@@ -1,3 +1,5 @@
+import { BarChart3, FileText, Wallet, Wrench } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
@@ -7,20 +9,106 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ROUTES } from "@/lib/auth/routes";
 import { formatPLN } from "@/lib/utils";
 
+export const metadata: Metadata = {
+  title: "Rentix — zarządzanie najmem bez Excela",
+  description:
+    "Umowy, rachunki, płatności i raporty finansowe w jednym miejscu. Bez korporacyjnego interfejsu i bez cen rosnących z każdym mieszkaniem.",
+};
+
 /**
- * Hero strony głównej. Pełna część marketingowa (funkcje, porównanie z SON,
- * cennik, opinie, publiczne oferty) powstaje w etapie 10 — tutaj jest tyle,
- * ile potrzeba, żeby wejść do rejestracji i zobaczyć design system w obu motywach.
+ * Strona główna według „Rentix Design System.dc.html".
+ *
+ * Odstępstwa od makiety są celowe i wszystkie idą w jedną stronę — makieta
+ * powstała przed decyzjami produktowymi i obiecuje rzeczy, których Rentix nie
+ * robi. Nie zapowiadamy podpisu elektronicznego ani zgłoszeń usterek (moduł
+ * świadomie poza zakresem), a sekcja z opiniami klientów czeka na prawdziwe
+ * cytaty — wymyślone byłyby zwykłym oszustwem wobec odwiedzającego.
  */
 
 const HERO_BARS = [40, 55, 48, 70, 62, 85];
+
+const FEATURES = [
+  {
+    icon: FileText,
+    title: "Umowy najmu",
+    description:
+      "Kreator umowy z danymi z kartoteki i gotowym PDF-em do podpisu — z polskimi znakami i kwotą słownie.",
+    background: "bg-mint",
+  },
+  {
+    icon: Wallet,
+    title: "Czynsz i płatności",
+    description:
+      "Rachunki naliczają się same w dniu z umowy. Statusy opłacone i zaległe, przypomnienia mailem do najemcy.",
+    background: "bg-sand",
+  },
+  {
+    icon: Wrench,
+    title: "Koszty najmu",
+    description:
+      "Rata kredytu, wspólnota, remonty i ubezpieczenie w jednym rejestrze — z podziałem na nieruchomości.",
+    background: "bg-clay",
+  },
+  {
+    icon: BarChart3,
+    title: "Raporty finansowe",
+    description:
+      "Przychód, koszty i wynik wg nieruchomości. Zestawienie roczne kasowo i eksport CSV dla księgowego.",
+    background: "bg-mint",
+  },
+];
+
+const COMPARISON = [
+  {
+    label: "Naliczanie czynszu",
+    excel: "Ręcznie, co miesiąc",
+    son: "Automatyczne",
+    rentix: "Automatyczne",
+  },
+  {
+    label: "Przypomnienia o płatności",
+    excel: "Brak",
+    son: "Tak",
+    rentix: "Tak",
+  },
+  {
+    label: "Rozliczenie roczne",
+    excel: "Ręczne sumowanie",
+    son: "W wyższym planie",
+    rentix: "Kasowo, w cenie",
+  },
+  {
+    label: "Cennik",
+    excel: "Darmowy, ale kosztuje czas",
+    son: "Rośnie z liczbą lokali",
+    rentix: "Stały, bez limitu lokali",
+  },
+  {
+    label: "Próg wejścia",
+    excel: "Niski, ale wszystko ręcznie",
+    son: "Wysoki",
+    rentix: "Niski",
+  },
+];
 
 export default function HomePage() {
   return (
     <div className="min-h-dvh bg-bg">
       <div className="px-4 pt-4 sm:px-8 sm:pt-5">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between rounded-[16px] border border-border bg-surface px-4 py-3 sm:px-[18px]">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-[16px] border border-border bg-surface px-4 py-3 sm:px-[18px]">
           <Logo />
+
+          <div className="hidden items-center gap-[26px] md:flex">
+            <a href="#funkcje" className="r-navlink">
+              Funkcje
+            </a>
+            <a href="#porownanie" className="r-navlink">
+              Porównanie
+            </a>
+            <a href="#cennik" className="r-navlink">
+              Cennik
+            </a>
+          </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
             <ThemeToggle />
@@ -47,8 +135,8 @@ export default function HomePage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-[520px] text-[17.5px] leading-[1.55] text-muted">
-            Umowy, płatności, zgłoszenia usterek i raporty finansowe w jednym, prostym
-            miejscu — bez korporacyjnego interfejsu i bez cen rosnących z każdym mieszkaniem.
+            Umowy, rachunki, płatności i raporty finansowe w jednym, prostym miejscu — bez
+            korporacyjnego interfejsu i bez cen rosnących z każdym mieszkaniem.
           </p>
 
           <div className="mt-7 flex flex-wrap justify-center gap-3">
@@ -56,7 +144,7 @@ export default function HomePage() {
               <Link href={ROUTES.register}>Załóż darmowe konto →</Link>
             </Button>
             <Button asChild variant="secondary" size="lg">
-              <Link href={ROUTES.login}>Mam już konto</Link>
+              <a href="#cennik">Zobacz cennik</a>
             </Button>
           </div>
 
@@ -95,17 +183,180 @@ export default function HomePage() {
                   />
                 ))}
               </div>
+
+              {/* Liczby na podglądzie są przykładowe — mówimy to wprost, żeby
+                  karta nie wyglądała na zrzut z czyjegoś konta. */}
+              <p className="mt-3 text-center text-[11px] text-muted">
+                Podgląd panelu na danych przykładowych
+              </p>
             </CardContent>
           </Card>
         </section>
+
+        <section id="funkcje" className="px-5 py-10 sm:px-12 sm:py-14">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="r-display text-center text-[32px] text-fg">Wszystko w jednym miejscu</h2>
+            <p className="mx-auto mt-2 max-w-[560px] text-center text-[15.5px] text-muted">
+              Cztery filary codziennej pracy właściciela — bez przełączania się między
+              narzędziami.
+            </p>
+
+            <div className="mt-8 grid gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+              {FEATURES.map((feature) => {
+                const Icon = feature.icon;
+
+                return (
+                  <div
+                    key={feature.title}
+                    className={`rounded-card p-[22px] ${feature.background}`}
+                  >
+                    <span className="mb-3.5 flex h-[38px] w-[38px] items-center justify-center rounded-[9px] bg-white/50 text-fg">
+                      <Icon className="h-[18px] w-[18px]" aria-hidden />
+                    </span>
+                    <p className="mb-1.5 text-base font-semibold text-fg">{feature.title}</p>
+                    <p className="text-sm leading-[1.55] text-fg/[0.72]">{feature.description}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section id="porownanie" className="px-5 py-10 sm:px-12 sm:py-14">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="r-display text-[32px] text-fg">Rentix kontra arkusz i SON</h2>
+            <p className="mt-2 text-[15.5px] text-muted">
+              To samo zarządzanie najmem, bez rozrastających się kolumn Excela i bez cen
+              rosnących z każdym mieszkaniem.
+            </p>
+
+            {/* Tabela przewija się w poziomie na telefonie zamiast zawijać
+                komórki — cztery kolumny porównania zwinięte w słupek przestają
+                być porównaniem. */}
+            <div className="mt-7 overflow-x-auto rounded-card border border-border">
+              <table className="w-full min-w-[560px] border-collapse text-left">
+                <thead>
+                  <tr className="bg-surface-alt text-[13.5px] font-semibold text-fg">
+                    <th scope="col" className="px-4 py-3.5 font-semibold">
+                      <span className="sr-only">Funkcja</span>
+                    </th>
+                    <th scope="col" className="px-4 py-3.5 font-semibold">
+                      Excel
+                    </th>
+                    <th scope="col" className="px-4 py-3.5 font-semibold">
+                      SON
+                    </th>
+                    <th scope="col" className="px-4 py-3.5 font-semibold text-accent">
+                      Rentix
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARISON.map((row) => (
+                    <tr key={row.label} className="border-t border-border text-sm">
+                      <th scope="row" className="px-4 py-3.5 text-left font-semibold text-fg">
+                        {row.label}
+                      </th>
+                      <td className="px-4 py-3.5 text-muted">{row.excel}</td>
+                      <td className="px-4 py-3.5 text-muted">{row.son}</td>
+                      <td className="px-4 py-3.5 font-bold text-accent">{row.rentix}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="cennik" className="px-5 py-10 sm:px-12 sm:py-14">
+          <div className="mx-auto max-w-6xl">
+            <h2 className="r-display text-center text-[32px] text-fg">
+              Prosty cennik, bez pułapek
+            </h2>
+
+            <div className="mx-auto mt-7 grid max-w-[760px] gap-[18px] sm:grid-cols-2">
+              <Card>
+                <CardContent className="p-[26px]">
+                  <p className="text-[15px] font-semibold text-fg">Free</p>
+                  <p className="r-display mt-1 text-[30px] text-fg">0 zł</p>
+                  <p className="mt-1 text-[13.5px] text-muted">do 20 najemców</p>
+
+                  <ul className="mt-5 space-y-2 text-sm text-muted">
+                    <PlanItem>Umowy i dokumenty</PlanItem>
+                    <PlanItem>Rachunki i przypomnienia</PlanItem>
+                    <PlanItem>Koszty i zestawienie roczne</PlanItem>
+                  </ul>
+
+                  <Button asChild variant="secondary" block className="mt-5">
+                    <Link href={ROUTES.register}>Zacznij za darmo</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="relative border-transparent bg-mint">
+                <span className="absolute -top-[11px] right-5 rounded-full bg-accent2 px-2.5 py-1 font-mono text-[11px] font-medium text-white">
+                  BEZ LIMITÓW
+                </span>
+
+                <CardContent className="p-[26px]">
+                  <p className="text-[15px] font-semibold text-fg">Pro</p>
+                  <p className="r-display mt-1 text-[30px] text-fg">
+                    149 zł
+                    <span className="font-sans text-[15px] font-medium text-fg/60">/mies.</span>
+                  </p>
+                  <p className="mt-1 text-[13.5px] text-fg/70">
+                    bez limitu nieruchomości i najemców
+                  </p>
+
+                  <ul className="mt-5 space-y-2 text-sm text-fg/80">
+                    <PlanItem>Wszystko z Free</PlanItem>
+                    <PlanItem>Raporty i eksport księgowy</PlanItem>
+                    <PlanItem>Wielu użytkowników zespołu</PlanItem>
+                  </ul>
+
+                  <Button asChild block className="mt-5">
+                    <Link href={ROUTES.register}>Przejdź na Pro</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-5 pb-16 sm:px-12 sm:pb-24">
+          <div className="mx-auto max-w-6xl rounded-[20px] bg-accent px-8 py-12 text-center">
+            <h2 className="r-display text-[28px] leading-tight text-accent-contrast">
+              Przenieś swój najem
+              <br />z Excela do Rentiksa
+            </h2>
+            <p className="mt-2.5 text-[15px] text-accent-contrast/75">
+              Pierwsze 20 najemców za darmo, na zawsze.
+            </p>
+            <Button asChild size="lg" variant="highlight" className="mt-5">
+              <Link href={ROUTES.register}>Załóż darmowe konto →</Link>
+            </Button>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-border px-5 py-8 sm:px-8">
+      <footer className="border-t border-border px-5 py-8 sm:px-12">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <Logo size="sm" />
           <p className="text-[13px] text-muted">© 2026 Rentix. Wszystkie prawa zastrzeżone.</p>
         </div>
       </footer>
     </div>
+  );
+}
+
+/** Pozycja listy w cenniku. Znak „✓" jest dekoracją, więc nie czyta go czytnik. */
+function PlanItem({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2">
+      <span aria-hidden className="text-accent">
+        ✓
+      </span>
+      {children}
+    </li>
   );
 }
