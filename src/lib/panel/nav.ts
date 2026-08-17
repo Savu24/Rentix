@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Building2,
+  KeyRound,
   FileText,
   LayoutDashboard,
   Settings,
@@ -23,6 +24,7 @@ export const PANEL_NAV: NavItem[] = [
   { href: "/panel", label: "Pulpit", icon: LayoutDashboard },
   { href: "/panel/nieruchomosci", label: "Nieruchomości", shortLabel: "Obiekty", icon: Building2 },
   { href: "/panel/najemcy", label: "Najemcy", icon: Users },
+  { href: "/panel/wlasciciele", label: "Właściciele", shortLabel: "Właśc.", icon: KeyRound },
   { href: "/panel/umowy", label: "Umowy", icon: FileText },
   { href: "/panel/finanse", label: "Finanse", icon: Wallet },
   // Zgłoszenia usterek świadomie poza zakresem: najemcy zgłaszają awarie

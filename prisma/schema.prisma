@@ -67,6 +67,7 @@ model Organization {
 
   members             Membership[]
   properties          Property[]
+  propertyOwners      PropertyOwner[]
   rooms               Room[]
   tenants             Tenant[]
   leases              Lease[]
@@ -205,6 +206,47 @@ enum RentalStatus {
   UNAVAILABLE // wyłączone (remont, użytek własny)
 }
 
+/// Właściciel lokalu przy podnajmie i zarządzaniu.
+///
+/// Osobny byt od `User` i od `Tenant`: to człowiek spoza systemu, którego
+/// mieszkanie obsługujemy. Nie ma konta, nie loguje się i nie jest stroną
+/// umowy z najemcą — przy podnajmie wynajmującym jest użytkownik Rentiksa.
+model PropertyOwner {
+  id             String @id @default(cuid())
+  organizationId String
+
+  /// Jedno pole na osobę i na firmę. Rozbicie na imię i nazwisko wymuszałoby
+  /// wpisywanie spółki w pole „imię", a właścicielem bywa i jedno, i drugie.
+  name  String
+  taxId String?
+
+  email String?
+  phone String?
+
+  street     String?
+  postalCode String?
+  city       String?
+
+  /// Rachunek, na który przekazujemy czynsz po potrąceniu prowizji.
+  bankAccount String?
+
+  notes String? @db.Text
+
+  /// Archiwizacja zamiast usuwania — nieruchomości i ich historia zostają.
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  properties   Property[]
+
+  @@index([organizationId])
+  @@index([organizationId, archivedAt])
+  @@index([organizationId, name])
+  @@map("property_owners")
+}
+
 /// Nieruchomość — i jednocześnie przedmiot najmu.
 ///
 /// Nie ma osobnej warstwy „jednostek": mieszkanie JEST jednostką najmu.
@@ -213,6 +255,9 @@ enum RentalStatus {
 model Property {
   id             String       @id @default(cuid())
   organizationId String
+  /// NULL = nieruchomość własna. Ustawione = obsługujemy cudzy lokal
+  /// (podnajem albo zarządzanie).
+  ownerId        String?
   name           String
   type           PropertyType @default(APARTMENT)
   status         RentalStatus @default(AVAILABLE)
@@ -247,6 +292,9 @@ model Property {
   archivedAt DateTime?
 
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// SetNull, nie Cascade: usunięcie właściciela nie może zabrać mieszkania
+  /// razem z jego umowami i fakturami.
+  owner               PropertyOwner?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   rooms               Room[]
   leases              Lease[]
   photos              PropertyPhoto[]
@@ -259,6 +307,7 @@ model Property {
   @@index([organizationId, archivedAt])
   @@index([organizationId, city])
   @@index([organizationId, status])
+  @@index([ownerId])
   @@map("properties")
 }
 

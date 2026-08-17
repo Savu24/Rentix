@@ -4,11 +4,13 @@ import Link from "next/link";
 
 import { PropertyForm } from "@/components/panel/properties/property-form";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { listOwnersForPicker } from "@/lib/owners/service";
 
 export const metadata: Metadata = { title: "Nowa nieruchomość" };
 
 export default async function NewPropertyPage() {
-  await requireOwnerSession("/panel/nieruchomosci/nowa");
+  const session = await requireOwnerSession("/panel/nieruchomosci/nowa");
+  const owners = await listOwnersForPicker(session.user.organizationId);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
@@ -27,7 +29,7 @@ export default async function NewPropertyPage() {
         </p>
       </div>
 
-      <PropertyForm />
+      <PropertyForm owners={owners} />
     </div>
   );
 }

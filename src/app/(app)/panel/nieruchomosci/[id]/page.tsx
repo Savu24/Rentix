@@ -80,6 +80,9 @@ export default async function PropertyDetailPage({ params }: Params) {
               {/* Oznaczenie do przyszłej strony ofert — sama strona jest poza
                   zakresem, więc badge tylko odnotowuje ustawienie. */}
               {property.publiclyListed ? <Badge tone="good">Oznaczona publicznie</Badge> : null}
+              {/* Podnajem widać na pierwszy rzut oka — przy cudzym lokalu
+                  inaczej wygląda rozliczenie i inaczej kończy się umowa. */}
+              {property.owner ? <Badge tone="accent">Podnajem</Badge> : null}
             </div>
 
             <p className="flex items-center gap-1.5 text-sm text-muted">
@@ -87,6 +90,18 @@ export default async function PropertyDetailPage({ params }: Params) {
               {address}
               {property.district ? ` · ${property.district}` : null}
             </p>
+
+            {property.owner ? (
+              <p className="text-xs text-muted">
+                Właściciel:{" "}
+                <Link
+                  href={`/panel/wlasciciele/${property.owner.id}`}
+                  className="font-medium text-accent hover:underline"
+                >
+                  {property.owner.name}
+                </Link>
+              </p>
+            ) : null}
 
             <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
               {property.areaM2 ? (

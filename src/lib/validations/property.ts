@@ -48,6 +48,12 @@ export const propertyFormSchema = z.object({
   name: requiredText("Nazwa", 120),
   type: z.enum(propertyTypes),
 
+  /** Puste = nieruchomość własna; ustawione = podnajem albo zarządzanie. */
+  ownerId: z
+    .union([z.literal(""), z.string().min(1)])
+    .optional()
+    .transform((value) => (value === "" || value === undefined ? null : value)),
+
   street: requiredText("Ulica", 120),
   buildingNumber: requiredText("Numer budynku", 20),
   /** Puste przy domu i budynku w całości — tam numeru lokalu nie ma. */

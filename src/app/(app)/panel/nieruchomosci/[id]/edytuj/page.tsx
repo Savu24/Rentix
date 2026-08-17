@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { PropertyForm } from "@/components/panel/properties/property-form";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { listOwnersForPicker } from "@/lib/owners/service";
 import { getProperty } from "@/lib/properties/service";
 
 export const metadata: Metadata = { title: "Edycja nieruchomości" };
@@ -17,7 +18,10 @@ export default async function EditPropertyPage({
   const session = await requireOwnerSession();
   const { id } = await params;
 
-  const property = await getProperty(session.user.organizationId, id);
+  const [property, owners] = await Promise.all([
+    getProperty(session.user.organizationId, id),
+    listOwnersForPicker(session.user.organizationId),
+  ]);
   if (!property) notFound();
 
   return (
@@ -35,6 +39,7 @@ export default async function EditPropertyPage({
       </div>
 
       <PropertyForm
+        owners={owners}
         propertyId={property.id}
         defaultValues={{
           name: property.name,
@@ -48,6 +53,7 @@ export default async function EditPropertyPage({
           street: property.street,
           buildingNumber: property.buildingNumber,
           apartmentNumber: property.apartmentNumber ?? "",
+          ownerId: property.ownerId ?? "",
           postalCode: property.postalCode,
           city: property.city,
           district: property.district ?? "",

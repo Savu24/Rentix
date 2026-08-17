@@ -47,6 +47,7 @@ export async function listProperties(organizationId: string, query: PropertyList
       street: true,
       buildingNumber: true,
       apartmentNumber: true,
+      owner: { select: { id: true, name: true } },
       postalCode: true,
       city: true,
       district: true,
@@ -107,6 +108,8 @@ export async function getProperty(organizationId: string, propertyId: string) {
           },
         },
       },
+      // Ustawiony = obsługujemy cudzy lokal; NULL = nieruchomość własna.
+      owner: { select: { id: true, name: true } },
       // Umowa na całą nieruchomość — czyli taka, która nie wskazuje pokoju.
       leases: {
         where: { status: "ACTIVE", roomId: null },

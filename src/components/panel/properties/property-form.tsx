@@ -14,6 +14,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { OwnerPicker, type OwnerOption } from "@/components/panel/owners/owner-picker";
 import { api } from "@/lib/api/client";
 import {
   MAX_ROOMS_PER_PROPERTY,
@@ -27,11 +28,13 @@ type Props = {
   /** Podany = edycja istniejącej nieruchomości (bez pola liczby pokoi). */
   propertyId?: string;
   defaultValues?: Partial<PropertyCreateInput>;
+  owners: OwnerOption[];
 };
 
 const EMPTY: PropertyCreateInput = {
   name: "",
   type: "APARTMENT",
+  ownerId: "",
   roomCount: "",
   street: "",
   buildingNumber: "",
@@ -47,7 +50,7 @@ const EMPTY: PropertyCreateInput = {
   publiclyListed: false,
 };
 
-export function PropertyForm({ propertyId, defaultValues }: Props) {
+export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(propertyId);
@@ -56,6 +59,8 @@ export function PropertyForm({ propertyId, defaultValues }: Props) {
     register,
     handleSubmit,
     getValues,
+    setValue,
+    watch,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<PropertyCreateInput, unknown, PropertyCreateOutput>({
@@ -65,6 +70,8 @@ export function PropertyForm({ propertyId, defaultValues }: Props) {
     resolver: zodResolver(propertyCreateSchema),
     defaultValues: { ...EMPTY, ...defaultValues },
   });
+
+  const ownerId = watch("ownerId") ?? "";
 
   /**
    * Surowe wartości pól, nie wynik resolvera — API waliduje tym samym
@@ -160,6 +167,23 @@ export function PropertyForm({ propertyId, defaultValues }: Props) {
               </FormField>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Właściciel</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Dotyczy podnajmu i zarządzania cudzym lokalem. Przy własnej nieruchomości zostaw
+            „nieruchomość własna”.
+          </p>
+
+          <OwnerPicker
+            owners={owners}
+            value={ownerId}
+            onChange={(value) => setValue("ownerId", value, { shouldValidate: true })}
+            disabled={isSubmitting}
+          />
         </CardContent>
       </Card>
 
