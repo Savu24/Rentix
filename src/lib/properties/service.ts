@@ -119,6 +119,8 @@ export async function getProperty(organizationId: string, propertyId: string) {
           },
         },
       },
+      // Slug organizacji — pod link do publicznej strony ofert /o/<slug>.
+      organization: { select: { slug: true } },
       _count: { select: { documents: true } },
     },
   });

@@ -76,7 +76,16 @@ export default async function PropertyDetailPage({ params }: Params) {
                 {RENTAL_STATUS_LABEL[property.status]}
               </Badge>
               {property.archivedAt ? <Badge tone="warning">Zarchiwizowana</Badge> : null}
-              {property.publiclyListed ? <Badge tone="good">Publiczna</Badge> : null}
+              {/* Badge prowadzi na stronę, na której oferta faktycznie stoi —
+                  wcześniej informował o publikacji, ale nie dało się jej
+                  zobaczyć. */}
+              {property.publiclyListed ? (
+                <Link href={`/o/${property.organization.slug}`} target="_blank" rel="noopener">
+                  <Badge tone="good" className="hover:underline">
+                    Publiczna
+                  </Badge>
+                </Link>
+              ) : null}
             </div>
 
             <p className="flex items-center gap-1.5 text-sm text-muted">

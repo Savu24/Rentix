@@ -38,6 +38,19 @@ export default async function SettingsPage() {
         </Alert>
       ) : null}
 
+      <Alert tone="info">
+        Twoja strona ofert:{" "}
+        <a
+          href={`/o/${organization.slug}`}
+          target="_blank"
+          rel="noopener"
+          className="font-medium underline"
+        >
+          /o/{organization.slug}
+        </a>{" "}
+        — trafiają na nią nieruchomości oznaczone jako publiczne.
+      </Alert>
+
       <OrganizationForm
         defaultValues={{
           name: organization.name,
