@@ -42,6 +42,21 @@ export const UTILITIES_MODE_HINT: Record<UtilitiesMode, string> = {
   MIXED: "Zaliczka co miesiąc, rozliczenie po odczytach.",
 };
 
+/**
+ * Tryby, których naliczanie nie potrafi jeszcze w pełni obsłużyć.
+ *
+ * Odczytów liczników nie da się dziś wpisać, więc rozliczenie w trybie METERED
+ * zawiera sam czynsz — dokument wygląda poprawnie i **jest zaniżony**, co bez
+ * ostrzeżenia przechodzi niezauważone. Zamiast ukrywać tryb przed użytkownikiem
+ * (są umowy, które faktycznie tak działają), mówimy wprost, czego zabraknie.
+ */
+export const UTILITIES_MODE_INCOMPLETE: Partial<Record<UtilitiesMode, string>> = {
+  METERED:
+    "Odczytów liczników nie da się jeszcze wpisać w Rentiksie, więc rozliczenie obejmie sam czynsz. Pozycje za media dolicz na razie poza systemem.",
+  MIXED:
+    "Zaliczka na media będzie naliczana normalnie, ale rozliczenia po odczytach liczników Rentix jeszcze nie zrobi.",
+};
+
 export const leaseFormSchema = z
   .object({
     propertyId: z.string().min(1, "Wybierz nieruchomość"),

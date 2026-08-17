@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { TerminateLease } from "@/components/panel/leases/terminate-lease";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { groszeToPolishWords } from "@/lib/money-words";
 import {
   LEASE_STATUS_LABEL,
   LEASE_STATUS_TONE,
+  UTILITIES_MODE_INCOMPLETE,
   UTILITIES_MODE_LABEL,
 } from "@/lib/validations/lease";
 
@@ -155,6 +157,12 @@ export default async function LeaseDetailPage({ params }: Params) {
           </dl>
         </CardContent>
       </Card>
+
+      {/* Ostrzeżenie zostaje na karcie umowy, nie tylko w formularzu: umowę
+          zakłada się raz, a rozliczenia wystawia co miesiąc. */}
+      {UTILITIES_MODE_INCOMPLETE[lease.utilitiesMode] ? (
+        <Alert tone="warning">{UTILITIES_MODE_INCOMPLETE[lease.utilitiesMode]}</Alert>
+      ) : null}
 
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">

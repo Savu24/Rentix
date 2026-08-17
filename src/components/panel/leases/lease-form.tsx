@@ -19,6 +19,7 @@ import { formatAmount } from "@/lib/money";
 import {
   LEASE_STATUS_LABEL,
   UTILITIES_MODE_HINT,
+  UTILITIES_MODE_INCOMPLETE,
   UTILITIES_MODE_LABEL,
   leaseFormSchema,
   type LeaseFormInput,
@@ -437,6 +438,14 @@ export function LeaseForm({
                 ))}
               </Select>
             </FormField>
+
+            {/* Ostrzeżenie w momencie wyboru trybu, a nie dopiero przy
+                fakturze — wtedy zaniżony dokument już poszedł do najemcy. */}
+            {utilitiesMode && UTILITIES_MODE_INCOMPLETE[utilitiesMode] ? (
+              <div className="sm:col-span-2">
+                <Alert tone="warning">{UTILITIES_MODE_INCOMPLETE[utilitiesMode]}</Alert>
+              </div>
+            ) : null}
 
             {chargesAdvance ? (
               <FormField
