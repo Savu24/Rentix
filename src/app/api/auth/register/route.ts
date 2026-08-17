@@ -20,7 +20,7 @@ export const runtime = "nodejs";
  * 429 →  { error: { code: "RATE_LIMITED" } }
  */
 export async function POST(request: NextRequest) {
-  const rate = consume(`register:${clientIp(request.headers)}`, LIMITS.register);
+  const rate = await consume(`register:${clientIp(request.headers)}`, LIMITS.register);
   if (!rate.success) return rateLimited(rate.retryAfterSeconds);
 
   let body: unknown;

@@ -1,11 +1,19 @@
+import { Redis } from "@upstash/redis";
+
 /**
- * Limiter w stałym oknie czasowym, trzymany w pamięci procesu.
+ * Limiter w stałym oknie czasowym.
  *
- * ⚠️ Świadome ograniczenie MVP: przy wielu instancjach (Render z >1 workerem,
- * funkcje Vercela) każda ma własny licznik, więc realny limit jest
- * przemnożony przez liczbę instancji. Przed produkcją podmieniamy
- * implementację `consume()` na Redis/Upstash — reszta kodu się nie zmienia,
- * bo wszyscy wołają wyłącznie ten interfejs.
+ * Dwie implementacje za jednym interfejsem:
+ *
+ * - **Redis (Upstash)**, gdy ustawione są `UPSTASH_REDIS_REST_URL`
+ *   i `UPSTASH_REDIS_REST_TOKEN`. Licznik jest wspólny dla wszystkich instancji,
+ *   więc limit znaczy to, co obiecuje.
+ * - **pamięć procesu** w pozostałych przypadkach — do pracy lokalnej i testów.
+ *
+ * Ten wybór jest istotny na serverless. Na Vercelu każde żądanie może trafić
+ * do świeżej instancji, a licznik w pamięci startuje wtedy od zera: „5 prób
+ * logowania na 15 minut" zamienia się w „5 prób na instancję", czyli
+ * praktycznie brak ochrony przed zgadywaniem haseł.
  */
 
 export type RateLimitResult = {
@@ -15,6 +23,15 @@ export type RateLimitResult = {
   /** Za ile sekund okno się zresetuje (do nagłówka Retry-After). */
   retryAfterSeconds: number;
 };
+
+export type RateLimitOptions = {
+  /** Maksymalna liczba prób w oknie. */
+  limit: number;
+  /** Długość okna w sekundach. */
+  windowSeconds: number;
+};
+
+// ── Backend w pamięci procesu ──────────────────────────────────────────────
 
 type Bucket = { count: number; resetAt: number };
 
@@ -28,27 +45,15 @@ function sweep(now: number) {
   }
 }
 
-export type RateLimitOptions = {
-  /** Maksymalna liczba prób w oknie. */
-  limit: number;
-  /** Długość okna w sekundach. */
-  windowSeconds: number;
-};
-
-export function consume(key: string, options: RateLimitOptions): RateLimitResult {
+function consumeInMemory(key: string, options: RateLimitOptions): RateLimitResult {
   const now = Date.now();
   sweep(now);
 
   const existing = buckets.get(key);
 
   if (!existing || existing.resetAt <= now) {
-    const resetAt = now + options.windowSeconds * 1000;
-    buckets.set(key, { count: 1, resetAt });
-    return {
-      success: true,
-      remaining: options.limit - 1,
-      retryAfterSeconds: options.windowSeconds,
-    };
+    buckets.set(key, { count: 1, resetAt: now + options.windowSeconds * 1000 });
+    return { success: true, remaining: options.limit - 1, retryAfterSeconds: options.windowSeconds };
   }
 
   existing.count += 1;
@@ -58,21 +63,100 @@ export function consume(key: string, options: RateLimitOptions): RateLimitResult
     return { success: false, remaining: 0, retryAfterSeconds };
   }
 
+  return { success: true, remaining: options.limit - existing.count, retryAfterSeconds };
+}
+
+// ── Backend na Redisie ─────────────────────────────────────────────────────
+
+/**
+ * Klient powstaje leniwie i siedzi na `globalThis` — hot reload w trybie
+ * deweloperskim inaczej tworzyłby nowego przy każdej zmianie pliku.
+ */
+const globalForRedis = globalThis as unknown as { rateLimitRedis?: Redis | null };
+
+function redisClient(): Redis | null {
+  if (globalForRedis.rateLimitRedis !== undefined) return globalForRedis.rateLimitRedis;
+
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  globalForRedis.rateLimitRedis = url && token ? new Redis({ url, token }) : null;
+  return globalForRedis.rateLimitRedis;
+}
+
+export function isDistributed(): boolean {
+  return redisClient() !== null;
+}
+
+async function consumeInRedis(
+  redis: Redis,
+  key: string,
+  options: RateLimitOptions,
+): Promise<RateLimitResult> {
+  const redisKey = `rl:${key}`;
+
+  // INCR i TTL jednym przelotem. Klucz bez wygaśnięcia (TTL < 0) oznacza
+  // pierwszą próbę w oknie — dopiero wtedy ustawiamy czas życia, żeby okno
+  // liczyło się od pierwszej próby, a nie przesuwało z każdą kolejną.
+  const pipeline = redis.pipeline();
+  pipeline.incr(redisKey);
+  pipeline.ttl(redisKey);
+  const [count, ttl] = (await pipeline.exec()) as [number, number];
+
+  let retryAfterSeconds = ttl;
+  if (ttl < 0) {
+    await redis.expire(redisKey, options.windowSeconds);
+    retryAfterSeconds = options.windowSeconds;
+  }
+
+  if (count > options.limit) {
+    return { success: false, remaining: 0, retryAfterSeconds: Math.max(1, retryAfterSeconds) };
+  }
+
   return {
     success: true,
-    remaining: options.limit - existing.count,
-    retryAfterSeconds,
+    remaining: options.limit - count,
+    retryAfterSeconds: Math.max(1, retryAfterSeconds),
   };
 }
 
-/** Czyści licznik po udanej akcji (np. poprawnym zalogowaniu). */
-export function reset(key: string) {
-  buckets.delete(key);
+// ── Interfejs publiczny ────────────────────────────────────────────────────
+
+export async function consume(key: string, options: RateLimitOptions): Promise<RateLimitResult> {
+  const redis = redisClient();
+  if (!redis) return consumeInMemory(key, options);
+
+  try {
+    return await consumeInRedis(redis, key, options);
+  } catch (error) {
+    // Awaria Redisa nie może zablokować logowania wszystkim naraz. Puszczamy
+    // żądanie dalej i zostawiamy ślad w logach — limiter jest zabezpieczeniem,
+    // a nie warunkiem działania aplikacji.
+    console.error("[rate-limit] Redis niedostępny, przepuszczam żądanie:", error);
+    return { success: true, remaining: options.limit - 1, retryAfterSeconds: options.windowSeconds };
+  }
 }
 
-/** Wyłącznie do testów — zeruje cały stan limitera. */
+/** Czyści licznik po udanej akcji (np. poprawnym zalogowaniu). */
+export async function reset(key: string): Promise<void> {
+  const redis = redisClient();
+
+  if (!redis) {
+    buckets.delete(key);
+    return;
+  }
+
+  try {
+    await redis.del(`rl:${key}`);
+  } catch (error) {
+    console.error("[rate-limit] Nie udało się wyzerować licznika:", error);
+  }
+}
+
+/** Wyłącznie do testów — zeruje stan limitera w pamięci. */
 export function resetAll() {
   buckets.clear();
+  globalForRedis.rateLimitRedis = undefined;
 }
 
 /** Polityki limitów w jednym miejscu, żeby dało się je przejrzeć na raz. */
@@ -90,7 +174,7 @@ export const LIMITS = {
 } as const satisfies Record<string, RateLimitOptions>;
 
 /**
- * Adres klienta na podstawie nagłówków proxy (Render, Vercel, nginx).
+ * Adres klienta na podstawie nagłówków proxy (Vercel, Render, nginx).
  * Zwraca "unknown", gdy nagłówków brak — wtedy wszyscy tacy klienci dzielą
  * jeden licznik, co jest bezpieczniejsze niż brak limitu.
  */

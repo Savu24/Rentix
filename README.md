@@ -74,7 +74,7 @@ wystarczy do obu.
 | Komenda              | Opis                                            |
 | -------------------- | ----------------------------------------------- |
 | `npm run dev`        | serwer deweloperski                              |
-| `npm run build`      | `prisma generate` + build produkcyjny            |
+| `npm run build`      | `prisma generate` + `migrate deploy` + build produkcyjny |
 | `npm test`           | testy jednostkowe                                |
 | `npm run typecheck`  | `tsc --noEmit`                                   |
 | `npm run db:migrate` | migracja deweloperska                            |
@@ -102,10 +102,13 @@ skonsumuje aplikacja mobilna w React Native, bez przepisywania backendu.
 - Hasła: bcrypt, koszt 12. Przy nieistniejącym koncie liczony jest hash-pułapka,
   żeby czas odpowiedzi nie zdradzał, czy dany e-mail ma konto.
 - Walidacja Zod na **każdym** API route — ta sama, której używa formularz.
-- Rate limiting: 5 prób logowania / 15 min na konto, 5 rejestracji / h na IP.
-  Implementacja jest w pamięci procesu — **przed produkcją podmień `consume()`
-  w `src/lib/rate-limit.ts` na Redis/Upstash**, bo przy wielu instancjach każda
-  liczy osobno.
+- Rate limiting: 5 prób logowania / 15 min na konto, 5 rejestracji / h na IP,
+  5 prób zmiany hasła / 15 min. Licznik trzyma Redis (Upstash), gdy ustawione są
+  `UPSTASH_REDIS_REST_URL` i `UPSTASH_REDIS_REST_TOKEN`; bez nich spada do
+  pamięci procesu — wygodne lokalnie, **bezużyteczne na serverless**, bo każda
+  instancja startuje z wyzerowanym licznikiem. Awaria Redisa przepuszcza
+  żądanie i loguje błąd: limiter jest zabezpieczeniem, a nie warunkiem
+  działania logowania.
 - CSRF: wbudowany w NextAuth (POST-y wymagają tokenu), wylogowanie idzie przez
   Server Action, więc Next dokłada własny token akcji.
 - Autoryzacja jest egzekwowana w API routes i Server Componentach
@@ -305,8 +308,32 @@ zwolniony z VAT (art. 43 ust. 1 pkt 36 ustawy o VAT).
 
 ## Wdrożenie
 
-- **Vercel** — działa bez konfiguracji; `postinstall` odpala `prisma generate`.
-- **Render** — `render.yaml` w repo. Build uruchamia `prisma migrate deploy`.
+### Vercel (zalecane)
+
+1. **Baza.** `DATABASE_URL` musi wskazywać **transaction pooler** (Supabase, port
+   6543) — session pooler wyczerpie limit połączeń, bo każda funkcja łączy się
+   osobno. `DIRECT_URL` wskazuje session pooler (5432) i służy wyłącznie
+   migracjom, których pooler transakcyjny nie obsługuje.
+2. **Limiter.** Załóż darmowy Redis na Upstash i ustaw `UPSTASH_REDIS_REST_URL`
+   oraz `UPSTASH_REDIS_REST_TOKEN`. Bez nich licznik prób logowania siedzi
+   w pamięci instancji, więc na serverless praktycznie nie działa.
+3. **Harmonogram.** Cron NIE jest w `vercel.json` — woła go GitHub Actions
+   (`.github/workflows/billing.yml`). W ustawieniach repozytorium dodaj sekrety
+   `APP_URL` i `CRON_SECRET` (ten sam, co w zmiennych Vercela). Darmowy plan
+   Vercela daje jedno uruchomienie dziennie o nieokreślonej godzinie, a przy
+   harmonogramie poza hostingiem zmiana hostingu nic nie łamie.
+4. **Migracje** idą w komendzie builda (`prisma migrate deploy`), więc wdrożenie
+   ze zmianą schematu samo dosuwa bazę.
+
+`vercel.json` podnosi limit czasu funkcji generujących PDF — paczka
+kilkudziesięciu dokumentów nie zmieści się w domyślnym oknie.
+
+### Render
+
+`render.yaml` w repo: build uruchamia `prisma migrate deploy`, a cron jest
+osobną usługą blueprintu. Tu wystarcza sam `DATABASE_URL` na porcie 5432
+i limiter w pamięci — usługa to jeden długo żyjący proces. Uwaga: darmowy plan
+usypia serwis po 15 minutach i **nie obejmuje cron jobs**.
 
 Wymagane zmienne: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST=true`.
 

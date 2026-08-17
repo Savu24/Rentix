@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { clientIp, consume, reset, resetAll } from "@/lib/rate-limit";
+import { clientIp, consume, isDistributed, reset, resetAll } from "@/lib/rate-limit";
 
 const POLICY = { limit: 3, windowSeconds: 60 };
 
@@ -14,60 +14,68 @@ afterEach(() => {
 });
 
 describe("consume", () => {
-  it("przepuszcza próby do wyczerpania limitu", () => {
-    expect(consume("a", POLICY).success).toBe(true);
-    expect(consume("a", POLICY).success).toBe(true);
-    expect(consume("a", POLICY).success).toBe(true);
+  it("przepuszcza próby do wyczerpania limitu", async () => {
+    expect((await consume("a", POLICY)).success).toBe(true);
+    expect((await consume("a", POLICY)).success).toBe(true);
+    expect((await consume("a", POLICY)).success).toBe(true);
   });
 
-  it("blokuje próbę ponad limit", () => {
-    for (let i = 0; i < POLICY.limit; i++) consume("a", POLICY);
+  it("blokuje próbę ponad limit", async () => {
+    for (let i = 0; i < POLICY.limit; i++) await consume("a", POLICY);
 
-    const blocked = consume("a", POLICY);
+    const blocked = await consume("a", POLICY);
     expect(blocked.success).toBe(false);
     expect(blocked.remaining).toBe(0);
     expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
   });
 
-  it("odlicza pozostałe próby", () => {
-    expect(consume("a", POLICY).remaining).toBe(2);
-    expect(consume("a", POLICY).remaining).toBe(1);
-    expect(consume("a", POLICY).remaining).toBe(0);
+  it("odlicza pozostałe próby", async () => {
+    expect((await consume("a", POLICY)).remaining).toBe(2);
+    expect((await consume("a", POLICY)).remaining).toBe(1);
+    expect((await consume("a", POLICY)).remaining).toBe(0);
   });
 
-  it("liczy klucze niezależnie — blokada jednego konta nie dotyka innego", () => {
-    for (let i = 0; i < POLICY.limit; i++) consume("login:a@example.com", POLICY);
+  it("liczy klucze niezależnie — blokada jednego konta nie dotyka innego", async () => {
+    for (let i = 0; i < POLICY.limit; i++) await consume("login:a@example.com", POLICY);
 
-    expect(consume("login:a@example.com", POLICY).success).toBe(false);
-    expect(consume("login:b@example.com", POLICY).success).toBe(true);
+    expect((await consume("login:a@example.com", POLICY)).success).toBe(false);
+    expect((await consume("login:b@example.com", POLICY)).success).toBe(true);
   });
 
-  it("otwiera nowe okno po upływie czasu", () => {
-    for (let i = 0; i < POLICY.limit; i++) consume("a", POLICY);
-    expect(consume("a", POLICY).success).toBe(false);
+  it("otwiera nowe okno po upływie czasu", async () => {
+    for (let i = 0; i < POLICY.limit; i++) await consume("a", POLICY);
+    expect((await consume("a", POLICY)).success).toBe(false);
 
     vi.advanceTimersByTime(POLICY.windowSeconds * 1000 + 1);
 
-    expect(consume("a", POLICY).success).toBe(true);
+    expect((await consume("a", POLICY)).success).toBe(true);
   });
 
-  it("nie otwiera okna przed czasem", () => {
-    for (let i = 0; i < POLICY.limit; i++) consume("a", POLICY);
+  it("nie otwiera okna przed czasem", async () => {
+    for (let i = 0; i < POLICY.limit; i++) await consume("a", POLICY);
 
     vi.advanceTimersByTime(POLICY.windowSeconds * 1000 - 1000);
 
-    expect(consume("a", POLICY).success).toBe(false);
+    expect((await consume("a", POLICY)).success).toBe(false);
+  });
+});
+
+describe("wybór backendu", () => {
+  it("bez konfiguracji Upstash liczy w pamięci procesu", () => {
+    // To jest tryb lokalny i testowy. Na serverless byłby dziurą: każda
+    // instancja startowałaby z własnym, wyzerowanym licznikiem.
+    expect(isDistributed()).toBe(false);
   });
 });
 
 describe("reset", () => {
-  it("zeruje licznik po udanym logowaniu", () => {
-    for (let i = 0; i < POLICY.limit; i++) consume("a", POLICY);
-    expect(consume("a", POLICY).success).toBe(false);
+  it("zeruje licznik po udanym logowaniu", async () => {
+    for (let i = 0; i < POLICY.limit; i++) await consume("a", POLICY);
+    expect((await consume("a", POLICY)).success).toBe(false);
 
-    reset("a");
+    await reset("a");
 
-    expect(consume("a", POLICY).success).toBe(true);
+    expect((await consume("a", POLICY)).success).toBe(true);
   });
 });
 

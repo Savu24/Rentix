@@ -6,6 +6,15 @@ import { z } from "zod";
  */
 const serverEnvSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL jest wymagany"),
+  /**
+   * Połączenie sesyjne wyłącznie do migracji (Supabase, port 5432).
+   *
+   * Na serverless `DATABASE_URL` wskazuje transaction pooler (6543), po którym
+   * `prisma migrate deploy` nie przejdzie. Czyta je `prisma.config.ts`, a nie
+   * kod aplikacji — tutaj stoi po to, żeby literówka w nazwie wyszła przy
+   * starcie, a nie przy pierwszym wdrożeniu ze zmianą schematu.
+   */
+  DIRECT_URL: z.string().optional(),
   AUTH_SECRET: z
     .string()
     .min(32, "AUTH_SECRET musi mieć co najmniej 32 znaki — wygeneruj: npx auth secret"),
@@ -20,6 +29,16 @@ const serverEnvSchema = z.object({
    * endpoint nie działa: naliczanie miesięczne nie może być otwarte dla świata.
    */
   CRON_SECRET: z.string().min(16, "CRON_SECRET musi mieć co najmniej 16 znaków").optional(),
+
+  /**
+   * Redis dla limitera prób logowania (Upstash, REST).
+   *
+   * Bez tych dwóch zmiennych limiter liczy w pamięci procesu, co na serverless
+   * oznacza licznik startujący od zera przy każdej instancji — czyli brak
+   * realnej ochrony. Obie albo żadna; jedna bez drugiej to literówka.
+   */
+  UPSTASH_REDIS_REST_URL: z.url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
@@ -37,7 +56,15 @@ function loadEnv(): ServerEnv {
     );
   }
 
-  return parsed.data;
+  const env = parsed.data;
+
+  if (Boolean(env.UPSTASH_REDIS_REST_URL) !== Boolean(env.UPSTASH_REDIS_REST_TOKEN)) {
+    throw new Error(
+      "Ustaw UPSTASH_REDIS_REST_URL i UPSTASH_REDIS_REST_TOKEN razem — sam adres bez tokenu (albo odwrotnie) po cichu wyłącza limiter.",
+    );
+  }
+
+  return env;
 }
 
 export const env = loadEnv();

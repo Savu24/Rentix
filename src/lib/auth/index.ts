@@ -39,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Limit prób per konto — chroni przed zgadywaniem hasła jednego
         // użytkownika. Limitem per IP zajmuje się osobno endpoint rejestracji.
-        const rate = consume(`login:${email}`, LIMITS.login);
+        const rate = await consume(`login:${email}`, LIMITS.login);
         if (!rate.success) throw new RateLimitError();
 
         const user = await prisma.user.findUnique({
@@ -69,7 +69,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) throw new InvalidCredentialsError();
 
-        reset(`login:${email}`);
+        await reset(`login:${email}`);
 
         await prisma.user.update({
           where: { id: user.id },

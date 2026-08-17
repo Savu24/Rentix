@@ -1,0 +1,40 @@
+# Nocne rozliczenia Rentiksa.
+#
+# Harmonogram mieszka tutaj, a nie na Vercelu, z dwóch powodów: darmowy plan
+# Vercela ogranicza crony do jednego uruchomienia dziennie o nieokreślonej
+# godzinie, a przeniesienie zadania poza hosting sprawia, że zmiana hostingu
+# nie wymaga przepisywania harmonogramu. Endpoint jest zwykłym HTTP-em
+# z sekretem w nagłówku, więc może go wołać cokolwiek.
+name: Naliczanie czynszu i przypomnienia
+
+on:
+  schedule:
+    # 4:00 UTC = 5:00 zimą / 6:00 latem czasu polskiego. GitHub uruchamia
+    # zadania z opóźnieniem do kilkunastu minut przy dużym obciążeniu —
+    # to bez znaczenia, bo przebieg jest idempotentny.
+    - cron: "0 4 * * *"
+  # Ręczne uruchomienie z zakładki Actions, do sprawdzenia po wdrożeniu.
+  workflow_dispatch:
+
+jobs:
+  billing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wywołaj endpoint rozliczeniowy
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Brak sekretu APP_URL albo CRON_SECRET w ustawieniach repozytorium." >&2
+            exit 1
+          fi
+
+          # --fail-with-body: kod wyjścia niezerowy przy 4xx/5xx, ale treść
+          # odpowiedzi trafia do logu. Bez tego nieudany przebieg byłby
+          # widoczny jako czerwony krzyżyk bez żadnego wyjaśnienia.
+          curl --fail-with-body --silent --show-error --location \
+            --max-time 300 \
+            -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/billing"

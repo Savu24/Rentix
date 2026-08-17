@@ -11,6 +11,13 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migracje idą DIRECT_URL, jeśli jest ustawiony.
+    //
+    // Na serverless aplikacja łączy się przez transaction pooler (Supabase,
+    // port 6543), który nie obsługuje instrukcji wymaganych przez migracje —
+    // `prisma migrate deploy` po nim po prostu pada. Do migracji potrzebne
+    // jest połączenie sesyjne (port 5432), i to właśnie trzyma DIRECT_URL.
+    // Lokalnie i na hostingu z jednym procesem wystarcza sam DATABASE_URL.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

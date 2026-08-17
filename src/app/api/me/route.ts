@@ -109,7 +109,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   const rateKey = `account-delete:${session.user.id}`;
-  const rate = consume(rateKey, LIMITS.passwordChange);
+  const rate = await consume(rateKey, LIMITS.passwordChange);
   if (!rate.success) return rateLimited(rate.retryAfterSeconds);
 
   let body: unknown;

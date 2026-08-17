@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   const userId = result.session.user.id;
   const rateKey = `password-change:${userId}`;
 
-  const rate = consume(rateKey, LIMITS.passwordChange);
+  const rate = await consume(rateKey, LIMITS.passwordChange);
   if (!rate.success) return rateLimited(rate.retryAfterSeconds);
 
   let body: unknown;
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   if (changed.ok) {
     // Licznik kasujemy po udanej zmianie — kolejne wejście do ustawień nie ma
     // dziedziczyć limitu po nieudanych próbach sprzed chwili.
-    reset(rateKey);
+    await reset(rateKey);
     return ok({ changed: true });
   }
 
