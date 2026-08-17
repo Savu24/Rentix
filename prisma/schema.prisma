@@ -349,6 +349,11 @@ model Tenant {
   /// NIP, gdy najemcą jest firma. Dla osoby fizycznej zostaje NULL.
   taxId      String?
 
+  /// Jaki dokument wystawiamy temu najemcy przy naliczaniu czynszu.
+  /// BILL zostawia decyzję stawkom VAT (rachunek albo faktura), CHARGE oznacza
+  /// samo naliczenie, które dowodem księgowym nie jest.
+  documentKind InvoiceKind @default(BILL)
+
   notes String? @db.Text
 
   createdAt  DateTime  @default(now())
@@ -489,6 +494,10 @@ enum InvoiceKind {
   BILL // rachunek
   VAT_INVOICE // faktura VAT
   PROFORMA // proforma
+  /// Naliczenie — informacja o kwocie do zapłaty. NIE jest dowodem księgowym,
+  /// więc biegnie własną numeracją i nie zajmuje numerów w rejestrze rachunków
+  /// ani faktur. Dla najemcy, który dokumentu do księgowości nie potrzebuje.
+  CHARGE
 }
 
 /// Stawki w rozbiciu wymaganym przez FA(2).

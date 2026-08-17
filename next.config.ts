@@ -26,6 +26,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/leases/[id]/pdf": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
     "/api/invoices/[id]/pdf": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
+    "/api/invoices/pdf": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
   },
 };
 

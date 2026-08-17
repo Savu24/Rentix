@@ -20,7 +20,19 @@ export const INVOICE_KIND_LABEL: Record<InvoiceKind, string> = {
   BILL: "Rachunek",
   VAT_INVOICE: "Faktura VAT",
   PROFORMA: "Proforma",
+  CHARGE: "Naliczenie",
 };
+
+/**
+ * Czy dokument danego rodzaju jest dowodem księgowym.
+ *
+ * Naliczenie nim nie jest — to informacja o kwocie do zapłaty, nie dokument
+ * dla księgowości. Rozróżnienie siedzi tutaj, bo decyduje jednocześnie
+ * o numeracji, o treści PDF-a i o tym, co pokazujemy w panelu.
+ */
+export function isAccountingDocument(kind: InvoiceKind): boolean {
+  return kind !== "CHARGE";
+}
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   TRANSFER: "Przelew",

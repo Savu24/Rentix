@@ -45,6 +45,7 @@ export default async function EditTenantPage({
           postalCode: tenant.postalCode ?? "",
           city: tenant.city ?? "",
           taxId: tenant.taxId ?? "",
+          documentKind: tenant.documentKind,
           notes: tenant.notes ?? "",
         }}
       />

@@ -1,11 +1,26 @@
 import { z } from "zod";
 
-import { TenantStatus } from "@/generated/prisma/enums";
+import { InvoiceKind, TenantStatus } from "@/generated/prisma/enums";
 
 import { emailSchema } from "./auth";
 import { optionalPostalCode, optionalTaxId, optionalText, requiredText } from "./common";
 
 const tenantStatuses = Object.values(TenantStatus) as [TenantStatus, ...TenantStatus[]];
+const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind[]];
+
+/**
+ * Co wystawiamy temu najemcy przy naliczaniu czynszu.
+ *
+ * Proformy nie ma na liście: to dokument doraźny, wystawiany ręcznie przed
+ * zapłatą, a nie stałe ustawienie kartoteki.
+ */
+export const TENANT_DOCUMENT_KIND_OPTIONS = ["BILL", "VAT_INVOICE", "CHARGE"] as const;
+
+export const TENANT_DOCUMENT_KIND_HINT: Partial<Record<InvoiceKind, string>> = {
+  BILL: "Rachunek, a gdy pojawi się pozycja z VAT-em — faktura. Domyślne i pasuje większości najmu mieszkaniowego.",
+  VAT_INVOICE: "Zawsze faktura VAT, także przy stawce zwolnionej. Dla najemcy-firmy, który tego wymaga.",
+  CHARGE: "Samo naliczenie — informacja o kwocie do zapłaty. NIE jest dowodem księgowym i ma osobną numerację.",
+};
 
 export const TENANT_STATUS_LABEL: Record<TenantStatus, string> = {
   PROSPECT: "Zainteresowany",
@@ -57,6 +72,8 @@ export const tenantFormSchema = z.object({
   city: optionalText(80),
   /// NIP, gdy najemcą jest firma.
   taxId: optionalTaxId,
+  /// Jaki dokument dostaje ten najemca przy naliczaniu czynszu.
+  documentKind: z.enum(documentKinds).default("BILL"),
 
   notes: optionalText(2000),
 });

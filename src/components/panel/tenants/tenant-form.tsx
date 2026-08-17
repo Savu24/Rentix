@@ -14,7 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
+import { INVOICE_KIND_LABEL } from "@/lib/validations/invoice";
 import {
+  TENANT_DOCUMENT_KIND_HINT,
+  TENANT_DOCUMENT_KIND_OPTIONS,
   TENANT_STATUS_LABEL,
   tenantFormSchema,
   type TenantFormInput,
@@ -31,6 +34,7 @@ const EMPTY: TenantFormInput = {
   postalCode: "",
   city: "",
   taxId: "",
+  documentKind: "BILL",
   notes: "",
 };
 
@@ -50,11 +54,14 @@ export function TenantForm({
     handleSubmit,
     getValues,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<TenantFormInput, unknown, TenantFormOutput>({
     resolver: zodResolver(tenantFormSchema),
     defaultValues: { ...EMPTY, ...defaultValues },
   });
+
+  const documentKind = watch("documentKind");
 
   /** Surowe wartości pól — patrz komentarz w `property-form.tsx`. */
   async function onSubmit() {
@@ -217,6 +224,29 @@ export function TenantForm({
                 disabled={isSubmitting}
                 {...register("taxId")}
               />
+            </FormField>
+
+            {/* Podpowiedź zmienia się razem z wyborem — różnica między
+                rachunkiem a naliczeniem jest istotna księgowo, a z samych
+                nazw nie da się jej odczytać. */}
+            <FormField
+              id="documentKind"
+              label="Co wystawiamy"
+              error={errors.documentKind?.message}
+              hint={TENANT_DOCUMENT_KIND_HINT[documentKind ?? "BILL"]}
+              className="sm:col-span-2"
+            >
+              <Select
+                {...fieldAria("documentKind", { error: errors.documentKind?.message })}
+                disabled={isSubmitting}
+                {...register("documentKind")}
+              >
+                {TENANT_DOCUMENT_KIND_OPTIONS.map((value) => (
+                  <option key={value} value={value}>
+                    {INVOICE_KIND_LABEL[value]}
+                  </option>
+                ))}
+              </Select>
             </FormField>
           </div>
 

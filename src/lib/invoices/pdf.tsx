@@ -5,7 +5,7 @@ import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/rendere
 import type { InvoiceKind, VatRate } from "@/generated/prisma/enums";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
-import { INVOICE_KIND_LABEL } from "@/lib/validations/invoice";
+import { INVOICE_KIND_LABEL, isAccountingDocument } from "@/lib/validations/invoice";
 
 import { VAT_LABEL } from "./vat";
 
@@ -123,6 +123,17 @@ const styles = StyleSheet.create({
 
   notes: { marginTop: 16, color: COLORS.muted },
 
+  disclaimer: {
+    marginTop: 16,
+    padding: 8,
+    borderWidth: 0.7,
+    borderColor: COLORS.rule,
+    borderRadius: 6,
+    fontSize: 8,
+    color: COLORS.muted,
+    lineHeight: 1.4,
+  },
+
   signatures: { flexDirection: "row", justifyContent: "space-between", marginTop: 44 },
   signature: { width: "40%", alignItems: "center" },
   signatureLine: { borderTopWidth: 0.7, borderTopColor: COLORS.ink, width: "100%", marginBottom: 4 },
@@ -234,15 +245,25 @@ function Party({
   );
 }
 
-export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
+/**
+ * Jedna strona dokumentu.
+ *
+ * Wydzielona z `InvoiceDocument`, żeby ten sam układ dało się złożyć zarówno
+ * w plik z jednym dokumentem, jak i w paczkę wielu — bez duplikowania szablonu,
+ * który za pół roku rozjechałby się między wariantami.
+ */
+function InvoicePage({ data }: { data: InvoicePdfData }) {
   const remaining = Math.max(0, data.totalGrossGrosze - data.paidGrosze);
   // Rozbicie po stawkach pokazujemy tylko wtedy, gdy na dokumencie jest więcej
   // niż jedna — przy samym „zw." powielałoby wiersz sumy.
   const showBreakdown = data.vatBreakdown.length > 1;
 
+  // Naliczenie nie jest dowodem księgowym, więc dokument musi to powiedzieć
+  // wprost — inaczej najemca odda je księgowej, a ta odeśle je z powrotem.
+  const accounting = isAccountingDocument(data.kind);
+
   return (
-    <Document title={`${INVOICE_KIND_LABEL[data.kind]} ${data.number}`} author={data.seller.name} language="pl">
-      <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>
@@ -356,24 +377,73 @@ export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
 
         {data.notes ? <Text style={styles.notes}>{data.notes}</Text> : null}
 
-        <View style={styles.signatures}>
-          <View style={styles.signature}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureCaption}>Wystawił</Text>
-          </View>
-          <View style={styles.signature}>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureCaption}>Odebrał</Text>
-          </View>
-        </View>
-
-        <View style={styles.footer} fixed>
-          <Text>
-            {INVOICE_KIND_LABEL[data.kind]} nr {data.number} · {data.seller.name}
+        {!accounting ? (
+          <Text style={styles.disclaimer}>
+            Naliczenie ma charakter informacyjny — wskazuje kwotę i termin płatności.
+            Nie jest fakturą ani rachunkiem w rozumieniu przepisów o rachunkowości i nie
+            stanowi podstawy do księgowania ani odliczenia podatku. Dokument księgowy
+            wystawiamy na życzenie.
           </Text>
-          <Text render={({ pageNumber, totalPages }) => `Strona ${pageNumber} z ${totalPages}`} />
-        </View>
-      </Page>
+        ) : null}
+
+        {/* Rubryki podpisu tylko na dokumencie księgowym — pod naliczeniem
+            sugerowałyby moc dowodową, której ono nie ma. */}
+        {accounting ? (
+          <View style={styles.signatures}>
+            <View style={styles.signature}>
+              <View style={styles.signatureLine} />
+              <Text style={styles.signatureCaption}>Wystawił</Text>
+            </View>
+            <View style={styles.signature}>
+              <View style={styles.signatureLine} />
+              <Text style={styles.signatureCaption}>Odebrał</Text>
+            </View>
+          </View>
+        ) : null}
+
+      <View style={styles.footer} fixed>
+        <Text>
+          {INVOICE_KIND_LABEL[data.kind]} nr {data.number} · {data.seller.name}
+        </Text>
+        {/* Numeracja stron jest w obrębie jednego dokumentu — w paczce każdy
+            dokument zaczyna się od nowej strony, więc licznik globalny mówiłby
+            najemcy „strona 7 z 40" na jego jedynej stronie. */}
+      </View>
+    </Page>
+  );
+}
+
+export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
+  return (
+    <Document
+      title={`${INVOICE_KIND_LABEL[data.kind]} ${data.number}`}
+      author={data.seller.name}
+      language="pl"
+    >
+      <InvoicePage data={data} />
+    </Document>
+  );
+}
+
+/**
+ * Wiele dokumentów w jednym pliku — do pobrania paczką z listy finansów.
+ *
+ * Jeden PDF, a nie archiwum z osobnymi plikami: paczkę drukuje się i wysyła
+ * księgowemu jednym ruchem, a przeglądarka i tak potrafi pobrać tylko jeden
+ * plik na kliknięcie.
+ */
+export function InvoiceBatchDocument({
+  documents,
+  authorName,
+}: {
+  documents: InvoicePdfData[];
+  authorName: string;
+}) {
+  return (
+    <Document title={`Dokumenty rozliczeniowe (${documents.length})`} author={authorName} language="pl">
+      {documents.map((data, index) => (
+        <InvoicePage key={index} data={data} />
+      ))}
     </Document>
   );
 }

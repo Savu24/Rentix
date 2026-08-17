@@ -1,23 +1,19 @@
 import { Receipt } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { InvoiceFilters } from "@/components/panel/invoices/invoice-filters";
+import { InvoiceList } from "@/components/panel/invoices/invoice-list";
 import { FinanceTabs } from "@/components/panel/finance-tabs";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { INVOICE_STATUS_META } from "@/lib/invoices/status";
 import { financeSummary, listInvoices } from "@/lib/invoices/service";
 import { formatPLN } from "@/lib/money";
 import { plural } from "@/lib/utils";
 import { invoiceListQuerySchema } from "@/lib/validations/invoice";
 
 export const metadata: Metadata = { title: "Finanse" };
-
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function FinancePage({
   searchParams,
@@ -83,49 +79,19 @@ export default async function FinancePage({
           }
         />
       ) : (
-        <div className="flex flex-col gap-2">
-          {invoices.map((invoice) => {
-            const meta = INVOICE_STATUS_META[invoice.displayStatus];
-
-            return (
-              <Card key={invoice.id} className="transition-colors hover:border-muted">
-                <Link href={`/panel/finanse/${invoice.id}`} className="block rounded-card">
-                  <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[15px] font-semibold text-fg">{invoice.number}</p>
-                        <Badge tone={meta.tone}>{meta.label}</Badge>
-                      </div>
-
-                      <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                        <span>{invoice.buyerName}</span>
-                        {invoice.lease?.property ? (
-                          <span>
-                            {invoice.lease.property.name}
-                            {invoice.lease.room ? ` · ${invoice.lease.room.name}` : ""}
-                          </span>
-                        ) : null}
-                        <span>termin {dateFormat.format(invoice.dueDate)}</span>
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="tabular font-mono text-sm font-medium text-fg">
-                        {formatPLN(invoice.totalGrossGrosze)}
-                      </p>
-                      {invoice.remainingGrosze > 0 &&
-                      invoice.remainingGrosze !== invoice.totalGrossGrosze ? (
-                        <p className="text-xs text-muted">
-                          zostało {formatPLN(invoice.remainingGrosze)}
-                        </p>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
-            );
-          })}
-        </div>
+        <InvoiceList
+          invoices={invoices.map((invoice) => ({
+            id: invoice.id,
+            number: invoice.number,
+            displayStatus: invoice.displayStatus,
+            buyerName: invoice.buyerName,
+            dueDate: invoice.dueDate,
+            totalGrossGrosze: invoice.totalGrossGrosze,
+            remainingGrosze: invoice.remainingGrosze,
+            propertyName: invoice.lease?.property.name ?? null,
+            roomName: invoice.lease?.room?.name ?? null,
+          }))}
+        />
       )}
     </div>
   );

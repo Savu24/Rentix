@@ -213,6 +213,7 @@ export async function listTenantsForPicker(organizationId: string) {
       postalCode: true,
       city: true,
       taxId: true,
+      documentKind: true,
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });

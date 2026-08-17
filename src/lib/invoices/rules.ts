@@ -57,6 +57,30 @@ export function invoiceKindForLines(lines: readonly { vatRate: VatRate }[]): Inv
 }
 
 /**
+ * Rodzaj dokumentu dla konkretnego najemcy.
+ *
+ * Ustawienie z kartoteki ma pierwszeństwo, ale tylko w jedną stronę:
+ *
+ * - `CHARGE` (naliczenie) i `VAT_INVOICE` biorą się wprost z decyzji
+ *   właściciela — najemca-firma bywa umówiony na fakturę nawet przy stawce
+ *   zwolnionej, a najemca, który dokumentu do księgowości nie potrzebuje,
+ *   dostaje samo naliczenie.
+ * - `BILL` znaczy „zdecyduj za mnie", więc wtedy rozstrzygają stawki: pozycja
+ *   z podatkiem wymusza fakturę, bo z rachunku nie da się odliczyć VAT-u.
+ *
+ * Odwrotnej drogi nie ma: ustawienie najemcy nigdy nie obniży faktury VAT
+ * do rachunku, gdy na dokumencie jest podatek należny.
+ */
+export function resolveDocumentKind(
+  tenantPreference: InvoiceKind,
+  lines: readonly { vatRate: VatRate }[],
+): InvoiceKind {
+  if (tenantPreference === "CHARGE") return "CHARGE";
+  if (tenantPreference === "BILL") return invoiceKindForLines(lines);
+  return tenantPreference;
+}
+
+/**
  * Stawka VAT dla czynszu.
  *
  * Najem lokalu mieszkalnego na cele mieszkaniowe jest zwolniony (art. 43 ust. 1

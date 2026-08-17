@@ -17,6 +17,9 @@ export const INVOICE_NUMBER_PREFIX: Record<InvoiceKind, string> = {
   BILL: "R",
   VAT_INVOICE: "FV",
   PROFORMA: "PF",
+  // Naliczenie ma własny prefiks i własną serię, bo nie jest dowodem
+  // księgowym — nie może zajmować numerów w rejestrze rachunków i faktur.
+  CHARGE: "N",
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");

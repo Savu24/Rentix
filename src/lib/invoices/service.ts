@@ -15,7 +15,13 @@ import type {
 } from "@/lib/validations/invoice";
 
 import { nextInvoiceNumber, withUniqueNumberRetry } from "./numbering";
-import { buyerSnapshot, invoiceKindForLines, rentVatRate, settlementStatus } from "./rules";
+import {
+  buyerSnapshot,
+  invoiceKindForLines,
+  rentVatRate,
+  resolveDocumentKind,
+  settlementStatus,
+} from "./rules";
 import { overdueWhere, remainingGrosze, resolveInvoiceStatus } from "./status";
 import { calculateInvoiceTotals, type InvoiceLineInput } from "./totals";
 
@@ -155,6 +161,40 @@ export async function getInvoice(organizationId: string, invoiceId: string) {
         },
       },
     },
+  });
+}
+
+/** Ile dokumentów wolno pobrać jednym kliknięciem. */
+export const MAX_BATCH_PDF = 100;
+
+/**
+ * Dokumenty do paczki PDF, w kolejności od najstarszego.
+ *
+ * Rosnąco po dacie wystawienia, odwrotnie niż na liście: paczka trafia do
+ * segregatora albo do księgowego, a tam dokumenty idą chronologicznie.
+ *
+ * Identyfikatory przychodzą z formularza, więc zapytanie zawęża się do
+ * organizacji z sesji — cudze id po prostu nie znajdzie dokumentu, zamiast
+ * dołożyć go do czyjejś paczki.
+ */
+export async function getInvoicesForBatch(organizationId: string, ids: readonly string[]) {
+  if (ids.length === 0) return [];
+
+  return prisma.invoice.findMany({
+    where: { organizationId, id: { in: ids.slice(0, MAX_BATCH_PDF) } },
+    include: {
+      lines: { orderBy: { position: "asc" } },
+      payments: { orderBy: { paidAt: "desc" } },
+      organization: true,
+      lease: {
+        include: {
+          property: true,
+          room: true,
+          tenants: { orderBy: { isPrimary: "desc" }, include: { tenant: true } },
+        },
+      },
+    },
+    orderBy: [{ issueDate: "asc" }, { number: "asc" }],
   });
 }
 
@@ -418,7 +458,9 @@ export async function generateInvoicesForMonth(
       continue;
     }
 
-    const kind = invoiceKindForLines(lines);
+    // Rodzaj dokumentu bierze się z kartoteki najemcy; „rachunek" oddaje
+    // decyzję stawkom VAT.
+    const kind = resolveDocumentKind(tenant.documentKind, lines);
 
     const existing = await prisma.invoice.findFirst({
       where: {

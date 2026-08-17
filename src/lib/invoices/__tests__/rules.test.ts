@@ -4,8 +4,10 @@ import {
   buyerSnapshot,
   invoiceKindForLines,
   rentVatRate,
+  resolveDocumentKind,
   settlementStatus,
 } from "@/lib/invoices/rules";
+import { INVOICE_KIND_LABEL, isAccountingDocument } from "@/lib/validations/invoice";
 import { formatInvoiceNumber, withUniqueNumberRetry } from "@/lib/invoices/numbering";
 
 describe("buyerSnapshot", () => {
@@ -129,5 +131,53 @@ describe("withUniqueNumberRetry", () => {
         throw Object.assign(new Error("unique"), { code: "P2002" });
       }, 2),
     ).rejects.toThrow("unique");
+  });
+});
+
+describe("resolveDocumentKind", () => {
+  const ZW = [{ vatRate: "ZW" as const }];
+  const TAXED = [{ vatRate: "ZW" as const }, { vatRate: "RATE_23" as const }];
+
+  it("rachunek oddaje decyzję stawkom VAT", () => {
+    expect(resolveDocumentKind("BILL", ZW)).toBe("BILL");
+    expect(resolveDocumentKind("BILL", TAXED)).toBe("VAT_INVOICE");
+  });
+
+  it("naliczenie zostaje naliczeniem, niezależnie od stawek", () => {
+    expect(resolveDocumentKind("CHARGE", ZW)).toBe("CHARGE");
+    expect(resolveDocumentKind("CHARGE", TAXED)).toBe("CHARGE");
+  });
+
+  it("wybrana faktura zostaje fakturą także przy stawce zwolnionej", () => {
+    // Najemca-firma bywa umówiony na fakturę, choć najem mieszkaniowy jest zw.
+    expect(resolveDocumentKind("VAT_INVOICE", ZW)).toBe("VAT_INVOICE");
+  });
+
+  it("ustawienie najemcy nie obniża faktury do rachunku, gdy jest podatek", () => {
+    // Jedyny kierunek, w którym stawki biją preferencję: z rachunku nie da się
+    // odliczyć VAT-u, więc pozycja z podatkiem musi trafić na fakturę.
+    expect(resolveDocumentKind("BILL", TAXED)).toBe("VAT_INVOICE");
+  });
+});
+
+describe("naliczenie a dowód księgowy", () => {
+  it("naliczenie nie jest dowodem księgowym, reszta jest", () => {
+    expect(isAccountingDocument("CHARGE")).toBe(false);
+    for (const kind of ["BILL", "VAT_INVOICE", "PROFORMA"] as const) {
+      expect(isAccountingDocument(kind)).toBe(true);
+    }
+  });
+
+  it("naliczenie ma własną serię numeracji", () => {
+    // Własny prefiks to nie kosmetyka: gdyby naliczenia biegły serią rachunków,
+    // zajmowałyby numery w rejestrze, w którym nie powinny się pojawić.
+    expect(formatInvoiceNumber("CHARGE", 1, 2026, 7)).toBe("N 1/08/2026");
+    expect(formatInvoiceNumber("BILL", 1, 2026, 7)).toBe("R 1/08/2026");
+  });
+
+  it("każdy rodzaj dokumentu ma etykietę", () => {
+    for (const kind of ["BILL", "VAT_INVOICE", "PROFORMA", "CHARGE"] as const) {
+      expect(INVOICE_KIND_LABEL[kind]).toBeTruthy();
+    }
   });
 });
