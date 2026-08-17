@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { DeleteAccount } from "@/components/panel/settings/delete-account";
 import { OrganizationForm } from "@/components/panel/settings/organization-form";
 import { PasswordForm } from "@/components/panel/settings/password-form";
 import { ProfileForm } from "@/components/panel/settings/profile-form";
 import { Alert } from "@/components/ui/alert";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { getOrganization, isSellerComplete } from "@/lib/organizations/service";
+import {
+  accountDeletionSummary,
+  getOrganization,
+  isSellerComplete,
+} from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "Ustawienia" };
@@ -14,12 +19,13 @@ export const metadata: Metadata = { title: "Ustawienia" };
 export default async function SettingsPage() {
   const session = await requireOwnerSession("/panel/ustawienia");
 
-  const [organization, user] = await Promise.all([
+  const [organization, user, deletion] = await Promise.all([
     getOrganization(session.user.organizationId),
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { email: true, name: true, phone: true, passwordHash: true },
     }),
+    accountDeletionSummary(session.user.organizationId),
   ]);
 
   if (!organization || !user) notFound();
@@ -56,6 +62,9 @@ export default async function SettingsPage() {
       {/* Konto bez hasła loguje się przez zewnętrznego dostawcę — formularz
           zmiany hasła nie miałby czego zmieniać. */}
       {user.passwordHash ? <PasswordForm /> : null}
+
+      {/* Usunięcie konta na końcu strony: nie sąsiaduje z żadnym „Zapisz". */}
+      {user.passwordHash && deletion ? <DeleteAccount summary={deletion} /> : null}
     </div>
   );
 }

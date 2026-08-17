@@ -71,3 +71,26 @@ export const passwordChangeSchema = z
 
 export type PasswordChangeInput = z.input<typeof passwordChangeSchema>;
 export type PasswordChangeOutput = z.output<typeof passwordChangeSchema>;
+
+/** Frazę trzeba przepisać ręcznie — kliknięcie „tak" idzie odruchowo. */
+export const ACCOUNT_DELETE_PHRASE = "USUWAM KONTO";
+
+/**
+ * Usunięcie konta.
+ *
+ * Dwie bariery, bo operacja jest nieodwracalna i zabiera ze sobą całą
+ * organizację: hasło (potwierdza, że to właściciel siedzi przy komputerze)
+ * i przepisana frazа (potwierdza, że rozumie, co klika).
+ */
+export const accountDeleteSchema = z.object({
+  currentPassword: z.string().min(1, "Podaj hasło, żeby potwierdzić"),
+  confirmation: z
+    .string()
+    .trim()
+    .refine((value) => value === ACCOUNT_DELETE_PHRASE, {
+      message: `Przepisz dokładnie: ${ACCOUNT_DELETE_PHRASE}`,
+    }),
+});
+
+export type AccountDeleteInput = z.input<typeof accountDeleteSchema>;
+export type AccountDeleteOutput = z.output<typeof accountDeleteSchema>;

@@ -59,5 +59,11 @@ export const api = {
   get: <T>(url: string) => request<T>(url, { method: "GET" }),
   post: <T>(url: string, json: unknown) => request<T>(url, { method: "POST", json }),
   patch: <T>(url: string, json: unknown) => request<T>(url, { method: "PATCH", json }),
-  delete: <T>(url: string) => request<T>(url, { method: "DELETE" }),
+  /**
+   * DELETE z opcjonalnym ciałem — potrzebne tam, gdzie usunięcie wymaga
+   * potwierdzenia (hasło przy kasowaniu konta). HTTP na to pozwala, a
+   * przenoszenie hasła do query stringa wpisywałoby je w logi serwera.
+   */
+  delete: <T>(url: string, json?: unknown) =>
+    request<T>(url, json === undefined ? { method: "DELETE" } : { method: "DELETE", json }),
 };

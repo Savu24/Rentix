@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { isSellerComplete } from "@/lib/organizations/seller";
 import {
+  ACCOUNT_DELETE_PHRASE,
+  accountDeleteSchema,
   organizationSettingsSchema,
   passwordChangeSchema,
   profileSettingsSchema,
@@ -93,6 +95,42 @@ describe("profileSettingsSchema", () => {
     } as never);
 
     expect(result).not.toHaveProperty("email");
+  });
+});
+
+describe("accountDeleteSchema", () => {
+  it("przyjmuje hasło i dokładnie przepisaną frazę", () => {
+    const result = accountDeleteSchema.safeParse({
+      currentPassword: "MojeHaslo1",
+      confirmation: ACCOUNT_DELETE_PHRASE,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("odrzuca frazę o innej wielkości liter", () => {
+    // Fraza ma być przepisana, a nie „mniej więcej trafiona" — to jedyna
+    // bariera między odruchowym kliknięciem a utratą wszystkich danych.
+    const result = accountDeleteSchema.safeParse({
+      currentPassword: "MojeHaslo1",
+      confirmation: "usuwam konto",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("wybacza spacje na brzegach", () => {
+    const result = accountDeleteSchema.safeParse({
+      currentPassword: "MojeHaslo1",
+      confirmation: `  ${ACCOUNT_DELETE_PHRASE} `,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("wymaga hasła, nie tylko frazy", () => {
+    const result = accountDeleteSchema.safeParse({
+      currentPassword: "",
+      confirmation: ACCOUNT_DELETE_PHRASE,
+    });
+    expect(result.success).toBe(false);
   });
 });
 

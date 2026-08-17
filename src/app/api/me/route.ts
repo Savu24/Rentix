@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 
-import { apiError, ok, validationError } from "@/lib/api/response";
+import { apiError, ok, rateLimited, validationError } from "@/lib/api/response";
 import { getApiSession } from "@/lib/auth/session";
-import { updateProfile } from "@/lib/organizations/service";
+import { deleteAccount, updateProfile } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
-import { profileSettingsSchema } from "@/lib/validations/settings";
+import { consume, LIMITS } from "@/lib/rate-limit";
+import { accountDeleteSchema, profileSettingsSchema } from "@/lib/validations/settings";
 
 export const runtime = "nodejs";
 
@@ -84,4 +85,58 @@ export async function PATCH(request: NextRequest) {
   if (!parsed.success) return validationError(parsed.error);
 
   return ok(await updateProfile(result.session.user.id, parsed.data));
+}
+
+/**
+ * DELETE /api/me — usunięcie konta wraz z organizacją.
+ *
+ * Nieodwracalne, więc wymaga hasła i przepisanej frazy potwierdzenia.
+ * Limit prób jak przy zmianie hasła: przejęty, niezablokowany komputer nie
+ * może pozwalać na zgadywanie hasła w nieskończoność.
+ *
+ * Sesji nie kasujemy tutaj — ciasteczko czyści `signOut()` po stronie
+ * klienta, bo to on nim zarządza.
+ */
+export async function DELETE(request: NextRequest) {
+  const result = await getApiSession();
+  if ("response" in result) return result.response;
+
+  const { session } = result;
+  const organizationId = session.user.organizationId;
+
+  if (!organizationId) {
+    return apiError("FORBIDDEN", "Konto nie ma przypisanej organizacji.");
+  }
+
+  const rateKey = `account-delete:${session.user.id}`;
+  const rate = consume(rateKey, LIMITS.passwordChange);
+  if (!rate.success) return rateLimited(rate.retryAfterSeconds);
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+  }
+
+  const parsed = accountDeleteSchema.safeParse(body);
+  if (!parsed.success) return validationError(parsed.error);
+
+  const deleted = await deleteAccount(session.user.id, organizationId, parsed.data);
+
+  if (deleted.ok) return ok({ deleted: true, deletedOrganization: deleted.deletedOrganization });
+
+  switch (deleted.reason) {
+    case "USER_NOT_FOUND":
+      return apiError("NOT_FOUND", "Nie znaleziono konta.");
+    case "NO_PASSWORD_SET":
+      return apiError(
+        "CONFLICT",
+        "To konto loguje się przez zewnętrznego dostawcę — usunięcie wymaga kontaktu z pomocą.",
+      );
+    case "WRONG_PASSWORD":
+      return apiError("VALIDATION_ERROR", "Popraw zaznaczone pola.", {
+        fields: { currentPassword: ["Nieprawidłowe hasło"] },
+      });
+  }
 }
