@@ -1,0 +1,316 @@
+import type { Prisma } from "@/generated/prisma/client";
+import { remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { prisma } from "@/lib/prisma";
+import type {
+  LeaseFormOutput,
+  LeaseListQuery,
+} from "@/lib/validations/lease";
+
+/**
+ * Dostęp do umów najmu. Zawężenie do organizacji jak w pozostałych serwisach.
+ */
+
+export type LeaseListItem = Awaited<ReturnType<typeof listLeases>>[number];
+
+export async function listLeases(organizationId: string, query: LeaseListQuery) {
+  const where: Prisma.LeaseWhereInput = {
+    organizationId,
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+    ...(query.expiringInDays
+      ? {
+          status: "ACTIVE",
+          endDate: {
+            not: null,
+            gte: new Date(),
+            lte: new Date(Date.now() + query.expiringInDays * 24 * 60 * 60 * 1000),
+          },
+        }
+      : {}),
+    ...(query.q
+      ? {
+          OR: [
+            { number: { contains: query.q, mode: "insensitive" } },
+            { property: { name: { contains: query.q, mode: "insensitive" } } },
+            { room: { name: { contains: query.q, mode: "insensitive" } } },
+            {
+              tenants: {
+                some: {
+                  tenant: {
+                    OR: [
+                      { firstName: { contains: query.q, mode: "insensitive" } },
+                      { lastName: { contains: query.q, mode: "insensitive" } },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+
+  const leases = await prisma.lease.findMany({
+    where,
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      rentGrosze: true,
+      utilitiesMode: true,
+      utilitiesAdvanceGrosze: true,
+      property: { select: { id: true, name: true, city: true } },
+      room: { select: { id: true, name: true } },
+      tenants: {
+        orderBy: { isPrimary: "desc" },
+        select: {
+          isPrimary: true,
+          tenant: { select: { id: true, firstName: true, lastName: true } },
+        },
+      },
+      invoices: {
+        where: { status: { in: ["ISSUED", "PARTIALLY_PAID"] } },
+        select: { status: true, dueDate: true, totalGrossGrosze: true, paidGrosze: true },
+      },
+    },
+    orderBy: [{ status: "asc" }, { startDate: "desc" }],
+  });
+
+  const now = new Date();
+
+  return leases.map(({ invoices, ...lease }) => ({
+    ...lease,
+    outstandingGrosze: invoices.reduce((total, invoice) => total + remainingGrosze(invoice), 0),
+    overdueCount: invoices.filter((invoice) => resolveInvoiceStatus(invoice, now) === "OVERDUE")
+      .length,
+  }));
+}
+
+export async function getLease(organizationId: string, leaseId: string) {
+  return prisma.lease.findFirst({
+    where: { id: leaseId, organizationId },
+    include: {
+      property: true,
+      room: true,
+      tenants: {
+        orderBy: { isPrimary: "desc" },
+        include: { tenant: true },
+      },
+      invoices: {
+        orderBy: { dueDate: "desc" },
+        include: { payments: { orderBy: { paidAt: "desc" } } },
+      },
+      documents: { orderBy: { createdAt: "desc" } },
+      organization: true,
+    },
+  });
+}
+
+export type CreateLeaseResult =
+  | { ok: true; lease: { id: string } }
+  | { ok: false; reason: "PROPERTY_NOT_FOUND" }
+  | { ok: false; reason: "ROOM_NOT_FOUND" }
+  | { ok: false; reason: "TENANT_NOT_FOUND" }
+  | { ok: false; reason: "PROPERTY_OCCUPIED"; conflictingLeaseId: string }
+  | { ok: false; reason: "ROOM_OCCUPIED"; conflictingLeaseId: string };
+
+/**
+ * Zakłada umowę i wiąże z nią najemców.
+ *
+ * Sprawdza, czy jednostka i wszyscy najemcy należą do tej organizacji —
+ * bez tego dałoby się podpiąć cudzą jednostkę, podając jej identyfikator.
+ * Pilnuje też, żeby jedna jednostka nie miała dwóch aktywnych umów naraz.
+ */
+export async function createLease(
+  organizationId: string,
+  data: LeaseFormOutput,
+): Promise<CreateLeaseResult> {
+  const { tenantIds, ...leaseData } = data;
+
+  const property = await prisma.property.findFirst({
+    where: { id: leaseData.propertyId, organizationId },
+    select: { id: true },
+  });
+  if (!property) return { ok: false, reason: "PROPERTY_NOT_FOUND" };
+
+  // Pokój musi należeć do tej samej nieruchomości — inaczej umowa wskazywałaby
+  // pokój z zupełnie innego mieszkania.
+  if (leaseData.roomId) {
+    const room = await prisma.room.findFirst({
+      where: { id: leaseData.roomId, organizationId, propertyId: leaseData.propertyId },
+      select: { id: true },
+    });
+    if (!room) return { ok: false, reason: "ROOM_NOT_FOUND" };
+  }
+
+  const tenantCount = await prisma.tenant.count({
+    where: { id: { in: tenantIds }, organizationId },
+  });
+  if (tenantCount !== tenantIds.length) return { ok: false, reason: "TENANT_NOT_FOUND" };
+
+  if (leaseData.status === "ACTIVE") {
+    if (leaseData.roomId) {
+      // Najem pokojowy: blokuje tylko ten pokój. Sąsiednie pokoje tego samego
+      // mieszkania mogą mieć własne, równoległe umowy — o to w tym chodzi.
+      const conflict = await prisma.lease.findFirst({
+        where: { organizationId, roomId: leaseData.roomId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (conflict) {
+        return { ok: false, reason: "ROOM_OCCUPIED", conflictingLeaseId: conflict.id };
+      }
+    } else {
+      // Najem całej nieruchomości koliduje z każdą aktywną umową na niej —
+      // także z umową na pojedynczy pokój.
+      const conflict = await prisma.lease.findFirst({
+        where: { organizationId, propertyId: leaseData.propertyId, status: "ACTIVE" },
+        select: { id: true },
+      });
+      if (conflict) {
+        return { ok: false, reason: "PROPERTY_OCCUPIED", conflictingLeaseId: conflict.id };
+      }
+    }
+  }
+
+  const lease = await prisma.$transaction(async (tx) => {
+    const created = await tx.lease.create({
+      data: {
+        organizationId,
+        ...leaseData,
+        tenants: {
+          create: tenantIds.map((tenantId, index) => ({
+            tenantId,
+            // Pierwszy z listy jest głównym najemcą — adresatem faktur.
+            isPrimary: index === 0,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+
+    if (leaseData.status === "ACTIVE") {
+      if (leaseData.roomId) {
+        await tx.room.update({ where: { id: leaseData.roomId }, data: { status: "OCCUPIED" } });
+
+        // Nieruchomość liczy się za wynajętą dopiero, gdy zajęte są wszystkie
+        // jej pokoje — przy najmie pokojowym pustostan to wolny pokój,
+        // a nie całe mieszkanie.
+        const free = await tx.room.count({
+          where: { propertyId: leaseData.propertyId, archivedAt: null, status: { not: "OCCUPIED" } },
+        });
+        await tx.property.update({
+          where: { id: leaseData.propertyId },
+          data: { status: free === 0 ? "OCCUPIED" : "AVAILABLE" },
+        });
+      } else {
+        await tx.property.update({
+          where: { id: leaseData.propertyId },
+          data: { status: "OCCUPIED" },
+        });
+      }
+
+      await tx.tenant.updateMany({
+        where: { id: { in: tenantIds } },
+        data: { status: "ACTIVE" },
+      });
+    }
+
+    return created;
+  });
+
+  return { ok: true, lease };
+}
+
+export async function updateLease(
+  organizationId: string,
+  leaseId: string,
+  data: Record<string, unknown>,
+) {
+  const { count } = await prisma.lease.updateMany({
+    where: { id: leaseId, organizationId },
+    data,
+  });
+
+  if (count === 0) return null;
+  return prisma.lease.findFirst({ where: { id: leaseId, organizationId } });
+}
+
+/**
+ * Wypowiedzenie umowy: zmienia status, zwalnia jednostkę i przestawia najemców
+ * na „były", o ile nie mają innej aktywnej umowy.
+ */
+export async function terminateLease(
+  organizationId: string,
+  leaseId: string,
+  data: { terminatedAt: Date; terminationNote?: string | null },
+) {
+  const lease = await prisma.lease.findFirst({
+    where: { id: leaseId, organizationId },
+    select: { id: true, propertyId: true, roomId: true, tenants: { select: { tenantId: true } } },
+  });
+  if (!lease) return null;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.lease.update({
+      where: { id: leaseId },
+      data: {
+        status: "TERMINATED",
+        terminatedAt: data.terminatedAt,
+        terminationNote: data.terminationNote ?? null,
+        endDate: data.terminatedAt,
+      },
+    });
+
+    // Zwalniamy pokój albo całe mieszkanie — zależnie od tego, co było
+    // przedmiotem najmu. Jednostka wraca do puli wolnych w obu przypadkach,
+    // bo choć jeden pokój stoi teraz pusty.
+    if (lease.roomId) {
+      await tx.room.update({ where: { id: lease.roomId }, data: { status: "AVAILABLE" } });
+    }
+    await tx.property.update({ where: { id: lease.propertyId }, data: { status: "AVAILABLE" } });
+
+    for (const { tenantId } of lease.tenants) {
+      const stillActive = await tx.leaseTenant.count({
+        where: { tenantId, lease: { status: "ACTIVE", id: { not: leaseId } } },
+      });
+      if (stillActive === 0) {
+        await tx.tenant.update({ where: { id: tenantId }, data: { status: "FORMER" } });
+      }
+    }
+
+    return updated;
+  });
+}
+
+/** Nieruchomości z pokojami — do kreatora umowy. */
+export async function listPropertiesForPicker(organizationId: string) {
+  const properties = await prisma.property.findMany({
+    where: { organizationId, archivedAt: null },
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      status: true,
+      askingRentGrosze: true,
+      rooms: {
+        where: { archivedAt: null },
+        select: { id: true, name: true, status: true, monthlyRentGrosze: true },
+        orderBy: [{ position: "asc" }, { name: "asc" }],
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return properties.map((property) => ({
+    id: property.id,
+    label: property.name,
+    city: property.city,
+    status: property.status,
+    askingRentGrosze: property.askingRentGrosze,
+    // Pokoje jadą razem z nieruchomościami jednym zapytaniem — kreator nie musi
+    // dociągać ich osobno przy każdej zmianie wyboru.
+    rooms: property.rooms,
+  }));
+}
