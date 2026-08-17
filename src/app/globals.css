@@ -1,26 +1,234 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ═══════════════════════════════════════════════════════════════════════════
+   Rentix — design tokens
+   Źródło prawdy: "Rentix Design System.dc.html" (Claude Design).
+   Zmiana koloru w tym pliku propaguje się na całą aplikację — nigdy nie
+   wpisujemy hexów w komponentach.
+
+   Motyw przełącza atrybut `data-theme` na <html> ("light" | "dark").
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="light"] {
+  /* Powierzchnie */
+  --bg: #fbf7ef;
+  --surface: #ffffff;
+  --surface-alt: #f2eada;
+  --border: #ded2b8;
+
+  /* Typografia */
+  --text: #16301d;
+  --text-secondary: #6b7266;
+
+  /* Marka — zieleń butelkowa */
+  --accent: #1b4d3e;
+  --accent-strong: #123a2e;
+  --accent-soft: #dcebd9;
+  --accent-contrast: #fbf7ef;
+
+  /* Drugorzędny — terakota (CTA, ważne powiadomienia) */
+  --accent2: #c4653b;
+  --accent2-strong: #a2502c;
+  --accent2-soft: #f3dfcf;
+
+  /* Wyróżnienie (logo, zakreślacz w nagłówkach) */
+  --highlight: #f0c878;
+  --highlight-text: #16301d;
+
+  /* Tła dekoracyjne kart */
+  --mint: #d5e9d2;
+  --sand: #f0ddbb;
+  --clay: #ead0c4;
+
+  /* Statusy — stonowane, nie neonowe */
+  --good: #3f7d52; /* opłacone */
+  --good-soft: #e1efdf;
+  --warn: #b9832b; /* zbliżający się termin */
+  --warn-soft: #f6ecd8;
+  --bad: #b14a34; /* zaległość */
+  --bad-soft: #f5e1d9;
+
+  /* Wykresy — sloty kategorialne 1 i 2 z docs/chart-palette.md.
+     Paleta wyszła z walidatora CVD, nie z oka: zieleń marki i terakota leżą
+     w tym samym łuku czerwień–zieleń, który protanopia zlepia, więc drugą
+     serią jest niebieski, a nie kolor marki. */
+  --chart-1: #018161; /* przychód */
+  --chart-2: #166eb9; /* koszty */
+  --chart-grid: #e6ded0;
+
+  --shadow-card: 0 1px 2px rgba(22, 48, 29, 0.06);
+  --shadow-float: 0 10px 28px rgba(22, 48, 29, 0.1);
+
+  color-scheme: light;
 }
+
+[data-theme="dark"] {
+  --bg: #10201a;
+  --surface: #17281f;
+  --surface-alt: #1e3129;
+  --border: #2b4038;
+
+  --text: #eeebe0;
+  --text-secondary: #97a597;
+
+  --accent: #6fbe97;
+  --accent-strong: #8ed2ac;
+  --accent-soft: #22392e;
+  --accent-contrast: #0e1a15;
+
+  --accent2: #e08a5f;
+  --accent2-strong: #f0a277;
+  --accent2-soft: #33261d;
+
+  --highlight: #4b3d22;
+  --highlight-text: #f0c878;
+
+  --mint: #1f3629;
+  --sand: #362c1b;
+  --clay: #372822;
+
+  --good: #5fae7c;
+  --good-soft: #1e3126;
+  --warn: #d8a857;
+  --warn-soft: #392e1a;
+  --bad: #d3735a;
+  --bad-soft: #3a2620;
+
+  /* Wykresy — kolumna Dark tej samej palety, przewalidowana na tle #17281F. */
+  --chart-1: #339e7c;
+  --chart-2: #3a84ca;
+  --chart-grid: #2b3f34;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 10px 32px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+/* ── Mapowanie na utilities Tailwinda ──────────────────────────────────────
+   `inline` sprawia, że utility kompiluje się do `var(--token)`, więc jedna
+   klasa (np. `bg-surface`) sama reaguje na zmianę motywu.
+
+   Nazwy 1:1 z design systemem, z dwoma wyjątkami dla czytelności kodu:
+     --text            → text-fg      (`text-text` czytałoby się źle)
+     --text-secondary  → text-muted
+   ──────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+
+  --color-fg: var(--text);
+  --color-muted: var(--text-secondary);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+
+  --color-accent2: var(--accent2);
+  --color-accent2-strong: var(--accent2-strong);
+  --color-accent2-soft: var(--accent2-soft);
+
+  --color-highlight: var(--highlight);
+  --color-highlight-text: var(--highlight-text);
+
+  --color-mint: var(--mint);
+  --color-sand: var(--sand);
+  --color-clay: var(--clay);
+
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+
+  /* Krój pisma — zmienne wstrzykuje next/font w layout.tsx */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-inter), sans-serif;
+  --font-mono: var(--font-roboto-mono), ui-monospace, monospace;
+
+  /* Promienie — zaokrąglone, ale spokojne */
+  --radius-card: 14px;
+  --radius-control: 8px;
+  --radius-btn: 6px;
+  --radius-mark: 4px;
+
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-float);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Warstwa bazowa ──────────────────────────────────────────────────────── */
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Fokus klawiaturowy — nigdy domyślny niebieski pierścień przeglądarki. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  /* Kwoty i daty w tabelach mają się nie „przesuwać" między wierszami. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /*
+   * Nagłówek wyrazisty — Bricolage Grotesque 800. Waga i tracking chodzą razem
+   * z krojem (tak definiuje je design system), więc jedna klasa zamiast trzech
+   * utilities powtarzanych na każdym nagłówku.
+   */
+  .r-display {
+    font-family: var(--font-bricolage), var(--font-inter), sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+
+  /* Zakreślacz w nagłówkach marketingowych: „Zarządzaj <mark>najmem</mark>". */
+  .r-mark {
+    background: var(--highlight);
+    color: var(--highlight-text);
+    padding: 0 0.35em;
+    border-radius: var(--radius-mark);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
