@@ -1,0 +1,104 @@
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { prisma } from "@/lib/prisma";
+import type {
+  OrganizationSettingsOutput,
+  PasswordChangeOutput,
+  ProfileSettingsOutput,
+} from "@/lib/validations/settings";
+
+export { isSellerComplete, type SellerData } from "./seller";
+
+/**
+ * Ustawienia konta — dane wystawcy dokumentów i profil użytkownika.
+ */
+
+export async function getOrganization(organizationId: string) {
+  return prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      taxId: true,
+      street: true,
+      postalCode: true,
+      city: true,
+      countryCode: true,
+    },
+  });
+}
+
+/**
+ * Zapisuje dane wystawcy.
+ *
+ * `slug` zostaje nietknięty mimo zmiany nazwy: siedzi w publicznych adresach
+ * ofert (`/o/<slug>`), więc przestawienie go przy każdej korekcie nazwy
+ * zerwałoby linki, które ktoś już gdzieś wkleił.
+ */
+export async function updateOrganization(
+  organizationId: string,
+  data: OrganizationSettingsOutput,
+) {
+  return prisma.organization.update({
+    where: { id: organizationId },
+    data: {
+      name: data.name,
+      taxId: data.taxId,
+      street: data.street,
+      postalCode: data.postalCode,
+      city: data.city,
+    },
+    select: {
+      id: true,
+      name: true,
+      taxId: true,
+      street: true,
+      postalCode: true,
+      city: true,
+    },
+  });
+}
+
+export async function updateProfile(userId: string, data: ProfileSettingsOutput) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { name: data.name, phone: data.phone },
+    select: { id: true, name: true, phone: true, email: true },
+  });
+}
+
+export type ChangePasswordResult =
+  | { ok: true }
+  | { ok: false; reason: "USER_NOT_FOUND" }
+  | { ok: false; reason: "NO_PASSWORD_SET" }
+  | { ok: false; reason: "WRONG_PASSWORD" };
+
+/**
+ * Zmiana hasła po potwierdzeniu obecnego.
+ *
+ * Konto założone przez dostawcę zewnętrznego nie ma hasła w bazie — wtedy nie
+ * ma czego potwierdzać ani zmieniać, więc odróżniamy ten przypadek od złego
+ * hasła zamiast zwracać mylące „nieprawidłowe hasło".
+ */
+export async function changePassword(
+  userId: string,
+  data: PasswordChangeOutput,
+): Promise<ChangePasswordResult> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, passwordHash: true },
+  });
+
+  if (!user) return { ok: false, reason: "USER_NOT_FOUND" };
+  if (!user.passwordHash) return { ok: false, reason: "NO_PASSWORD_SET" };
+
+  const matches = await verifyPassword(data.currentPassword, user.passwordHash);
+  if (!matches) return { ok: false, reason: "WRONG_PASSWORD" };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await hashPassword(data.newPassword) },
+  });
+
+  return { ok: true };
+}
