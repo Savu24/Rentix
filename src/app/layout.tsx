@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, Inter, Roboto_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { env } from "@/lib/env";
 import { isTheme, THEME_COOKIE, themeInitScript, type Theme } from "@/lib/theme";
 
 import "./globals.css";
@@ -35,7 +36,13 @@ export const metadata: Metadata = {
   description:
     "Umowy, płatności, zgłoszenia usterek i raporty finansowe w jednym prostym miejscu. Dla właścicieli mieszkań i zarządców nieruchomości w Polsce.",
   applicationName: "Rentix",
-  metadataBase: new URL(process.env.AUTH_URL ?? "http://localhost:3000"),
+  /*
+    Adres bazowy podglądów linków. Bierzemy go ze zwalidowanego `env`, a nie
+    wprost z `process.env`: panel hostingu pozwala dodać zmienną z pustą
+    wartością, a pusty string nie jest `undefined`, więc `??` go nie łapie
+    i `new URL("")` wywracał budowanie komunikatem „Invalid URL".
+  */
+  metadataBase: new URL(env.APP_URL ?? env.AUTH_URL ?? "http://localhost:3000"),
 };
 
 export const viewport: Viewport = {

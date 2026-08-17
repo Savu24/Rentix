@@ -44,8 +44,28 @@ const serverEnvSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
+/**
+ * Puste zmienne traktujemy jak nieustawione.
+ *
+ * Panele hostingu (Vercel, Render) pozwalają dodać zmienną bez wartości, a taka
+ * przychodzi jako pusty string — czyli coś, czego `??` nie łapie, bo to nie jest
+ * `undefined`. Pusty `AUTH_URL` wywracał w ten sposób budowanie na `new URL("")`
+ * z komunikatem „Invalid URL", w którym nie było nawet nazwy zmiennej.
+ *
+ * Odsiewamy je raz, tutaj, zamiast bronić się przed pustym stringiem w każdym
+ * miejscu użycia osobno.
+ */
+function withoutBlanks(source: NodeJS.ProcessEnv): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(source).filter(
+      (entry): entry is [string, string] =>
+        entry[1] !== undefined && entry[1].trim() !== "",
+    ),
+  );
+}
+
 function loadEnv(): ServerEnv {
-  const parsed = serverEnvSchema.safeParse(process.env);
+  const parsed = serverEnvSchema.safeParse(withoutBlanks(process.env));
 
   if (!parsed.success) {
     const issues = parsed.error.issues
