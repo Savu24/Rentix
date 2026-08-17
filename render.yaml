@@ -1,0 +1,57 @@
+# Wdrożenie na Render.com — Blueprint.
+# Vercel nie potrzebuje żadnego pliku: wykrywa Next.js sam, a `postinstall`
+# w package.json odpala `prisma generate` przed budowaniem.
+services:
+  - type: web
+    name: rentix
+    runtime: node
+    plan: starter
+    region: frankfurt
+    # `migrate deploy` uruchamia migracje przed startem — nigdy `migrate dev`
+    # na produkcji, bo tamten potrafi zresetować bazę przy rozjeździe historii.
+    buildCommand: npm ci && npx prisma migrate deploy && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false # wklejane ręcznie w panelu Render
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AUTH_URL
+        sync: false # publiczny adres serwisu, np. https://rentix.onrender.com
+      - key: AUTH_TRUST_HOST
+        value: "true" # Render stoi za proxy — NextAuth ma ufać X-Forwarded-*
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: "Rentix <no-reply@rentix.pl>"
+      - key: APP_URL
+        sync: false # ten sam adres co AUTH_URL — linki w e-mailach do najemców
+      - key: CRON_SECRET
+        generateValue: true
+
+  # Nocne rozliczenia: naliczenie czynszu w dniu wskazanym w umowie i wysyłka
+  # przypomnień. Codziennie, a nie raz w miesiącu — umowy mają różne dni
+  # naliczania, a przypomnienia muszą wychodzić na bieżąco. Oba kroki są
+  # idempotentne, więc powtórzony przebieg niczego nie zdubluje.
+  - type: cron
+    name: rentix-billing
+    runtime: image
+    image:
+      url: curlimages/curl:latest
+    region: frankfurt
+    schedule: "0 4 * * *" # 4:00 UTC, czyli 5:00/6:00 czasu polskiego
+    dockerCommand: >-
+      curl --fail --silent --show-error -X POST
+      -H "Authorization: Bearer $CRON_SECRET"
+      "$APP_URL/api/cron/billing"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: rentix
+          envVarKey: CRON_SECRET
+      - key: APP_URL
+        sync: false
