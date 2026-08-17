@@ -7,7 +7,9 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { formatPLN } from "@/lib/money";
+// Kwoty w tabeli idą bez sufiksu waluty — trzy razy „zł" w jednym wierszu
+// nie mieści się na telefonie, więc jednostka stoi raz, w nagłówku sekcji.
+import { formatAmount, formatPLN } from "@/lib/money";
 import { annualReport, reportYears } from "@/lib/reports/service";
 import { plural } from "@/lib/utils";
 import { EXPENSE_CATEGORY_LABEL } from "@/lib/validations/expense";
@@ -84,30 +86,46 @@ export default async function ReportsPage({
       <div className="grid gap-3 lg:grid-cols-2">
         <Card>
           <CardContent className="flex flex-col gap-3">
-            <h2 className="text-[15px] font-semibold text-fg">Wynik wg nieruchomości</h2>
+            <h2 className="text-[15px] font-semibold text-fg">
+              Wynik wg nieruchomości <span className="font-normal text-muted">(zł)</span>
+            </h2>
 
             {report.properties.length === 0 ? (
               <p className="text-sm text-muted">Brak danych za ten rok.</p>
             ) : (
               <div className="flex flex-col">
+                {/* Nagłówek kolumn: przy zawinięciu na telefonie same trzy
+                    kwoty pod nazwą byłyby nie do rozróżnienia. */}
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-1.5 text-[11px] uppercase tracking-wide text-muted">
+                  <span className="hidden flex-1 sm:block">Nieruchomość</span>
+                  <span className="ml-auto w-20 text-right sm:w-24">Przychód</span>
+                  <span className="w-20 text-right sm:w-24">Koszty</span>
+                  <span className="w-20 text-right sm:w-24">Wynik</span>
+                </div>
+
                 {report.properties.map((row) => (
+                  // Nazwa zajmuje całą szerokość na telefonie, a kwoty spadają
+                  // do drugiej linii: trzy kolumny po 96 px nie mieszczą się
+                  // obok siebie w karcie na wąskim ekranie i rozpychały stronę.
                   <div
                     key={row.propertyId ?? "general"}
-                    className="flex items-center gap-3 border-b border-border py-2.5 last:border-b-0"
+                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border py-2.5 last:border-b-0"
                   >
-                    <span className="min-w-0 flex-1 truncate text-sm text-fg">{row.name}</span>
-                    <span className="tabular w-24 text-right font-mono text-xs text-muted">
-                      {formatPLN(row.incomeGrosze)}
+                    <span className="min-w-0 basis-full truncate text-sm text-fg sm:flex-1 sm:basis-auto">
+                      {row.name}
                     </span>
-                    <span className="tabular w-24 text-right font-mono text-xs text-muted">
-                      −{formatPLN(row.expenseGrosze)}
+                    <span className="tabular ml-auto w-20 text-right font-mono text-xs text-muted sm:w-24">
+                      {formatAmount(row.incomeGrosze)}
+                    </span>
+                    <span className="tabular w-20 text-right font-mono text-xs text-muted sm:w-24">
+                      −{formatAmount(row.expenseGrosze)}
                     </span>
                     <span
-                      className={`tabular w-24 text-right font-mono text-sm ${
+                      className={`tabular w-20 text-right font-mono text-sm sm:w-24 ${
                         row.profitGrosze >= 0 ? "text-fg" : "text-bad"
                       }`}
                     >
-                      {formatPLN(row.profitGrosze)}
+                      {formatAmount(row.profitGrosze)}
                     </span>
                   </div>
                 ))}

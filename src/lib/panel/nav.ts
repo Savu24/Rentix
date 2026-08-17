@@ -35,11 +35,28 @@ export const PANEL_NAV: NavItem[] = [
   { href: "/panel/ustawienia", label: "Ustawienia", shortLabel: "Konto", icon: Settings },
 ];
 
-/** Pięć pozycji na dolny pasek — więcej nie mieści się czytelnie na telefonie. */
+/**
+ * Cztery skróty na dolnym pasku telefonu; piąte miejsce zajmuje „Więcej".
+ *
+ * Wcześniej pasek był sztywną listą pięciu adresów, więc każdy nowy moduł
+ * po prostu z niego wypadał i na telefonie stawał się nieosiągalny — tak
+ * zniknęły Umowy, Raporty i Właściciele. Teraz reszta zawsze jest pod
+ * „Więcej", bez ręcznego dopisywania.
+ */
+const MOBILE_PRIMARY_HREFS = [
+  "/panel",
+  "/panel/nieruchomosci",
+  "/panel/najemcy",
+  "/panel/finanse",
+] as const;
+
 export const MOBILE_NAV: NavItem[] = PANEL_NAV.filter((item) =>
-  ["/panel", "/panel/nieruchomosci", "/panel/najemcy", "/panel/finanse", "/panel/ustawienia"].includes(
-    item.href,
-  ),
+  (MOBILE_PRIMARY_HREFS as readonly string[]).includes(item.href),
+);
+
+/** Pozycje spod „Więcej" — wszystko, czego nie ma na pasku. */
+export const MOBILE_OVERFLOW_NAV: NavItem[] = PANEL_NAV.filter(
+  (item) => !(MOBILE_PRIMARY_HREFS as readonly string[]).includes(item.href),
 );
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isNavItemActive, MOBILE_NAV, PANEL_NAV } from "@/lib/panel/nav";
+import { isNavItemActive, MOBILE_NAV, MOBILE_OVERFLOW_NAV, PANEL_NAV } from "@/lib/panel/nav";
 
 const item = (href: string) => PANEL_NAV.find((entry) => entry.href === href)!;
 
@@ -29,14 +29,24 @@ describe("isNavItemActive", () => {
 });
 
 describe("konfiguracja nawigacji", () => {
-  it("dolny pasek mobilny ma pięć pozycji", () => {
+  it("dolny pasek mobilny ma cztery skróty — piąte miejsce zajmuje „Więcej”", () => {
     // Więcej nie mieści się czytelnie na szerokości telefonu.
-    expect(MOBILE_NAV).toHaveLength(5);
+    expect(MOBILE_NAV).toHaveLength(4);
   });
 
   it("każda pozycja mobilna istnieje w nawigacji głównej", () => {
     const hrefs = new Set(PANEL_NAV.map((entry) => entry.href));
     for (const entry of MOBILE_NAV) expect(hrefs.has(entry.href)).toBe(true);
+  });
+
+  it("na telefonie da się dojść do każdego modułu", () => {
+    // To jest ta reguła, która wcześniej pękła po cichu: pasek był sztywną
+    // listą adresów, więc Umowy, Raporty i Właściciele stały się na telefonie
+    // nieosiągalne. Podział musi pokrywać całą nawigację, bez części wspólnej.
+    const reachable = [...MOBILE_NAV, ...MOBILE_OVERFLOW_NAV].map((entry) => entry.href);
+
+    expect(new Set(reachable).size).toBe(reachable.length);
+    expect(new Set(reachable)).toEqual(new Set(PANEL_NAV.map((entry) => entry.href)));
   });
 
   it("ścieżki są unikalne", () => {

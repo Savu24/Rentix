@@ -127,8 +127,19 @@ function StatTile({
     <Card>
       <CardContent className="flex flex-col gap-1 p-4">
         <p className="text-xs text-muted">{label}</p>
-        {/* tabular-nums, żeby kwoty w sąsiednich kafelkach nie skakały. */}
-        <p className="font-mono text-[22px] font-medium tabular text-fg">{value}</p>
+        {/*
+          tabular-nums, żeby kwoty w sąsiednich kafelkach nie skakały.
+
+          Rozmiar skaluje się z szerokością ekranu, bo kafelki stoją po dwa
+          w rzędzie już od najwęższego telefonu. Stałe 22px sprawiało, że
+          „5 900,00 zł" w monospace nie mieściło się w kafelku i rozpychało
+          siatkę, a przez nią całą stronę w poziomie — pasek przewijania
+          pojawiał się na pulpicie. Kwoty nie wolno zawijać ani przycinać,
+          więc zmienia się typografia, a nie treść.
+        */}
+        <p className="font-mono text-[clamp(15px,4.6vw,22px)] font-medium tabular text-fg">
+          {value}
+        </p>
         {hint ? <p className={`text-xs ${hintColor}`}>{hint}</p> : null}
       </CardContent>
     </Card>

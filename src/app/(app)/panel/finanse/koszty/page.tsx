@@ -108,7 +108,12 @@ export default async function ExpensesPage({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium text-fg">{expense.description}</p>
-                    <Badge>{EXPENSE_CATEGORY_LABEL[expense.category]}</Badge>
+                    {/* `whitespace-normal` znosi domyślne `nowrap` znacznika:
+                        „Podatek od nieruchomości" jest szersze niż kolumna
+                        opisu na telefonie i wychodziło poza wiersz. */}
+                    <Badge className="whitespace-normal text-left">
+                      {EXPENSE_CATEGORY_LABEL[expense.category]}
+                    </Badge>
                   </div>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                     <span>{dateFormat.format(expense.paidAt)}</span>
