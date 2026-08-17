@@ -80,7 +80,21 @@ function redisClient(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  globalForRedis.rateLimitRedis = url && token ? new Redis({ url, token }) : null;
+  if (!url || !token) {
+    globalForRedis.rateLimitRedis = null;
+    return null;
+  }
+
+  try {
+    globalForRedis.rateLimitRedis = new Redis({ url, token });
+  } catch (error) {
+    // Konstruktor rzuca przy błędnym adresie — na przykład gdy zamiast adresu
+    // REST wklejono connection string `redis://`. Wynik zapamiętujemy jako
+    // `null`, więc kolejne żądania nie próbują od nowa przy każdym wywołaniu.
+    console.error("[rate-limit] Błędna konfiguracja Upstash, liczę w pamięci:", error);
+    globalForRedis.rateLimitRedis = null;
+  }
+
   return globalForRedis.rateLimitRedis;
 }
 
@@ -123,30 +137,32 @@ async function consumeInRedis(
 // ── Interfejs publiczny ────────────────────────────────────────────────────
 
 export async function consume(key: string, options: RateLimitOptions): Promise<RateLimitResult> {
-  const redis = redisClient();
-  if (!redis) return consumeInMemory(key, options);
-
+  // Cała ścieżka w try, łącznie z utworzeniem klienta. Limiter jest
+  // zabezpieczeniem, a nie warunkiem działania aplikacji: żaden jego błąd nie
+  // może wywrócić logowania ani rejestracji. Wcześniej konstruktor klienta stał
+  // poza tym blokiem i błędny adres Upstasha kończył się błędem 500 na każdym
+  // endpoincie, który sięgał po limiter.
   try {
+    const redis = redisClient();
+    if (!redis) return consumeInMemory(key, options);
+
     return await consumeInRedis(redis, key, options);
   } catch (error) {
-    // Awaria Redisa nie może zablokować logowania wszystkim naraz. Puszczamy
-    // żądanie dalej i zostawiamy ślad w logach — limiter jest zabezpieczeniem,
-    // a nie warunkiem działania aplikacji.
-    console.error("[rate-limit] Redis niedostępny, przepuszczam żądanie:", error);
+    console.error("[rate-limit] Limiter niedostępny, przepuszczam żądanie:", error);
     return { success: true, remaining: options.limit - 1, retryAfterSeconds: options.windowSeconds };
   }
 }
 
 /** Czyści licznik po udanej akcji (np. poprawnym zalogowaniu). */
 export async function reset(key: string): Promise<void> {
-  const redis = redisClient();
-
-  if (!redis) {
-    buckets.delete(key);
-    return;
-  }
-
   try {
+    const redis = redisClient();
+
+    if (!redis) {
+      buckets.delete(key);
+      return;
+    }
+
     await redis.del(`rl:${key}`);
   } catch (error) {
     console.error("[rate-limit] Nie udało się wyzerować licznika:", error);

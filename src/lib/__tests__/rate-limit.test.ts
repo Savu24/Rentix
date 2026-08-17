@@ -93,3 +93,35 @@ describe("clientIp", () => {
     expect(clientIp(new Headers())).toBe("unknown");
   });
 });
+
+describe("odporność na błędną konfigurację Upstasha", () => {
+  const ENV_KEYS = ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"] as const;
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) delete process.env[key];
+    resetAll();
+  });
+
+  it("nie wywraca żądania, gdy adres Upstasha jest błędny", async () => {
+    // Regresja z wdrożenia: konstruktor klienta stał poza blokiem try, więc
+    // wklejenie connection stringa `redis://` zamiast adresu REST kończyło się
+    // błędem 500 na logowaniu i rejestracji — czyli limiter blokował całą
+    // aplikację zamiast tylko siebie.
+    resetAll();
+    process.env.UPSTASH_REDIS_REST_URL = "redis://to-nie-jest-adres-rest";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+
+    const result = await consume("a", POLICY);
+
+    expect(result.success).toBe(true);
+    expect(result.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it("reset też nie rzuca przy błędnej konfiguracji", async () => {
+    resetAll();
+    process.env.UPSTASH_REDIS_REST_URL = "redis://to-nie-jest-adres-rest";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+
+    await expect(reset("a")).resolves.toBeUndefined();
+  });
+});
