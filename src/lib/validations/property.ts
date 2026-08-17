@@ -50,6 +50,8 @@ export const propertyFormSchema = z.object({
 
   street: requiredText("Ulica", 120),
   buildingNumber: requiredText("Numer budynku", 20),
+  /** Puste przy domu i budynku w całości — tam numeru lokalu nie ma. */
+  apartmentNumber: optionalText(20),
   postalCode: postalCodeSchema,
   city: requiredText("Miejscowość", 80),
   district: optionalText(80),

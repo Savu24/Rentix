@@ -40,6 +40,7 @@ export async function getTenantPortal(userId: string) {
                   name: true,
                   street: true,
                   buildingNumber: true,
+                  apartmentNumber: true,
                   postalCode: true,
                   city: true,
                 },

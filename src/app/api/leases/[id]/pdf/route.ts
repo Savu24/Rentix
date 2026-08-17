@@ -68,6 +68,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       name: lease.property.name,
       street: lease.property.street,
       buildingNumber: lease.property.buildingNumber,
+      apartmentNumber: lease.property.apartmentNumber,
       postalCode: lease.property.postalCode,
       city: lease.property.city,
       // Decimal → tekst z polskim przecinkiem, jak w interfejsie.

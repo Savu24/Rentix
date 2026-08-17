@@ -14,6 +14,7 @@ import { requireSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/auth/routes";
 import { INVOICE_STATUS_META } from "@/lib/invoices/status";
 import { formatPLN } from "@/lib/money";
+import { formatPropertyAddress } from "@/lib/properties/address";
 import { getTenantPortal } from "@/lib/tenants/portal";
 import { LEASE_STATUS_LABEL, UTILITIES_MODE_LABEL } from "@/lib/validations/lease";
 
@@ -106,8 +107,7 @@ export default async function TenantPortalPage() {
                       </div>
 
                       <p className="text-xs text-muted">
-                        {lease.property.street} {lease.property.buildingNumber},{" "}
-                        {lease.property.postalCode} {lease.property.city}
+                        {formatPropertyAddress(lease.property)}
                       </p>
 
                       <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">

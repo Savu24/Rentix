@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { formatPropertyAddress } from "@/lib/properties/address";
 import type { PropertyListItem } from "@/lib/properties/service";
 import { formatPLN } from "@/lib/money";
 import { plural } from "@/lib/utils";
@@ -34,13 +35,7 @@ function occupancyBadge(property: PropertyListItem) {
 
 export function PropertyCard({ property }: { property: PropertyListItem }) {
   const badge = occupancyBadge(property);
-  const address = [
-    `${property.street} ${property.buildingNumber}`,
-    property.postalCode,
-    property.city,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const address = formatPropertyAddress(property);
 
   return (
     <Card className="transition-colors hover:border-muted">

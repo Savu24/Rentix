@@ -11,6 +11,7 @@ import {
 
 import type { UtilitiesMode } from "@/generated/prisma/enums";
 import { formatPLN } from "@/lib/money";
+import { formatPropertyAddress, formatUnitLabel } from "@/lib/properties/address";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { UTILITIES_MODE_LABEL } from "@/lib/validations/lease";
 
@@ -156,6 +157,7 @@ export type LeasePdfData = {
     name: string;
     street: string;
     buildingNumber: string;
+    apartmentNumber: string | null;
     postalCode: string;
     city: string;
     areaM2: string | null;
@@ -211,20 +213,25 @@ function utilitiesClause(data: LeasePdfData): string {
 
 export function LeaseAgreementDocument({ data }: { data: LeasePdfData }) {
   const landlordAddress = addressLines(data.landlord);
-  const propertyAddress = `${data.property.street} ${data.property.buildingNumber}, ${data.property.postalCode} ${data.property.city}`;
+  const propertyAddress = formatPropertyAddress(data.property);
+
+  // Bez numeru mieszkania przedmiotem najmu jest cały budynek — i tak trzeba to
+  // nazwać. „Lokal nr 14" przy domu jednorodzinnym pod numerem 14 czytałoby się
+  // jak mieszkanie o tym numerze, którego w tym budynku nie ma.
+  const unitLabel = formatUnitLabel(data.property);
 
   // Przy najmie pokoju przedmiotem umowy jest sam pokój, a mieszkanie jest
   // tylko jego adresem — opis musi to oddawać, inaczej dokument sugerowałby
   // wynajęcie całego lokalu.
   const subjectDescription = data.room
     ? [
-        `pokój „${data.room.name}” w lokalu ${data.property.buildingNumber}`,
+        `pokój „${data.room.name}” w lokalu ${data.property.apartmentNumber ?? data.property.buildingNumber}`,
         data.property.floor !== null ? `położonym na ${data.property.floor} piętrze` : null,
       ]
         .filter(Boolean)
         .join(", ")
     : [
-        `lokal nr ${data.property.buildingNumber}`,
+        unitLabel,
         data.property.areaM2 ? `o powierzchni ${data.property.areaM2} m²` : null,
         data.property.roomCount > 0
           ? `składający się z ${data.property.roomCount} pokoi`

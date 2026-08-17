@@ -219,6 +219,9 @@ model Property {
 
   street         String
   buildingNumber String
+  /// Numer lokalu w budynku. NULL dla domu i budynku w całości — tam numer
+  /// mieszkania po prostu nie istnieje, a pusty string udawałby, że go pominięto.
+  apartmentNumber String?
   postalCode     String
   city           String
   countryCode    String  @default("PL")

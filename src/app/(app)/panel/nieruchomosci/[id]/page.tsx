@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { formatPLN } from "@/lib/money";
+import { formatPropertyAddress } from "@/lib/properties/address";
 import { getProperty } from "@/lib/properties/service";
 import {
   PROPERTY_TYPE_LABEL,
@@ -54,7 +55,7 @@ export default async function PropertyDetailPage({ params }: Params) {
   const wholeLease = property.leases[0];
   const wholeTenant = wholeLease?.tenants[0]?.tenant;
 
-  const address = `${property.street} ${property.buildingNumber}, ${property.postalCode} ${property.city}`;
+  const address = formatPropertyAddress(property);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">

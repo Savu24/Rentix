@@ -47,6 +47,7 @@ export default async function EditPropertyPage({
               : "",
           street: property.street,
           buildingNumber: property.buildingNumber,
+          apartmentNumber: property.apartmentNumber ?? "",
           postalCode: property.postalCode,
           city: property.city,
           district: property.district ?? "",

@@ -46,6 +46,7 @@ export async function listProperties(organizationId: string, query: PropertyList
       status: true,
       street: true,
       buildingNumber: true,
+      apartmentNumber: true,
       postalCode: true,
       city: true,
       district: true,

@@ -35,6 +35,7 @@ const EMPTY: PropertyCreateInput = {
   roomCount: "",
   street: "",
   buildingNumber: "",
+  apartmentNumber: "",
   postalCode: "",
   city: "",
   district: "",
@@ -171,7 +172,7 @@ export function PropertyForm({ propertyId, defaultValues }: Props) {
               id="street"
               label="Ulica"
               error={errors.street?.message}
-              className="sm:col-span-4"
+              className="sm:col-span-3"
             >
               <Input
                 {...fieldAria("street", { error: errors.street?.message })}
@@ -184,15 +185,30 @@ export function PropertyForm({ propertyId, defaultValues }: Props) {
 
             <FormField
               id="buildingNumber"
-              label="Numer"
+              label="Nr budynku"
               error={errors.buildingNumber?.message}
-              className="sm:col-span-2"
+              className="sm:col-span-1"
             >
               <Input
                 {...fieldAria("buildingNumber", { error: errors.buildingNumber?.message })}
-                placeholder="4/2"
+                placeholder="4"
                 disabled={isSubmitting}
                 {...register("buildingNumber")}
+              />
+            </FormField>
+
+            <FormField
+              id="apartmentNumber"
+              label="Nr mieszkania"
+              error={errors.apartmentNumber?.message}
+              hint="Zostaw puste przy domu."
+              className="sm:col-span-2"
+            >
+              <Input
+                {...fieldAria("apartmentNumber", { error: errors.apartmentNumber?.message })}
+                placeholder="2"
+                disabled={isSubmitting}
+                {...register("apartmentNumber")}
               />
             </FormField>
 

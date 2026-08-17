@@ -14,6 +14,7 @@ import { getLease } from "@/lib/leases/service";
 import { INVOICE_STATUS_META, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
+import { formatPropertyAddress } from "@/lib/properties/address";
 import {
   LEASE_STATUS_LABEL,
   LEASE_STATUS_TONE,
@@ -102,8 +103,7 @@ export default async function LeaseDetailPage({ params }: Params) {
               </Badge>
             ) : null}
             <p className="text-xs text-muted">
-              {lease.property.street} {lease.property.buildingNumber},{" "}
-              {lease.property.postalCode} {lease.property.city}
+              {formatPropertyAddress(lease.property)}
             </p>
             {lease.property.areaM2 ? (
               <p className="text-xs text-muted">

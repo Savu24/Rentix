@@ -79,26 +79,26 @@ async function main() {
   const propertySpecs = [
     {
       name: "Kwiatowa 4/2",
-      street: "Kwiatowa", buildingNumber: "4/2", postalCode: "30-001", city: "Kraków", district: "Podgórze",
+      street: "Kwiatowa", buildingNumber: "4", apartmentNumber: "2", postalCode: "30-001", city: "Kraków", district: "Podgórze",
       type: "APARTMENT" as const, areaM2: "48.50", floor: 1, askingRentGrosze: 240000,
       rooms: [{ name: "Pokój 1", rent: 130000 }, { name: "Pokój 2", rent: 110000 }],
     },
     {
       name: "Leśna 12",
-      street: "Leśna", buildingNumber: "12", postalCode: "30-002", city: "Kraków", district: "Krowodrza",
+      street: "Leśna", buildingNumber: "12", apartmentNumber: "5", postalCode: "30-002", city: "Kraków", district: "Krowodrza",
       type: "APARTMENT" as const, areaM2: "62.00", floor: 2, askingRentGrosze: 310000,
       rooms: [{ name: "Pokój 1", rent: 120000 }, { name: "Pokój 2", rent: 110000 }, { name: "Pokój 3", rent: 105000 }],
     },
     {
       name: "Polna 8/1",
-      street: "Polna", buildingNumber: "8/1", postalCode: "32-020", city: "Wieliczka", district: null,
+      street: "Polna", buildingNumber: "8", apartmentNumber: "1", postalCode: "32-020", city: "Wieliczka", district: null,
       type: "APARTMENT" as const, areaM2: "38.20", floor: 0, askingRentGrosze: 185000,
       rooms: [{ name: "Pokój 1", rent: 185000 }],
     },
     {
       // Najem pokojowy — trzy osobne stawki, dwa pokoje zajęte.
       name: "Ogrodowa 3",
-      street: "Ogrodowa", buildingNumber: "3", postalCode: "30-003", city: "Kraków", district: "Bronowice",
+      street: "Ogrodowa", buildingNumber: "3", apartmentNumber: null, postalCode: "30-003", city: "Kraków", district: "Bronowice",
       type: "HOUSE" as const, areaM2: "110.00", floor: 0, askingRentGrosze: 270000,
       rooms: [
         { name: "Pokój 1", rent: 90000 },
@@ -119,6 +119,7 @@ async function main() {
         type: spec.type,
         street: spec.street,
         buildingNumber: spec.buildingNumber,
+        apartmentNumber: spec.apartmentNumber,
         postalCode: spec.postalCode,
         city: spec.city,
         district: spec.district,

@@ -6,6 +6,7 @@ import { apiError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
 import { InvoiceDocument, type InvoicePdfData } from "@/lib/invoices/pdf";
 import { getInvoice } from "@/lib/invoices/service";
+import { formatPropertyAddress } from "@/lib/properties/address";
 import { slugify } from "@/lib/utils";
 
 // Osadzanie fontu czyta plik TTF z dysku — to wymaga runtime'u Node.
@@ -42,7 +43,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     ? [
         property.name,
         invoice.lease?.room ? `pokój ${invoice.lease.room.name}` : null,
-        `${property.street} ${property.buildingNumber}, ${property.postalCode} ${property.city}`,
+        formatPropertyAddress(property),
       ]
         .filter(Boolean)
         .join(", ")
