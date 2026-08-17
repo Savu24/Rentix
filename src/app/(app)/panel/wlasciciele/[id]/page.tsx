@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ArchiveAction } from "@/components/panel/archive/archive-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,12 +59,22 @@ export default async function OwnerDetailPage({ params }: Params) {
             {address ? <p className="text-sm text-muted">{address}</p> : null}
           </div>
 
-          <Button asChild size="sm" variant="secondary">
-            <Link href={`/panel/wlasciciele/${owner.id}/edytuj`}>
-              <Pencil className="h-4 w-4" aria-hidden />
-              Edytuj
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/panel/wlasciciele/${owner.id}/edytuj`}>
+                <Pencil className="h-4 w-4" aria-hidden />
+                Edytuj
+              </Link>
+            </Button>
+
+            <ArchiveAction
+              endpoint="/api/owners"
+              id={owner.id}
+              archived={owner.archivedAt !== null}
+              label="właściciela"
+              hint="Zniknie z listy, ale jego nieruchomości i ich historia zostaną nietknięte."
+            />
+          </div>
         </div>
       </div>
 

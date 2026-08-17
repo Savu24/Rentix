@@ -480,6 +480,9 @@ model Lease {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  /// Umowa schowana z listy roboczej — wypowiedziana albo wygasła, a jej
+  /// faktury i historia rozliczeń zostają nietknięte.
+  archivedAt DateTime?
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   property     Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
@@ -492,6 +495,7 @@ model Lease {
   @@index([propertyId])
   @@index([roomId])
   @@index([organizationId, status])
+  @@index([organizationId, archivedAt])
   // Dashboard pyta „które umowy kończą się w najbliższych 60 dniach".
   @@index([organizationId, endDate])
   @@map("leases")

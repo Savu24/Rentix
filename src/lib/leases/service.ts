@@ -15,6 +15,7 @@ export type LeaseListItem = Awaited<ReturnType<typeof listLeases>>[number];
 export async function listLeases(organizationId: string, query: LeaseListQuery) {
   const where: Prisma.LeaseWhereInput = {
     organizationId,
+    ...(query.includeArchived ? {} : { archivedAt: null }),
     ...(query.status ? { status: query.status } : {}),
     ...(query.propertyId ? { propertyId: query.propertyId } : {}),
     ...(query.expiringInDays
@@ -59,6 +60,7 @@ export async function listLeases(organizationId: string, query: LeaseListQuery) 
       startDate: true,
       endDate: true,
       rentGrosze: true,
+      archivedAt: true,
       utilitiesMode: true,
       utilitiesAdvanceGrosze: true,
       property: { select: { id: true, name: true, city: true } },
@@ -282,6 +284,71 @@ export async function terminateLease(
 
     return updated;
   });
+}
+
+/**
+ * Archiwizacja umowy.
+ *
+ * Wyłącznie chowa ją z listy roboczej — faktury, wpłaty i historia rozliczeń
+ * zostają nietknięte, bo to dokumenty księgowe, a nie robocza notatka.
+ * Aktywnej umowy nie archiwizujemy: najpierw trzeba ją zakończyć, inaczej
+ * jednostka zostałaby zajęta przez umowę, której nikt już nie widzi.
+ */
+export type ArchiveLeaseResult =
+  | { ok: true }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "STILL_ACTIVE" };
+
+export async function archiveLease(
+  organizationId: string,
+  leaseId: string,
+): Promise<ArchiveLeaseResult> {
+  const lease = await prisma.lease.findFirst({
+    where: { id: leaseId, organizationId, archivedAt: null },
+    select: { id: true, status: true },
+  });
+  if (!lease) return { ok: false, reason: "NOT_FOUND" };
+  if (lease.status === "ACTIVE") return { ok: false, reason: "STILL_ACTIVE" };
+
+  await prisma.lease.update({ where: { id: leaseId }, data: { archivedAt: new Date() } });
+  return { ok: true };
+}
+
+export async function restoreLease(organizationId: string, leaseId: string) {
+  const { count } = await prisma.lease.updateMany({
+    where: { id: leaseId, organizationId, archivedAt: { not: null } },
+    data: { archivedAt: null },
+  });
+  return count > 0;
+}
+
+export type DeleteLeaseResult =
+  | { ok: true }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "HAS_INVOICES"; invoiceCount: number };
+
+/**
+ * Trwałe usunięcie — tylko dla umowy, na którą nigdy nic nie wystawiono.
+ *
+ * Umowa z fakturami jest częścią historii rozliczeń: skasowanie zerwałoby
+ * powiązanie dokumentu z przedmiotem najmu, a sam dokument i tak by został.
+ */
+export async function deleteLease(
+  organizationId: string,
+  leaseId: string,
+): Promise<DeleteLeaseResult> {
+  const lease = await prisma.lease.findFirst({
+    where: { id: leaseId, organizationId },
+    select: { id: true, _count: { select: { invoices: true } } },
+  });
+  if (!lease) return { ok: false, reason: "NOT_FOUND" };
+
+  if (lease._count.invoices > 0) {
+    return { ok: false, reason: "HAS_INVOICES", invoiceCount: lease._count.invoices };
+  }
+
+  await prisma.lease.delete({ where: { id: leaseId } });
+  return { ok: true };
 }
 
 /** Nieruchomości z pokojami — do kreatora umowy. */

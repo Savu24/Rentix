@@ -163,6 +163,10 @@ export const leaseListQuerySchema = z.object({
   propertyId: z.string().max(64).optional(),
   /** Umowy kończące się w ciągu N dni — do przypomnień o przedłużeniu. */
   expiringInDays: z.coerce.number().int().min(1).max(365).optional(),
+  includeArchived: z
+    .union([z.boolean(), z.string()])
+    .transform((value) => value === true || value === "true")
+    .default(false),
 });
 
 export type LeaseListQuery = z.output<typeof leaseListQuerySchema>;

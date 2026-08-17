@@ -1,0 +1,19 @@
+import type { NextRequest } from "next/server";
+
+import { apiError, ok } from "@/lib/api/response";
+import { requireApiOwner } from "@/lib/auth/session";
+import { restoreLease } from "@/lib/leases/service";
+
+export const runtime = "nodejs";
+
+/** POST /api/leases/:id/restore — wyjęcie umowy z archiwum. */
+export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireApiOwner();
+  if ("response" in auth) return auth.response;
+
+  const { id } = await params;
+  const restored = await restoreLease(auth.organizationId, id);
+
+  if (!restored) return apiError("NOT_FOUND", "Nie znaleziono zarchiwizowanej umowy.");
+  return ok({ id, archivedAt: null });
+}

@@ -1,4 +1,6 @@
 import { ArrowLeft, DoorOpen, FileText, Mail, MessageSquare, Pencil, Phone } from "lucide-react";
+
+import { ArchiveAction } from "@/components/panel/archive/archive-action";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -85,13 +87,21 @@ export default async function TenantDetailPage({ params }: Params) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button asChild size="sm" variant="secondary">
               <Link href={`/panel/najemcy/${tenant.id}/edytuj`}>
                 <Pencil className="h-4 w-4" aria-hidden />
                 Edytuj
               </Link>
             </Button>
+
+            <ArchiveAction
+              endpoint="/api/tenants"
+              id={tenant.id}
+              archived={tenant.archivedAt !== null}
+              label="najemcę"
+              hint="Zniknie z listy najemców. Jego umowy i wystawione dokumenty zostaną nietknięte — widnieje na nich jako nabywca."
+            />
 
             {/* Przypisanie idzie przez kreator umowy z wypełnionym najemcą —
                 nie dublujemy mechanizmu, bo o tym, kto gdzie mieszka,

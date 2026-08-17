@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ArchiveAction } from "@/components/panel/archive/archive-action";
 import { TerminateLease } from "@/components/panel/leases/terminate-lease";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -238,6 +239,18 @@ export default async function LeaseDetailPage({ params }: Params) {
         </Card>
       ) : canTerminate ? (
         <TerminateLease leaseId={lease.id} />
+      ) : null}
+
+      {/* Archiwizacja dopiero po zakończeniu umowy — aktywna zajmuje jednostkę,
+          więc schowana z listy zostawiłaby lokal zablokowany bez śladu. */}
+      {lease.status !== "ACTIVE" ? (
+        <ArchiveAction
+          endpoint="/api/leases"
+          id={lease.id}
+          archived={lease.archivedAt !== null}
+          label="umowę"
+          hint="Zniknie z listy umów. Faktury, wpłaty i cała historia rozliczeń zostaną nietknięte."
+        />
       ) : null}
     </div>
   );
