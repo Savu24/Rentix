@@ -11,6 +11,20 @@ import { ROUTES } from "./routes";
  * dokłada Credentials i PrismaAdapter po stronie Node.
  */
 export const authConfig = {
+  /*
+    Aplikacja zawsze stoi za proxy — Vercel, Render, nginx — więc adres
+    żądania przychodzi w nagłówku `X-Forwarded-Host`. Bez tego NextAuth
+    odrzuca każde żądanie błędem `UntrustedHost`, a formularz logowania
+    pokazuje wtedy ogólne „nie udało się zalogować", bo błąd wybucha zanim
+    dojdzie do sprawdzania hasła.
+
+    Ustawiamy to wprost, a nie zmienną `AUTH_TRUST_HOST`: to nie jest decyzja
+    wdrożeniowa, tylko fakt o architekturze tej aplikacji. Zmienna, o której
+    trzeba pamiętać przy każdym nowym środowisku, prędzej czy później zostanie
+    pominięta — i objawi się dokładnie tym błędem.
+  */
+  trustHost: true,
+
   pages: {
     signIn: ROUTES.login,
     newUser: ROUTES.register,
