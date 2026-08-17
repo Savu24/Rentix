@@ -1,0 +1,1046 @@
+// Rentix — schemat bazy danych
+//
+// ── Decyzje przekrojowe ─────────────────────────────────────────────────────
+//
+// 1. PIENIĄDZE W GROSZACH (Int). Wszystkie kwoty to liczby całkowite groszy,
+//    nigdy Float. 2 400,00 zł = 240000. Powód: arytmetyka zmiennoprzecinkowa
+//    gubi grosze przy sumowaniu (0.1 + 0.2 !== 0.3), a to dane rozliczeniowe.
+//    Sufiks `Grosze` jest w nazwie każdego pola, żeby nikt nie pomylił jednostki.
+//    Sufit Int to 21 474 836 zł na pojedyncze pole — z zapasem wystarcza.
+//
+// 2. GRANICĄ IZOLACJI JEST organizationId. Każda tabela domenowa nosi je wprost,
+//    nawet gdy dałoby się je wywnioskować przez relację. Dzięki temu każde
+//    zapytanie zawęża się jednym warunkiem, a nie łańcuchem joinów — i nie da
+//    się przypadkiem napisać zapytania bez zawężenia.
+//
+// 3. WIELKOŚCI FIZYCZNE JAKO Decimal. Powierzchnia i odczyty liczników to
+//    Decimal, nie Int — odczyt wody ma trzy miejsca po przecinku i wchodzi
+//    w mnożenie przez taryfę, więc zaokrąglenie na wejściu byłoby błędem.
+//
+// 4. KSeF: model Invoice trzyma dane w rozbiciu wymaganym przez strukturę FA(2)
+//    (numer, data wystawienia, data sprzedaży, dane nabywcy w migawce, pozycje
+//    ze stawką VAT netto/VAT/brutto). Integracji NIE MA — są tylko pola
+//    `ksef*`, żeby jej dołożenie nie wymagało przebudowy modelu.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Konta, organizacje, uwierzytelnianie
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Rola globalna użytkownika — decyduje, do którego panelu trafia po zalogowaniu.
+enum UserRole {
+  OWNER // właściciel / zarządca nieruchomości
+  TENANT // najemca
+  ADMIN // administrator platformy
+}
+
+/// Rola w obrębie jednej organizacji (zespoły).
+enum MembershipRole {
+  OWNER // założyciel konta, pełne uprawnienia + rozliczenia
+  ADMIN // pełne uprawnienia operacyjne
+  MEMBER // ograniczony dostęp
+}
+
+model Organization {
+  id   String @id @default(cuid())
+  name String
+  /// Unikalny identyfikator w URL-ach i na publicznej stronie ofert: /o/<slug>
+  slug String @unique
+
+  // Dane wystawcy faktur — sprzedawca w rozumieniu FA(2).
+  taxId       String? // NIP
+  street      String?
+  postalCode  String?
+  city        String?
+  countryCode String  @default("PL")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members             Membership[]
+  properties          Property[]
+  rooms               Room[]
+  tenants             Tenant[]
+  leases              Lease[]
+  invoices            Invoice[]
+  payments            Payment[]
+  expenses            Expense[]
+  meterReadings       MeterReading[]
+  maintenanceRequests MaintenanceRequest[]
+  messageThreads      MessageThread[]
+  messages            Message[]
+  documents           Document[]
+  notifications       Notification[]
+  subscription        Subscription?
+
+  @@index([createdAt])
+  @@map("organizations")
+}
+
+/// Powiązanie użytkownik ↔ organizacja. W MVP właściciel ma jedno członkostwo,
+/// ale model od początku dopuszcza wielu użytkowników na koncie.
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MembershipRole @default(OWNER)
+  createdAt      DateTime       @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+model User {
+  id    String  @id @default(cuid())
+  email String  @unique
+  name  String?
+  phone String?
+  image String?
+
+  /// NULL dla kont z OAuth — logowanie hasłem jest wtedy niedostępne.
+  passwordHash String?
+
+  role          UserRole  @default(OWNER)
+  emailVerified DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
+  memberships   Membership[]
+  accounts      Account[]
+  sessions      Session[]
+  /// Profil najemcy, jeśli to konto należy do najemcy.
+  tenantProfile Tenant?
+
+  reportedRequests    MaintenanceRequest[] @relation("MaintenanceReporter")
+  assignedRequests    MaintenanceRequest[] @relation("MaintenanceAssignee")
+  sentMessages        Message[]
+  uploadedDocuments   Document[]
+  notifications       Notification[]
+
+  @@index([role])
+  @@map("users")
+}
+
+/// Konto u zewnętrznego dostawcy (Google, Apple…). Nieużywane, ale wymagane
+/// przez PrismaAdapter i gotowe na OAuth bez migracji.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// Logowanie hasłem korzysta z JWT (wymóg Credentials), więc ta tabela zostaje
+/// pusta — jest pod przyszłe OAuth i unieważnianie sesji po stronie serwera.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Tokeny jednorazowe: weryfikacja e-maila, reset hasła, zaproszenia.
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([expires])
+  @@map("verification_tokens")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Nieruchomości i jednostki
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum PropertyType {
+  APARTMENT // mieszkanie
+  HOUSE // dom
+  ROOM // pokój
+  COMMERCIAL // lokal użytkowy
+  PARKING // miejsce postojowe
+  STORAGE // komórka lokatorska
+  BUILDING // cały budynek (wiele jednostek)
+}
+
+/// Status przedmiotu najmu — nieruchomości albo pojedynczego pokoju.
+enum RentalStatus {
+  AVAILABLE // wolne, do wynajęcia
+  OCCUPIED // wynajęte
+  UNAVAILABLE // wyłączone (remont, użytek własny)
+}
+
+/// Nieruchomość — i jednocześnie przedmiot najmu.
+///
+/// Nie ma osobnej warstwy „jednostek": mieszkanie JEST jednostką najmu.
+/// Wynajmuje się je albo w całości (umowa wskazuje samą nieruchomość),
+/// albo pokój po pokoju (umowa wskazuje dodatkowo `Room`).
+model Property {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  type           PropertyType @default(APARTMENT)
+  status         RentalStatus @default(AVAILABLE)
+
+  street         String
+  buildingNumber String
+  postalCode     String
+  city           String
+  countryCode    String  @default("PL")
+  district       String?
+
+  /// Powierzchnia w m². Decimal, bo 48,50 m² to nie liczba całkowita.
+  areaM2 Decimal? @db.Decimal(8, 2)
+  floor  Int?
+
+  /// Czynsz wywoławczy za całą nieruchomość. Przy najmie pokojowym stawki
+  /// siedzą na pokojach.
+  askingRentGrosze Int?
+
+  description String? @db.Text
+  /// Notatki widoczne wyłącznie dla właściciela — nigdy dla najemcy.
+  notes       String? @db.Text
+
+  /// Czy nieruchomość pokazuje się na publicznej stronie ofert /o/<slug>.
+  publiclyListed Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  archivedAt DateTime?
+
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rooms               Room[]
+  leases              Lease[]
+  photos              PropertyPhoto[]
+  documents           Document[]
+  meterReadings       MeterReading[]
+  maintenanceRequests MaintenanceRequest[]
+  expenses            Expense[]
+
+  @@index([organizationId])
+  @@index([organizationId, archivedAt])
+  @@index([organizationId, city])
+  @@index([organizationId, status])
+  @@map("properties")
+}
+
+model PropertyPhoto {
+  id         String  @id @default(cuid())
+  propertyId String
+  url        String
+  caption    String?
+  /// Kolejność wyświetlania w galerii; pierwsze zdjęcie jest okładką.
+  position   Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, position])
+  @@map("property_photos")
+}
+
+/// Pojedynczy pokój w nieruchomości — osobny przedmiot najmu.
+///
+/// Pokoje powstają automatycznie przy zakładaniu nieruchomości, z podanej
+/// liczby pokoi. Wynajem całości oznacza po prostu umowę bez wskazanego
+/// pokoju — pokoje i tak istnieją, żeby było widać, co jest w środku.
+///
+/// Świadomie bez powierzchni: przy pokoju nikt jej nie rozlicza, a pole,
+/// którego nikt nie wypełnia, tylko zaśmieca formularz.
+model Room {
+  id             String       @id @default(cuid())
+  organizationId String
+  propertyId     String
+  /// Oznaczenie pokoju: "1", "Pokój od ogrodu", "A".
+  name           String
+  /// Kolejność wyświetlania — pokoje mają iść tak, jak je ponumerowano.
+  position       Int          @default(0)
+  status         RentalStatus @default(AVAILABLE)
+
+  /// Czynsz za sam pokój. Umowa może go nadpisać — to cena wywoławcza.
+  monthlyRentGrosze Int?
+
+  notes String? @db.Text
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property            Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  leases              Lease[]
+  meterReadings       MeterReading[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@unique([propertyId, name])
+  @@index([organizationId])
+  @@index([propertyId, position])
+  @@index([propertyId, status])
+  @@map("rooms")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Najemcy
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum TenantStatus {
+  PROSPECT // zainteresowany, jeszcze bez umowy
+  ACTIVE // ma aktywną umowę
+  FORMER // umowa zakończona
+}
+
+model Tenant {
+  id             String       @id @default(cuid())
+  organizationId String
+  status         TenantStatus @default(PROSPECT)
+
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+
+  /// Konto w panelu najemcy. NULL, dopóki właściciel nie wyśle zaproszenia —
+  /// najemca może istnieć w systemie bez własnego logowania.
+  userId String? @unique
+
+  /// Adres korespondencyjny — trafia na fakturę jako dane nabywcy.
+  street     String?
+  postalCode String?
+  city       String?
+  /// NIP, gdy najemcą jest firma. Dla osoby fizycznej zostaje NULL.
+  taxId      String?
+
+  notes String? @db.Text
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  archivedAt DateTime?
+
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  leases              LeaseTenant[]
+  messageThreads      MessageThread[]
+  maintenanceRequests MaintenanceRequest[]
+  documents           Document[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, lastName])
+  @@map("tenants")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Umowy najmu
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum LeaseStatus {
+  DRAFT // szkic, jeszcze nie podpisana
+  ACTIVE // obowiązuje
+  TERMINATED // wypowiedziana przed terminem
+  EXPIRED // wygasła w terminie
+}
+
+/// Sposób rozliczania mediów — determinuje, czy faktura dolicza zaliczkę,
+/// czy pozycje wyliczane z odczytów liczników.
+enum UtilitiesMode {
+  INCLUDED // media w czynszu
+  FLAT_RATE // stała zaliczka
+  METERED // wg odczytów liczników
+  MIXED // zaliczka + rozliczenie z odczytów
+}
+
+model Lease {
+  id             String      @id @default(cuid())
+  organizationId String
+  propertyId     String
+  /// Gdy ustawione, przedmiotem najmu jest ten pokój, a nie cała nieruchomość.
+  /// `propertyId` zostaje wypełnione także wtedy — dzięki temu droga do
+  /// nieruchomości jest zawsze taka sama i zapytania nie rozgałęziają się
+  /// na dwa warianty.
+  roomId         String?
+  status         LeaseStatus @default(DRAFT)
+
+  /// Numer umowy widoczny na dokumencie, np. "2026/08/01".
+  number String?
+
+  startDate DateTime
+  /// NULL = umowa na czas nieokreślony.
+  endDate   DateTime?
+
+  rentGrosze    Int
+  depositGrosze Int @default(0)
+
+  utilitiesMode           UtilitiesMode @default(FLAT_RATE)
+  /// Zaliczka na media przy FLAT_RATE i MIXED.
+  utilitiesAdvanceGrosze  Int           @default(0)
+
+  /// Dzień miesiąca, w którym wystawiana jest faktura (1–28; nie 29–31,
+  /// żeby luty nie wymagał wyjątku).
+  billingDay      Int @default(1)
+  /// Ile dni od wystawienia na zapłatę.
+  paymentTermDays Int @default(10)
+
+  terminatedAt     DateTime?
+  terminationNote  String?   @db.Text
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  room         Room?         @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  tenants      LeaseTenant[]
+  invoices     Invoice[]
+  documents    Document[]
+
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([roomId])
+  @@index([organizationId, status])
+  // Dashboard pyta „które umowy kończą się w najbliższych 60 dniach".
+  @@index([organizationId, endDate])
+  @@map("leases")
+}
+
+/// Najemcy na umowie. Tabela łącząca, a nie pole `tenantId` na umowie, bo pary
+/// podpisujące razem to norma — i tak byłby potrzebny drugi mechanizm.
+model LeaseTenant {
+  id       String  @id @default(cuid())
+  leaseId  String
+  tenantId String
+  /// Główny najemca: adresat faktur i powiadomień. Dokładnie jeden na umowę
+  /// (pilnowane w kodzie — Postgres nie wyrazi tego indeksem częściowym
+  /// przez Prismę bez migracji ręcznej).
+  isPrimary Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  lease  Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([leaseId, tenantId])
+  @@index([tenantId])
+  @@map("lease_tenants")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Faktury i płatności
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Stan rozliczenia faktury.
+///
+/// ŚWIADOMIE NIE MA TU STATUSU „ZALEGŁA". Zaległość to funkcja czasu
+/// (`dueDate < dziś && status != PAID`), a nie zapisany stan — trzymanie jej
+/// w kolumnie wymagałoby crona przestawiającego statusy o północy i i tak
+/// bywałoby nieaktualne. Wyliczamy ją w `src/lib/invoices/status.ts`,
+/// a indeks (organizationId, status, dueDate) sprawia, że filtr jest tani.
+enum InvoiceStatus {
+  DRAFT // szkic, nie trafił do najemcy
+  ISSUED // wystawiona
+  PARTIALLY_PAID // wpłata częściowa
+  PAID // rozliczona
+  CANCELLED // anulowana / skorygowana do zera
+}
+
+/// Najem mieszkaniowy jest zwolniony z VAT (art. 43 ust. 1 pkt 36 ustawy
+/// o VAT), więc większość właścicieli wystawia rachunek, nie fakturę VAT.
+enum InvoiceKind {
+  BILL // rachunek
+  VAT_INVOICE // faktura VAT
+  PROFORMA // proforma
+}
+
+/// Stawki w rozbiciu wymaganym przez FA(2).
+enum VatRate {
+  ZW // zwolniony
+  NP // nie podlega
+  RATE_0
+  RATE_5
+  RATE_8
+  RATE_23
+}
+
+/// Status wysyłki do Krajowego Systemu e-Faktur. Integracji nie ma — pole
+/// istnieje, żeby jej dołożenie nie wymagało migracji na żywej bazie.
+enum KsefStatus {
+  NOT_SENT
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  organizationId String
+  /// NULL dla faktur jednorazowych, niepowiązanych z umową (np. kaucja).
+  leaseId        String?
+  status         InvoiceStatus @default(DRAFT)
+  kind           InvoiceKind   @default(BILL)
+
+  /// Numer dokumentu, unikalny w obrębie organizacji.
+  number String
+
+  issueDate DateTime
+  /// Data sprzedaży / wykonania usługi — w FA(2) osobne pole od daty wystawienia.
+  saleDate  DateTime
+  dueDate   DateTime
+
+  /// Okres, którego dotyczy rozliczenie — pokazywany na dokumencie
+  /// („Czynsz za sierpień 2026").
+  periodStart DateTime?
+  periodEnd   DateTime?
+
+  currency String @default("PLN")
+
+  // Sumy w groszach. Trzymane wprost, a nie liczone z pozycji przy każdym
+  // odczycie: faktura po wystawieniu jest niezmienna, a dashboard sumuje
+  // tysiące rekordów i nie może za każdym razem dociągać pozycji.
+  totalNetGrosze   Int @default(0)
+  totalVatGrosze   Int @default(0)
+  totalGrossGrosze Int @default(0)
+  /// Suma wpłat. Aktualizowana w transakcji razem z zapisem płatności.
+  paidGrosze       Int @default(0)
+
+  // ── Migawka danych nabywcy ────────────────────────────────────────────────
+  // Kopiowane z profilu najemcy w chwili wystawienia, a nie czytane przez
+  // relację. Faktura jest dokumentem księgowym: musi pokazywać dane z dnia
+  // wystawienia, nawet jeśli najemca później zmieni nazwisko czy adres.
+  buyerName       String
+  buyerTaxId      String?
+  buyerStreet     String?
+  buyerPostalCode String?
+  buyerCity       String?
+
+  notes String? @db.Text
+
+  // ── KSeF (nieaktywne) ─────────────────────────────────────────────────────
+  ksefStatus          KsefStatus @default(NOT_SENT)
+  ksefReferenceNumber String?
+  ksefSentAt          DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lease         Lease?         @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  lines         InvoiceLine[]
+  payments      Payment[]
+  documents     Document[]
+  notifications Notification[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId])
+  @@index([leaseId])
+  // Główny indeks dashboardu: „nieopłacone po terminie", „nadchodzące w tym
+  // tygodniu" — filtr po statusie plus sortowanie po terminie płatności.
+  @@index([organizationId, status, dueDate])
+  @@index([organizationId, issueDate])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id        String @id @default(cuid())
+  invoiceId String
+
+  description String
+  /// Ilość — Decimal, bo pozycja za media to np. 4,235 m³ wody.
+  quantity    Decimal @db.Decimal(12, 3)
+  unit        String  @default("szt.")
+
+  unitPriceNetGrosze Int
+  vatRate            VatRate @default(ZW)
+
+  netGrosze   Int
+  vatGrosze   Int
+  grossGrosze Int
+
+  /// Kolejność pozycji na dokumencie.
+  position Int @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, position])
+  @@map("invoice_lines")
+}
+
+enum PaymentMethod {
+  TRANSFER // przelew
+  CASH // gotówka
+  CARD // karta
+  DIRECT_DEBIT // polecenie zapłaty
+  OTHER
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  amountGrosze   Int
+  paidAt         DateTime
+  method         PaymentMethod @default(TRANSFER)
+
+  /// Tytuł przelewu lub identyfikator z wyciągu — do uzgadniania z bankiem.
+  reference String?
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoice      Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@index([organizationId, paidAt])
+  @@map("payments")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Koszty
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Kategorie kosztów najmu. Lista jest zamknięta, żeby raport dało się
+/// pogrupować — wolny tekst rozjechałby się na „wspólnota", „czynsz do
+/// wspólnoty" i „opłata administracyjna" oznaczające to samo.
+enum ExpenseCategory {
+  MORTGAGE // rata kredytu
+  COMMUNITY_FEE // czynsz do wspólnoty lub spółdzielni
+  UTILITIES // media opłacane przez właściciela
+  REPAIR // naprawa i remont
+  FURNISHING // wyposażenie
+  INSURANCE // ubezpieczenie
+  PROPERTY_TAX // podatek od nieruchomości, użytkowanie wieczyste
+  INCOME_TAX // ryczałt lub PIT od najmu
+  MANAGEMENT // zarządzanie, prowizja pośrednika
+  ACCOUNTING // księgowość
+  LEGAL // obsługa prawna
+  OTHER
+}
+
+/// Wydatek właściciela. Bez tej tabeli system znał wyłącznie wpływy, więc
+/// raport potrafiłby pokazać przychód, ale nigdy zysku.
+model Expense {
+  id             String          @id @default(cuid())
+  organizationId String
+  /// NULL = koszt ogólny konta (księgowość, obsługa prawna), którego nie da się
+  /// przypisać do jednej nieruchomości.
+  propertyId     String?
+  category       ExpenseCategory @default(OTHER)
+
+  amountGrosze Int
+  /// Data poniesienia. Kasowo, tak samo jak przy wpłatach — zestawienie roczne
+  /// ma się zgadzać z tym, co faktycznie wyszło z konta w danym roku.
+  paidAt       DateTime
+
+  description String
+  /// Dostawca — wspólnota, wykonawca, ubezpieczyciel.
+  vendor      String?
+  /// Numer faktury albo rachunku od dostawcy, do uzgodnienia z dokumentami.
+  documentRef String?
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// SetNull, a nie Cascade: po archiwizacji nieruchomości koszt zostaje
+  /// w zestawieniu rocznym, bo pieniądze naprawdę wyszły.
+  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  // Główny indeks raportu: koszty okresu, posortowane od najnowszych.
+  @@index([organizationId, paidAt])
+  @@index([organizationId, category])
+  @@index([propertyId])
+  @@map("expenses")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Liczniki
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum MeterType {
+  COLD_WATER
+  HOT_WATER
+  ELECTRICITY
+  GAS
+  HEAT
+  OTHER
+}
+
+/// Kto podał odczyt — właściciel widzi, czy dane pochodzą od najemcy.
+enum MeterReadingSource {
+  OWNER
+  TENANT
+}
+
+model MeterReading {
+  id             String             @id @default(cuid())
+  organizationId String
+  propertyId     String
+  /// Licznik przypisany do konkretnego pokoju (rzadkie — zwykle liczniki są
+  /// wspólne dla całego mieszkania).
+  roomId         String?
+  meterType      MeterType
+  /// Numer licznika — jednostka może mieć dwa liczniki tego samego typu.
+  meterSerial    String?
+  source         MeterReadingSource @default(OWNER)
+
+  /// Stan licznika. Decimal(12,3): wodomierze podają trzy miejsca po przecinku.
+  value  Decimal  @db.Decimal(12, 3)
+  readAt DateTime
+
+  photoUrl String?
+  note     String?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  room         Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  // Rozliczenie mediów pyta o kolejne odczyty jednego licznika w czasie.
+  @@index([propertyId, meterType, readAt])
+  @@map("meter_readings")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Zgłoszenia usterek
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum MaintenanceStatus {
+  NEW // nowe
+  IN_PROGRESS // w trakcie
+  RESOLVED // zakończone
+  CANCELLED // odrzucone
+}
+
+enum MaintenancePriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model MaintenanceRequest {
+  id             String              @id @default(cuid())
+  organizationId String
+  propertyId     String
+  /// NULL, gdy usterka dotyczy całego mieszkania, a nie konkretnego pokoju.
+  roomId         String?
+  status         MaintenanceStatus   @default(NEW)
+  priority       MaintenancePriority @default(NORMAL)
+
+  title       String
+  description String @db.Text
+
+  /// Kto zgłosił — konto najemcy albo właściciela.
+  reportedByUserId String?
+  /// Profil najemcy, jeśli zgłoszenie przyszło z panelu najemcy.
+  tenantId         String?
+
+  /// Przypisany użytkownik konta (pracownik zarządcy)…
+  assignedToUserId String?
+  /// …albo wykonawca zewnętrzny, który konta nie ma.
+  assigneeName     String?
+  assigneeContact  String?
+
+  /// Koszt naprawy — do raportu rentowności nieruchomości.
+  costGrosze Int?
+
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property           @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  room         Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  reportedBy   User?              @relation("MaintenanceReporter", fields: [reportedByUserId], references: [id], onDelete: SetNull)
+  assignedTo   User?              @relation("MaintenanceAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  tenant       Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  photos       MaintenancePhoto[]
+
+  @@index([organizationId])
+  // Tablica kanban: kolumny po statusie, w każdej sortowanie po priorytecie.
+  @@index([organizationId, status, priority])
+  @@index([propertyId])
+  @@index([roomId])
+  @@map("maintenance_requests")
+}
+
+model MaintenancePhoto {
+  id        String  @id @default(cuid())
+  requestId String
+  url       String
+  caption   String?
+  position  Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId, position])
+  @@map("maintenance_photos")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Komunikacja
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Wątek rozmowy właściciel ↔ najemca. Osobna encja, a nie płaska lista
+/// wiadomości: skrzynka sortuje po `lastMessageAt` i liczy nieprzeczytane,
+/// a bez wątku każde otwarcie listy skanowałoby wszystkie wiadomości.
+model MessageThread {
+  id             String @id @default(cuid())
+  organizationId String
+  tenantId       String
+
+  subject String?
+
+  /// Denormalizowane pod sortowanie skrzynki — ustawiane w tej samej
+  /// transakcji co zapis wiadomości.
+  lastMessageAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  closedAt  DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@index([organizationId, lastMessageAt])
+  @@index([tenantId])
+  @@map("message_threads")
+}
+
+model Message {
+  id             String @id @default(cuid())
+  organizationId String
+  threadId       String
+  senderUserId   String
+
+  body String @db.Text
+
+  /// Kiedy odbiorca przeczytał. NULL = nieprzeczytana.
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  thread       MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender       User          @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
+
+  @@index([threadId, createdAt])
+  @@index([organizationId, readAt])
+  @@map("messages")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Dokumenty
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum DocumentType {
+  LEASE_AGREEMENT // umowa najmu
+  ANNEX // aneks
+  HANDOVER_PROTOCOL // protokół zdawczo-odbiorczy
+  INVOICE_PDF // wygenerowany PDF faktury
+  ID_SCAN // skan dokumentu tożsamości
+  OTHER
+}
+
+enum SignatureStatus {
+  NOT_REQUIRED
+  PENDING
+  SIGNED
+  DECLINED
+}
+
+model Document {
+  id             String       @id @default(cuid())
+  organizationId String
+  type           DocumentType @default(OTHER)
+
+  name        String
+  fileUrl     String
+  mimeType    String?
+  sizeBytes   Int?
+  /// TRUE dla dokumentów wygenerowanych przez Rentix (umowa z kreatora),
+  /// FALSE dla wgranych ręcznie.
+  generated   Boolean @default(false)
+
+  signatureStatus SignatureStatus @default(NOT_REQUIRED)
+  signedAt        DateTime?
+
+  // Dokument wisi przy jednej z encji. Wszystkie opcjonalne, bo protokół
+  // dotyczy jednostki, umowa — umowy, a skan dowodu — najemcy.
+  propertyId String?
+  roomId     String?
+  leaseId    String?
+  tenantId   String?
+  invoiceId  String?
+
+  uploadedByUserId String?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  lease        Lease?       @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  uploadedBy   User?        @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, type])
+  @@index([leaseId])
+  @@index([tenantId])
+  @@index([propertyId])
+  @@map("documents")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Powiadomienia
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum NotificationType {
+  PAYMENT_REMINDER // przypomnienie przed terminem
+  PAYMENT_OVERDUE // zaległość
+  INVOICE_ISSUED // wystawiono fakturę
+  MAINTENANCE_UPDATE // zmiana statusu zgłoszenia
+  MESSAGE_RECEIVED // nowa wiadomość
+  LEASE_EXPIRING // kończąca się umowa
+  METER_READING_REQUEST // prośba o odczyt licznika
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+  /// Nieużywany — kanał istnieje pod przyszłą aplikację mobilną.
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id             String              @id @default(cuid())
+  organizationId String
+  /// Odbiorca. Powiadomienia dla najemcy bez konta idą tylko na e-mail,
+  /// więc pole jest opcjonalne.
+  userId         String?
+  type           NotificationType
+  channel        NotificationChannel @default(EMAIL)
+  status         NotificationStatus  @default(PENDING)
+
+  title String
+  body  String @db.Text
+
+  /// Adres, na który poszedł e-mail — zapisany, bo profil może się zmienić.
+  toEmail String?
+
+  /// Faktura, której dotyczy przypomnienie. Najczęstszy przypadek, więc jako
+  /// zwykła relacja zamiast pary (entityType, entityId).
+  invoiceId String?
+
+  sentAt DateTime?
+  readAt DateTime?
+  /// Treść błędu z bramki e-mail, gdy status = FAILED.
+  error  String?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([userId, readAt])
+  // Kolejka wysyłki: „co czeka na wysłanie".
+  @@index([status, createdAt])
+  @@map("notifications")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Subskrypcja
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum SubscriptionPlan {
+  FREE // do 20 najemców
+  PRO // bez limitu
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+model Subscription {
+  id             String             @id @default(cuid())
+  /// Jedna subskrypcja na organizację.
+  organizationId String             @unique
+  plan           SubscriptionPlan   @default(FREE)
+  status         SubscriptionStatus @default(ACTIVE)
+
+  /// Limity zapisane wprost, a nie wyprowadzane z `plan`. Dzięki temu da się
+  /// podnieść limit pojedynczemu klientowi bez dokładania nowego planu.
+  tenantLimit   Int? @default(20)
+  propertyLimit Int?
+
+  currentPeriodEnd DateTime?
+  cancelledAt      DateTime?
+
+  /// Identyfikatory u operatora płatności (Stripe / Przelewy24) — puste,
+  /// dopóki nie ma integracji.
+  externalCustomerId     String?
+  externalSubscriptionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("subscriptions")
+}
