@@ -126,6 +126,37 @@ export async function archiveOwner(organizationId: string, ownerId: string) {
   return count > 0;
 }
 
+export type DeleteOwnerResult =
+  | { ok: true }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "HAS_PROPERTIES"; propertyCount: number };
+
+/**
+ * Trwałe usunięcie — tylko dla właściciela bez przypisanych nieruchomości.
+ *
+ * Relacja ma SetNull, więc technicznie nic by się nie zepsuło: mieszkania po
+ * prostu straciłyby właściciela. Ale strata byłaby cicha — nikt nie zauważy,
+ * że lokal przestał być podnajmem, dopóki nie przyjdzie rozliczenie. Lepiej
+ * odmówić i kazać najpierw odpiąć nieruchomości.
+ */
+export async function deleteOwner(
+  organizationId: string,
+  ownerId: string,
+): Promise<DeleteOwnerResult> {
+  const owner = await prisma.propertyOwner.findFirst({
+    where: { id: ownerId, organizationId },
+    select: { id: true, _count: { select: { properties: true } } },
+  });
+  if (!owner) return { ok: false, reason: "NOT_FOUND" };
+
+  if (owner._count.properties > 0) {
+    return { ok: false, reason: "HAS_PROPERTIES", propertyCount: owner._count.properties };
+  }
+
+  await prisma.propertyOwner.delete({ where: { id: ownerId } });
+  return { ok: true };
+}
+
 export async function restoreOwner(organizationId: string, ownerId: string) {
   const { count } = await prisma.propertyOwner.updateMany({
     where: { id: ownerId, organizationId, archivedAt: { not: null } },

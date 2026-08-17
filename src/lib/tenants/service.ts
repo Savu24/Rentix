@@ -172,6 +172,21 @@ export async function archiveTenant(organizationId: string, tenantId: string) {
   return count > 0;
 }
 
+/**
+ * Przywrócenie z archiwum.
+ *
+ * Status wraca na PROSPECT, a nie na ACTIVE: archiwizacja ustawiła FORMER,
+ * a o tym, czy najemca znów jest aktywny, decyduje istnienie umowy, nie sam
+ * fakt wyjęcia go z archiwum.
+ */
+export async function restoreTenant(organizationId: string, tenantId: string) {
+  const { count } = await prisma.tenant.updateMany({
+    where: { id: tenantId, organizationId, archivedAt: { not: null } },
+    data: { archivedAt: null, status: "PROSPECT" },
+  });
+  return count > 0;
+}
+
 export type DeleteTenantResult =
   | { ok: true }
   | { ok: false; reason: "NOT_FOUND" }

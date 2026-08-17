@@ -172,3 +172,53 @@ describe("buildRentInvoiceLines", () => {
     expect(totals.totalVatGrosze).toBe(0);
   });
 });
+
+describe("data wystawienia nie wyprzedza okresu", () => {
+  // Zgłoszone z produkcji: umowa zawarta 17. sierpnia, dzień naliczania 1.,
+  // termin płatności 5 dni. Dokument wychodził z datą wystawienia 1 sierpnia
+  // i terminem 6 sierpnia — obie przed powstaniem umowy.
+  const midMonth = lease({
+    startDate: new Date(Date.UTC(2026, 7, 17)),
+    billingDay: 1,
+    paymentTermDays: 5,
+  });
+
+  it("pierwszy, niepełny miesiąc wystawia się w dniu zawarcia umowy", () => {
+    const period = buildBillingPeriod(midMonth, 2026, 7)!;
+
+    expect(period.issueDate.toISOString()).toBe("2026-08-17T00:00:00.000Z");
+    expect(period.dueDate.toISOString()).toBe("2026-08-22T00:00:00.000Z");
+    expect(period.saleDate.toISOString()).toBe("2026-08-31T00:00:00.000Z");
+  });
+
+  it("kolejny miesiąc wraca do dnia naliczania z umowy", () => {
+    const period = buildBillingPeriod(midMonth, 2026, 8)!;
+
+    expect(period.issueDate.toISOString()).toBe("2026-09-01T00:00:00.000Z");
+    expect(period.dueDate.toISOString()).toBe("2026-09-06T00:00:00.000Z");
+  });
+
+  it("dzień naliczania późniejszy niż start umowy zostaje bez zmian", () => {
+    // Umowa od 3., naliczanie 10. — nie ma powodu przyspieszać wystawienia.
+    const period = buildBillingPeriod(
+      lease({ startDate: new Date(Date.UTC(2026, 7, 3)), billingDay: 10, paymentTermDays: 5 }),
+      2026,
+      7,
+    )!;
+
+    expect(period.issueDate.toISOString()).toBe("2026-08-10T00:00:00.000Z");
+  });
+
+  it("termin płatności nigdy nie wypada przed wystawieniem", () => {
+    for (const day of [1, 5, 17, 28]) {
+      const period = buildBillingPeriod(
+        lease({ startDate: new Date(Date.UTC(2026, 7, day)), billingDay: 1, paymentTermDays: 0 }),
+        2026,
+        7,
+      )!;
+
+      expect(period.dueDate.getTime()).toBeGreaterThanOrEqual(period.issueDate.getTime());
+      expect(period.issueDate.getTime()).toBeGreaterThanOrEqual(period.periodStart.getTime());
+    }
+  });
+});

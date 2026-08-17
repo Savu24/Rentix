@@ -142,14 +142,52 @@ export type InvoiceCreateOutput = z.output<typeof invoiceCreateSchema>;
  */
 export const INVOICE_FILTERS = ["all", "UNPAID", "OVERDUE", ...invoiceStatuses] as const;
 
+/**
+ * Data z filtra w adresie URL.
+ *
+ * Pusta i niepoprawna dają `undefined`, a nie błąd: filtry mieszkają w adresie,
+ * więc byle wklejony albo obcięty link nie może wywracać całej listy.
+ */
+const filterDate = z
+  .string()
+  .optional()
+  .transform((value) => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
+
+    const [year, month, day] = value.split("-").map(Number) as [number, number, number];
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    // Sam format nie wystarcza: „2026-13-45" przechodzi regex, a `Date` po cichu
+    // przewija to na luty 2027 — czyli filtr pokazywałby zupełnie inny zakres
+    // niż wpisany. Sprawdzamy, czy data wróciła w tych samych częściach.
+    const roundTrips =
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day;
+
+    return roundTrips ? date : undefined;
+  });
+
 export const invoiceListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
   status: z.enum(INVOICE_FILTERS).default("all"),
+  kind: z.enum(invoiceKinds).optional(),
   leaseId: z.string().max(64).optional(),
   tenantId: z.string().max(64).optional(),
   propertyId: z.string().max(64).optional(),
   /** Rok wystawienia — zawęża widok do jednego roku obrotowego. */
   year: z.coerce.number().int().min(2000).max(2100).optional(),
+
+  /** Zakres daty wystawienia; obie granice włącznie. */
+  issuedFrom: filterDate,
+  issuedTo: filterDate,
+  /** Zakres terminu płatności — do wyłapywania, co wypada w danym tygodniu. */
+  dueFrom: filterDate,
+  dueTo: filterDate,
+
+  /** Kwota brutto w złotych, od–do. */
+  minAmount: z.coerce.number().min(0).optional(),
+  maxAmount: z.coerce.number().min(0).optional(),
 });
 
 export type InvoiceListQuery = z.output<typeof invoiceListQuerySchema>;
@@ -180,6 +218,17 @@ export const generateInvoicesSchema = z.object({
   month: z.coerce.number().int().min(1).max(12),
   /** Puste = wszystkie aktywne umowy organizacji. */
   leaseId: z
+    .union([z.literal(""), idSchema])
+    .optional()
+    .transform((value) => (value === "" || value === undefined ? null : value)),
+  /**
+   * Zawężenie do jednego najemcy — nalicza wszystkie jego aktywne umowy naraz.
+   *
+   * Rozliczamy najemcę, a nie umowę: ten sam człowiek może wynajmować dwa
+   * pokoje na dwóch umowach i oczekuje jednego przebiegu, a nie dwóch spacerów
+   * po kartotece.
+   */
+  tenantId: z
     .union([z.literal(""), idSchema])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value)),

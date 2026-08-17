@@ -47,7 +47,7 @@ async function run(request: NextRequest) {
   for (const organization of organizations) {
     const result = await generateInvoicesForMonth(
       organization.id,
-      { year, month, leaseId: null },
+      { year, month, leaseId: null, tenantId: null },
       // Dzień naliczania musi już minąć — inaczej pierwszego dnia miesiąca
       // wystawialibyśmy dokumenty z datą w przyszłości.
       { notBefore: now },

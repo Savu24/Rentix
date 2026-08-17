@@ -81,7 +81,18 @@ export function buildBillingPeriod(
 
   const coveredDays = Math.round((periodEndMs - periodStartMs) / DAY_MS) + 1;
 
-  const issueDate = utcDate(year, month, clampBillingDay(lease.billingDay));
+  /*
+    Dokumentu nie da się wystawić, zanim okres, którego dotyczy, w ogóle się
+    zacznie. Umowa od 17. z dniem naliczania 1. dawała wcześniej datę
+    wystawienia 1. — czyli szesnaście dni przed powstaniem umowy — i termin
+    płatności jeszcze wcześniejszy niż pierwszy dzień najmu.
+
+    Dlatego bierzemy późniejszą z dwóch dat: dnia naliczania i początku okresu.
+    W pierwszym, niepełnym miesiącu wygrywa data zawarcia umowy; w każdym
+    kolejnym dzień naliczania, bo okres zaczyna się wtedy pierwszego.
+  */
+  const billingDate = utcDate(year, month, clampBillingDay(lease.billingDay));
+  const issueDate = new Date(Math.max(startOfDay(billingDate), periodStartMs));
   const dueDate = new Date(startOfDay(issueDate) + lease.paymentTermDays * DAY_MS);
 
   return {

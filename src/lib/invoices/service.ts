@@ -83,6 +83,50 @@ function statusWhere(status: InvoiceListQuery["status"], now: Date): Prisma.Invo
   }
 }
 
+/**
+ * Zakres daty wystawienia z filtra.
+ *
+ * Rok i zakres dat składamy w jeden warunek, a nie dwa: Prisma bierze pod uwagę
+ * tylko ostatni klucz `issueDate` w obiekcie, więc rozdzielone po cichu
+ * kasowałyby się nawzajem.
+ *
+ * Górna granica jest włącznie — użytkownik wpisujący „do 31 sierpnia" ma na
+ * myśli cały ten dzień, więc porównujemy z początkiem następnego.
+ */
+function issueDateWhere(query: InvoiceListQuery): Prisma.InvoiceWhereInput {
+  const bounds: { gte?: Date; lt?: Date } = {};
+
+  if (query.year) {
+    bounds.gte = new Date(Date.UTC(query.year, 0, 1));
+    bounds.lt = new Date(Date.UTC(query.year + 1, 0, 1));
+  }
+  if (query.issuedFrom) bounds.gte = query.issuedFrom;
+  if (query.issuedTo) bounds.lt = nextDay(query.issuedTo);
+
+  return Object.keys(bounds).length > 0 ? { issueDate: bounds } : {};
+}
+
+function dueDateWhere(query: InvoiceListQuery): Prisma.InvoiceWhereInput {
+  const bounds: { gte?: Date; lt?: Date } = {};
+
+  if (query.dueFrom) bounds.gte = query.dueFrom;
+  if (query.dueTo) bounds.lt = nextDay(query.dueTo);
+
+  return Object.keys(bounds).length > 0 ? { dueDate: bounds } : {};
+}
+
+/** Kwoty w filtrze podaje się w złotych, w bazie leżą w groszach. */
+function amountWhere(query: InvoiceListQuery): Prisma.InvoiceWhereInput {
+  const bounds: { gte?: number; lte?: number } = {};
+
+  if (query.minAmount !== undefined) bounds.gte = Math.round(query.minAmount * 100);
+  if (query.maxAmount !== undefined) bounds.lte = Math.round(query.maxAmount * 100);
+
+  return Object.keys(bounds).length > 0 ? { totalGrossGrosze: bounds } : {};
+}
+
+const nextDay = (date: Date) => new Date(date.getTime() + 24 * 60 * 60 * 1000);
+
 export type InvoiceListItem = Awaited<ReturnType<typeof listInvoices>>[number];
 
 export async function listInvoices(organizationId: string, query: InvoiceListQuery) {
@@ -91,17 +135,13 @@ export async function listInvoices(organizationId: string, query: InvoiceListQue
   const where: Prisma.InvoiceWhereInput = {
     organizationId,
     ...statusWhere(query.status, now),
+    ...(query.kind ? { kind: query.kind } : {}),
     ...(query.leaseId ? { leaseId: query.leaseId } : {}),
     ...(query.propertyId ? { lease: { propertyId: query.propertyId } } : {}),
     ...(query.tenantId ? { lease: { tenants: { some: { tenantId: query.tenantId } } } } : {}),
-    ...(query.year
-      ? {
-          issueDate: {
-            gte: new Date(Date.UTC(query.year, 0, 1)),
-            lt: new Date(Date.UTC(query.year + 1, 0, 1)),
-          },
-        }
-      : {}),
+    ...issueDateWhere(query),
+    ...dueDateWhere(query),
+    ...amountWhere(query),
     ...(query.q
       ? {
           OR: [
@@ -382,7 +422,7 @@ export type GenerateInvoicesResult = {
  */
 export async function generateInvoicesForMonth(
   organizationId: string,
-  { year, month, leaseId }: GenerateInvoicesOutput,
+  { year, month, leaseId, tenantId }: GenerateInvoicesOutput,
   options: { notBefore?: Date } = {},
 ): Promise<GenerateInvoicesResult> {
   // Wejście jest w zapisie ludzkim (1–12), Date liczy miesiące od zera.
@@ -393,6 +433,7 @@ export async function generateInvoicesForMonth(
       organizationId,
       status: "ACTIVE",
       ...(leaseId ? { id: leaseId } : {}),
+      ...(tenantId ? { tenants: { some: { tenantId } } } : {}),
       // Umowa musi zahaczać o ten miesiąc choć jednym dniem.
       startDate: { lt: new Date(Date.UTC(year, monthIndex + 1, 1)) },
       OR: [{ endDate: null }, { endDate: { gte: new Date(Date.UTC(year, monthIndex, 1)) } }],

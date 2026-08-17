@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
-import { archiveOwner, getOwner, restoreOwner, updateOwner } from "@/lib/owners/service";
+import { archiveOwner, deleteOwner, getOwner, restoreOwner, updateOwner } from "@/lib/owners/service";
 import { ownerUpdateSchema } from "@/lib/validations/owner";
 
 export const runtime = "nodejs";
@@ -59,13 +59,29 @@ export async function PATCH(request: NextRequest, { params }: Params) {
  * Usunięcie zerwałoby powiązanie w historii rozliczeń, która ma zostać
  * czytelna także po zakończeniu współpracy.
  */
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, { params }: Params) {
   const auth = await requireApiOwner();
   if ("response" in auth) return auth.response;
 
   const { id } = await params;
-  const archived = await archiveOwner(auth.organizationId, id);
+  // `?force=true` = usunięcie trwałe, jak przy nieruchomościach i najemcach.
+  const force = request.nextUrl.searchParams.get("force") === "true";
 
-  if (!archived) return apiError("NOT_FOUND", "Nie znaleziono właściciela.");
-  return ok({ id, archived: true });
+  if (!force) {
+    const archived = await archiveOwner(auth.organizationId, id);
+    if (!archived) return apiError("NOT_FOUND", "Nie znaleziono właściciela.");
+    return ok({ id, archived: true });
+  }
+
+  const result = await deleteOwner(auth.organizationId, id);
+
+  if (result.ok) return ok({ id, deleted: true });
+  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono właściciela.");
+
+  return apiError(
+    "CONFLICT",
+    `Nie można usunąć — do właściciela przypisano ${result.propertyCount} ${
+      result.propertyCount === 1 ? "nieruchomość" : "nieruchomości"
+    }. Odepnij je najpierw albo zostaw właściciela w archiwum.`,
+  );
 }

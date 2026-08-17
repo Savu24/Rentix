@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { TerminateLease } from "@/components/panel/leases/terminate-lease";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -165,12 +164,12 @@ export default async function LeaseDetailPage({ params }: Params) {
       ) : null}
 
       <section className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[15px] font-semibold text-fg">
-            Rozliczenia <span className="font-normal text-muted">({lease.invoices.length})</span>
-          </h2>
-          {lease.status === "ACTIVE" ? <GenerateInvoices leaseId={lease.id} /> : null}
-        </div>
+        {/* Naliczanie i wystawianie przeniesione do profilu najemcy:
+            rozliczamy człowieka, a nie umowę — ten sam najemca miewa dwie
+            umowy i oczekuje jednego miejsca do obsługi płatności. */}
+        <h2 className="text-[15px] font-semibold text-fg">
+          Rozliczenia <span className="font-normal text-muted">({lease.invoices.length})</span>
+        </h2>
 
         {lease.invoices.length === 0 ? (
           <Card>

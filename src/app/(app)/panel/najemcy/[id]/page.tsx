@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
+import { ManualInvoiceForm } from "@/components/panel/invoices/manual-invoice-form";
 import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { formatPLN } from "@/lib/money";
 import { getTenant } from "@/lib/tenants/service";
@@ -33,6 +35,7 @@ export default async function TenantDetailPage({ params }: Params) {
   if (!tenant) notFound();
 
   const leases = tenant.leases.map((entry) => entry.lease);
+  const activeLeases = leases.filter((lease) => lease.status === "ACTIVE");
   const invoices = leases.flatMap((lease) => lease.invoices);
   const payments = invoices.flatMap((invoice) =>
     invoice.payments.map((payment) => ({ ...payment, invoiceNumber: invoice.number })),
@@ -152,8 +155,26 @@ export default async function TenantDetailPage({ params }: Params) {
         )}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-semibold text-fg">Rozliczenia</h2>
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-[15px] font-semibold text-fg">Rozliczenia</h2>
+
+          {/* Obsługa płatności siedzi przy najemcy, a nie przy umowie:
+              rozliczamy człowieka, a jeden najemca miewa dwie umowy. */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {activeLeases.length > 0 ? <GenerateInvoices tenantId={tenant.id} /> : null}
+            <ManualInvoiceForm
+              tenantId={tenant.id}
+              tenantName={`${tenant.firstName} ${tenant.lastName}`}
+              leases={leases.map((lease) => ({
+                id: lease.id,
+                label: `${lease.property.name}${lease.room ? ` · ${lease.room.name}` : ""}`,
+                rentGrosze: lease.rentGrosze,
+              }))}
+            />
+          </div>
+        </div>
+
         {invoices.length === 0 ? (
           <Card>
             <CardContent className="p-4 text-sm text-muted">Brak wystawionych faktur.</CardContent>

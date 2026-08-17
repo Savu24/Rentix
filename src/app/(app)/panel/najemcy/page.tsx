@@ -1,4 +1,4 @@
-import { Plus, UserPlus } from "lucide-react";
+import { Archive, Plus, UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -42,12 +42,23 @@ export default async function TenantsPage({
           </p>
         </div>
 
-        <Button asChild size="sm">
-          <Link href="/panel/najemcy/nowy">
-            <Plus className="h-4 w-4" aria-hidden />
-            Dodaj najemcę
-          </Link>
-        </Button>
+        {/* Archiwum obok dodawania, bo to para: jedno chowa, drugie
+            przywraca. Schowane w menu byłoby nie do znalezienia. */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button asChild size="sm" variant="secondary">
+            <Link href="/panel/najemcy/archiwum">
+              <Archive className="h-4 w-4" aria-hidden />
+              Zarchiwizowane
+            </Link>
+          </Button>
+
+          <Button asChild size="sm">
+            <Link href="/panel/najemcy/nowy">
+              <Plus className="h-4 w-4" aria-hidden />
+              Dodaj najemcę
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {tenants.length === 0 ? (

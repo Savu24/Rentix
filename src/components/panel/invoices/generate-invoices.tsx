@@ -39,10 +39,14 @@ const SKIP_REASON_LABEL: Record<string, string> = {
  */
 export function GenerateInvoices({
   leaseId,
+  tenantId,
   label = "Nalicz czynsz",
 }: {
-  /** Ustawione = naliczamy tylko tę umowę. Puste = wszystkie aktywne. */
+  /** Ustawione = naliczamy tylko tę umowę. */
   leaseId?: string;
+  /** Ustawione = naliczamy wszystkie aktywne umowy tego najemcy. */
+  tenantId?: string;
+  /** Bez obu = wszystkie aktywne umowy organizacji. */
   label?: string;
 }) {
   const router = useRouter();
@@ -64,6 +68,7 @@ export function GenerateInvoices({
       year,
       month,
       leaseId: leaseId ?? "",
+      tenantId: tenantId ?? "",
     });
 
     setBusy(false);
@@ -96,8 +101,8 @@ export function GenerateInvoices({
         <div>
           <p className="text-sm font-semibold text-fg">Naliczenie czynszu</p>
           <p className="mt-0.5 text-xs text-muted">
-            {leaseId
-              ? "Wystawi dokument za wskazany miesiąc dla tej umowy."
+            {leaseId || tenantId
+              ? "Wystawi dokumenty za wskazany miesiąc dla aktywnych umów tego najemcy."
               : "Wystawi dokumenty wszystkim aktywnym umowom za wskazany miesiąc."}{" "}
             Umowy, które mają już rozliczenie za ten okres, zostaną pominięte.
           </p>
