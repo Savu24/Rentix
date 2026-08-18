@@ -19,6 +19,10 @@ on:
 jobs:
   billing:
     runs-on: ubuntu-latest
+    # Zawieszone żądanie nie może palić minut Actions w nieskończoność.
+    # Naliczanie u jednego właściciela trwa sekundy; pięć minut to zapas
+    # na zimny start funkcji po stronie hostingu.
+    timeout-minutes: 5
     steps:
       - name: Wywołaj endpoint rozliczeniowy
         env:
