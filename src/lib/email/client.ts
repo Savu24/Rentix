@@ -20,6 +20,11 @@ function client(): Resend | null {
 
 export type SendEmailResult = { ok: true; id: string | null } | { ok: false; error: string };
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+};
+
 /** Treść wiadomości bez adresata — tyle zwracają szablony. */
 export type EmailContent = {
   subject: string;
@@ -28,7 +33,11 @@ export type EmailContent = {
   text: string;
 };
 
-export type EmailMessage = EmailContent & { to: string };
+export type EmailMessage = EmailContent & {
+  to: string;
+  /** Dokumenty dołączone do wiadomości — najemca dostaje PDF, nie link. */
+  attachments?: EmailAttachment[];
+};
 
 /**
  * Wysyła wiadomość i zwraca wynik zamiast rzucać wyjątkiem.
@@ -53,6 +62,14 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
       subject: message.subject,
       html: message.html,
       text: message.text,
+      ...(message.attachments?.length
+        ? {
+            attachments: message.attachments.map((file) => ({
+              filename: file.filename,
+              content: file.content,
+            })),
+          }
+        : {}),
     });
 
     if (error) return { ok: false, error: error.message };

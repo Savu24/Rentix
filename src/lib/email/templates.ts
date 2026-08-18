@@ -33,8 +33,8 @@ export type InvoiceEmailData = {
   remainingGrosze: number;
   dueDate: Date;
   periodLabel: string | null;
-  /** Pełny adres dokumentu w panelu — NULL, gdy nie znamy adresu aplikacji. */
-  invoiceUrl: string | null;
+  /** Czy PDF dokumentu jedzie w załączniku — decyduje o treści wezwania. */
+  attached: boolean;
 };
 
 function layout(options: {
@@ -43,7 +43,7 @@ function layout(options: {
   intro: string;
   rows: Array<[string, string]>;
   outro: string;
-  invoiceUrl: string | null;
+  attached: boolean;
   landlordName: string;
 }): string {
   const rows = options.rows
@@ -56,13 +56,17 @@ function layout(options: {
     )
     .join("");
 
-  const button = options.invoiceUrl
-    ? `<p style="margin:24px 0 0;">
-         <a href="${options.invoiceUrl}"
-            style="display:inline-block;background:${COLORS.accent};color:#FFFFFF;text-decoration:none;
-                   padding:11px 20px;border-radius:10px;font-size:14px;font-weight:600;">
-           Zobacz dokument
-         </a>
+  /*
+    Bez przycisku do panelu.
+
+    Wcześniej wiadomość prowadziła do `/panel/finanse/...`, czyli do panelu
+    właściciela — a najemca nie ma tam konta i lądował na ekranie logowania.
+    Dokument jedzie teraz w załączniku, więc nie ma dokąd odsyłać.
+  */
+  const attachmentNote = options.attached
+    ? `<p style="margin:20px 0 0;padding:10px 12px;background:${COLORS.page};border-radius:8px;
+                 font-size:13.5px;color:${COLORS.ink};">
+         Dokument w formacie PDF znajdziesz w załączniku tej wiadomości.
        </p>`
     : "";
 
@@ -84,7 +88,7 @@ function layout(options: {
                  style="border-top:1px solid ${COLORS.rule};border-bottom:1px solid ${COLORS.rule};">
             ${rows}
           </table>
-          ${button}
+          ${attachmentNote}
         </td>
       </tr>
       <tr>
@@ -122,7 +126,7 @@ export function invoiceIssuedEmail(data: InvoiceEmailData): EmailContent {
         ["Termin płatności", dateFormat.format(data.dueDate)],
       ],
       outro: "Jeśli płatność została już wykonana, prosimy potraktować tę wiadomość jako informacyjną.",
-      invoiceUrl: data.invoiceUrl,
+      attached: data.attached,
       landlordName: data.landlordName,
     }),
     text: textVersion([
@@ -131,7 +135,7 @@ export function invoiceIssuedEmail(data: InvoiceEmailData): EmailContent {
       `Wystawiliśmy dokument ${data.invoiceNumber}${data.periodLabel ? ` za ${data.periodLabel}` : ""}.`,
       `Kwota: ${formatPLN(data.amountGrosze)}`,
       `Termin płatności: ${dateFormat.format(data.dueDate)}`,
-      data.invoiceUrl ? `\n${data.invoiceUrl}` : null,
+      data.attached ? "\nDokument PDF jest w załączniku tej wiadomości." : null,
       "",
       `${data.landlordName} · wiadomość wysłana automatycznie z systemu Rentix`,
     ]),
@@ -154,7 +158,7 @@ export function paymentReminderEmail(data: InvoiceEmailData): EmailContent {
         ["Termin", dateFormat.format(data.dueDate)],
       ],
       outro: "Jeśli przelew jest już w drodze, prosimy zignorować tę wiadomość.",
-      invoiceUrl: data.invoiceUrl,
+      attached: data.attached,
       landlordName: data.landlordName,
     }),
     text: textVersion([
@@ -163,7 +167,7 @@ export function paymentReminderEmail(data: InvoiceEmailData): EmailContent {
       `Przypominamy o płatności ${data.invoiceNumber}.`,
       `Do zapłaty: ${formatPLN(data.remainingGrosze)}`,
       `Termin: ${dateFormat.format(data.dueDate)}`,
-      data.invoiceUrl ? `\n${data.invoiceUrl}` : null,
+      data.attached ? "\nDokument PDF jest w załączniku tej wiadomości." : null,
       "",
       `${data.landlordName} · wiadomość wysłana automatycznie z systemu Rentix`,
     ]),
@@ -189,7 +193,7 @@ export function paymentOverdueEmail(data: InvoiceEmailData & { daysOverdue: numb
       ],
       outro:
         "Jeśli płatność została wykonana w ciągu ostatnich dni, prosimy o kontakt — sprawdzimy, czy wpłata do nas dotarła.",
-      invoiceUrl: data.invoiceUrl,
+      attached: data.attached,
       landlordName: data.landlordName,
     }),
     text: textVersion([
@@ -197,7 +201,7 @@ export function paymentOverdueEmail(data: InvoiceEmailData & { daysOverdue: numb
       "",
       `Dokument ${data.invoiceNumber} jest po terminie płatności (${dateFormat.format(data.dueDate)}).`,
       `Do zapłaty: ${formatPLN(data.remainingGrosze)}`,
-      data.invoiceUrl ? `\n${data.invoiceUrl}` : null,
+      data.attached ? "\nDokument PDF jest w załączniku tej wiadomości." : null,
       "",
       `${data.landlordName} · wiadomość wysłana automatycznie z systemu Rentix`,
     ]),

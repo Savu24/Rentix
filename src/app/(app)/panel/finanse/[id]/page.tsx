@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { CancelInvoice } from "@/components/panel/invoices/cancel-invoice";
 import { DeletePayment, RecordPayment } from "@/components/panel/invoices/record-payment";
+import { SendInvoice } from "@/components/panel/invoices/send-invoice";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -263,6 +264,10 @@ export default async function InvoiceDetailPage({ params }: Params) {
 
       {invoice.status !== "CANCELLED" ? (
         <div className="flex flex-col gap-3">
+          <SendInvoice
+            invoiceId={invoice.id}
+            tenantEmail={invoice.lease?.tenants[0]?.tenant.email ?? null}
+          />
           {remaining > 0 ? (
             <RecordPayment invoiceId={invoice.id} remainingGrosze={remaining} />
           ) : null}

@@ -6,7 +6,8 @@ import {
   paymentReminderEmail,
   type InvoiceEmailData,
 } from "@/lib/email/templates";
-import { env } from "@/lib/env";
+import { getInvoice } from "@/lib/invoices/service";
+import { renderInvoicePdf } from "@/lib/invoices/render";
 import { daysOverdue, remainingGrosze } from "@/lib/invoices/status";
 import { periodLabel } from "@/lib/leases/billing";
 import { prisma } from "@/lib/prisma";
@@ -21,18 +22,6 @@ import { chooseNotification } from "./schedule";
  * i konkurują ze sobą: najemca ma dostać jedną wiadomość dziennie, a nie trzy.
  * Pierwszeństwo ma najpilniejsza.
  */
-
-/**
- * Adres aplikacji do linków w wiadomościach.
- *
- * `APP_URL` jest opcjonalny — na środowisku bez skonfigurowanego adresu
- * wysyłamy e-mail bez przycisku zamiast linku prowadzącego w `undefined`.
- */
-function invoiceUrl(invoiceId: string): string | null {
-  const base = env.APP_URL ?? env.AUTH_URL;
-  if (!base) return null;
-  return `${base.replace(/\/$/, "")}/panel/finanse/${invoiceId}`;
-}
 
 export type NotificationOutcome = {
   invoiceId: string;
@@ -152,11 +141,28 @@ export async function sendPaymentNotifications({
       periodLabel: invoice.periodStart
         ? periodLabel(invoice.periodStart.getUTCFullYear(), invoice.periodStart.getUTCMonth())
         : null,
-      invoiceUrl: invoiceUrl(invoice.id),
+      // PDF dokładamy tylko przy zawiadomieniu o wystawieniu. Przy
+      // przypomnieniu i wezwaniu najemca ma dokument od tygodni — powtarzanie
+      // załącznika zapycha skrzynkę i wydłuża nocny przebieg o kolejne
+      // renderowania.
+      attached: type === "INVOICE_ISSUED",
     };
 
     const content = buildEmail(type, emailData, daysOverdue(invoice.dueDate, now));
-    const result = await sendEmail({ to: tenant.email, ...content });
+
+    // Dokument renderujemy dopiero tutaj, dla tej jednej wiadomości — nie ma
+    // sensu składać PDF-a dla najemcy bez adresu e-mail ani dla dokumentu,
+    // o którym już powiadomiliśmy.
+    let attachments;
+    if (emailData.attached) {
+      const full = await getInvoice(invoice.organizationId, invoice.id);
+      if (full) {
+        const pdf = await renderInvoicePdf(full);
+        attachments = [{ filename: pdf.filename, content: pdf.buffer }];
+      }
+    }
+
+    const result = await sendEmail({ to: tenant.email, ...content, attachments });
 
     await prisma.notification.create({
       data: {

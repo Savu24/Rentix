@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
     "/api/leases/[id]/pdf": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
     "/api/invoices/[id]/pdf": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
     "/api/invoices/pdf": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
+    // Wysyłka dołącza PDF, więc te trasy też czytają fonty z dysku.
+    "/api/invoices/[id]/send": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
+    "/api/cron/billing": ["./node_modules/@expo-google-fonts/inter/**/*.ttf"],
   },
 };
 
