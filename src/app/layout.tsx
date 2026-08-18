@@ -44,20 +44,36 @@ export const metadata: Metadata = {
   */
   metadataBase: new URL(env.APP_URL ?? env.AUTH_URL ?? "http://localhost:3000"),
   /*
-    Ikona i tryb po dodaniu do ekranu głównego iPhone'a.
+    Ikona na ekran główny iPhone'a — celowo z `public/`, nie z konwencji
+    `src/app/apple-icon.png`.
 
-    Bez tego iOS rysuje szarą kafelkę z pierwszą literą tytułu, bo nie ma czego
-    pokazać. Sam plik `apple-icon.png` (180×180) leży w `src/app/` — Next
-    znajduje go po nazwie i sam wystawia `<link rel="apple-touch-icon">`.
+    Konwencja Nexta serwuje plik pod adresem ze skrótem treści
+    (`/apple-icon.png?9f7593f6…`). Safari na iOS bywa, że przy takim adresie
+    ikony nie pobiera, i wtedy zostaje szara kafelka z pierwszą literą tytułu —
+    dokładnie to, co widać po dodaniu skrótu. Plik w `public/` ma adres stały
+    i bez znaku zapytania.
 
-    `capable` uruchamia aplikację bez paska Safari. Nawigacja jest w panelu
-    (dolny pasek na telefonie), więc pasek przeglądarki tylko zabierałby
-    wysokość ekranu.
+    Nazwa `apple-touch-icon.png` w korzeniu domeny jest drugim zabezpieczeniem:
+    iOS sam próbuje pobrać ten adres, gdy nie uda mu się skorzystać ze
+    znacznika w HTML-u.
   */
+  icons: {
+    // Bez `icon` — `favicon.ico` w `src/app/` Next wystawia sam, a wpisanie go
+    // tutaj dokładało drugi, identyczny znacznik.
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   appleWebApp: {
     title: "Rentix",
     capable: true,
     statusBarStyle: "default",
+  },
+  /*
+    `capable: true` wystawia dziś wyłącznie znormalizowany `mobile-web-app-capable`,
+    a Safari na iOS nadal czyta wariant z przedrostkiem `apple-`. Bez niego skrót
+    otwiera się w zwykłej karcie Safari zamiast jako osobna aplikacja.
+  */
+  other: {
+    "apple-mobile-web-app-capable": "yes",
   },
 };
 
