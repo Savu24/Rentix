@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  */
 export function Select({ className, children, ...props }: React.ComponentProps<"select">) {
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <select
         data-slot="select"
         className={cn(

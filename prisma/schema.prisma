@@ -706,6 +706,10 @@ model Payment {
 /// wspólnoty" i „opłata administracyjna" oznaczające to samo.
 enum ExpenseCategory {
   MORTGAGE // rata kredytu
+  /// Czynsz płacony właścicielowi przy podnajmie. Osobno od MORTGAGE, bo to
+  /// koszt cudzego lokalu, a nie własnego — inaczej raport nie odróżniłby
+  /// mieszkania na kredyt od mieszkania wziętego w podnajem.
+  RENT
   COMMUNITY_FEE // czynsz do wspólnoty lub spółdzielni
   UTILITIES // media opłacane przez właściciela
   REPAIR // naprawa i remont

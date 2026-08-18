@@ -11,6 +11,7 @@ const expenseCategories = Object.values(ExpenseCategory) as [
 
 export const EXPENSE_CATEGORY_LABEL: Record<ExpenseCategory, string> = {
   MORTGAGE: "Rata kredytu",
+  RENT: "Wynajem",
   COMMUNITY_FEE: "Czynsz do wspólnoty",
   UTILITIES: "Media",
   REPAIR: "Naprawa i remont",
@@ -30,6 +31,11 @@ export const EXPENSE_CATEGORY_LABEL: Record<ExpenseCategory, string> = {
  */
 export const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [
   "COMMUNITY_FEE",
+  // Czynsz do właściciela przy podnajmie — pozycja comiesięczna i osobna dla
+  // każdego lokalu, więc wpisywana częściej niż rata kredytu. Obie stoją obok
+  // siebie, bo odpowiadają na to samo pytanie: ile kosztuje samo posiadanie
+  // lokalu, zanim wejdzie do niego najemca.
+  "RENT",
   "MORTGAGE",
   "UTILITIES",
   "REPAIR",

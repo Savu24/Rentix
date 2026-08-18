@@ -197,6 +197,26 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+
+  /*
+   * Pola daty i czasu na iOS.
+   *
+   * Safari na iPhonie nadaje im własną szerokość wewnętrzną — pełny format daty
+   * plus ikona kalendarza — i ignoruje `width: 100%`, dopóki nie zdejmie się
+   * natywnego wyglądu. Bez tego pole rozpychało kolumnę siatki ponad szerokość
+   * karty i formularz kosztów wyjeżdżał poza ekran telefonu.
+   *
+   * Ikona wywołująca kalendarz to osobny pseudoelement, więc na desktopie
+   * zostaje na miejscu.
+   */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+  }
 }
 
 @layer components {

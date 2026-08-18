@@ -43,6 +43,22 @@ export const metadata: Metadata = {
     i `new URL("")` wywracał budowanie komunikatem „Invalid URL".
   */
   metadataBase: new URL(env.APP_URL ?? env.AUTH_URL ?? "http://localhost:3000"),
+  /*
+    Ikona i tryb po dodaniu do ekranu głównego iPhone'a.
+
+    Bez tego iOS rysuje szarą kafelkę z pierwszą literą tytułu, bo nie ma czego
+    pokazać. Sam plik `apple-icon.png` (180×180) leży w `src/app/` — Next
+    znajduje go po nazwie i sam wystawia `<link rel="apple-touch-icon">`.
+
+    `capable` uruchamia aplikację bez paska Safari. Nawigacja jest w panelu
+    (dolny pasek na telefonie), więc pasek przeglądarki tylko zabierałby
+    wysokość ekranu.
+  */
+  appleWebApp: {
+    title: "Rentix",
+    capable: true,
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {

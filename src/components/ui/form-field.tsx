@@ -29,7 +29,15 @@ export function FormField({
   const hintId = `${id}-hint`;
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    /*
+      `min-w-0` jest tu obowiązkowe, nie kosmetyczne.
+
+      Element siatki ma domyślnie `min-width: auto`, czyli nie zwęzi się poniżej
+      swojej zawartości. Natywny `input[type="date"]` na iOS ma własną szerokość
+      minimalną (pełny format daty plus ikona kalendarza), więc kolumna rozpychała
+      się ponad szerokość karty i cały formularz wyjeżdżał poza ekran telefonu.
+    */
+    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
 
       {children}
