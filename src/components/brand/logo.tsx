@@ -1,6 +1,25 @@
 import { cn } from "@/lib/utils";
 
-/** Znak Rentiksa — dach w bursztynowym kwadracie, jak w design systemie. */
+/**
+ * Znak Rentiksa — litera R w bursztynowym kwadracie, ten sam rysunek co ikona
+ * na ekranie głównym telefonu.
+ *
+ * Kształt wchodzi maską CSS, a nie zwykłym obrazkiem. Kolory znaku odwracają się
+ * między motywami (jasny: ciemna zieleń na bursztynie, ciemny: bursztyn na
+ * przygaszonym brązie), więc wklejona bitmapa miałaby w jednym z nich za mały
+ * kontrast. Maska bierze kolor z tokenu, czyli idzie za motywem sama.
+ */
+const MASK = {
+  maskImage: "url(/logo-mark.png)",
+  WebkitMaskImage: "url(/logo-mark.png)",
+  maskSize: "contain",
+  WebkitMaskSize: "contain",
+  maskRepeat: "no-repeat",
+  WebkitMaskRepeat: "no-repeat",
+  maskPosition: "center",
+  WebkitMaskPosition: "center",
+} as const;
+
 export function LogoMark({ className }: { className?: string }) {
   return (
     <span
@@ -11,18 +30,9 @@ export function LogoMark({ className }: { className?: string }) {
       )}
       aria-hidden
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--highlight-text)"
-        strokeWidth={2.2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="h-[17px] w-[17px]"
-      >
-        <path d="M3 11 12 4l9 7" />
-        <path d="M5 10v10h14V10" />
-      </svg>
+      {/* Odstęp wokół litery jest już wrysowany w maskę, więc kwadrat wypełniamy
+          w całości — inaczej znak zrobiłby się dwa razy za mały. */}
+      <span className="h-full w-full bg-highlight-text" style={MASK} />
     </span>
   );
 }
