@@ -93,8 +93,17 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
     );
   }
 
+  /*
+    `w-full` po rozwinięciu.
+
+    Przycisk stoi w wierszu nagłówka, obok tytułu strony, i tam jest na miejscu.
+    Rozwinięty formularz dziedziczył to samo miejsce, czyli wąską prawą kolumnę
+    obok nagłówka — a ma osiem pól. Pełna szerokość wypycha go do własnego
+    wiersza (rodzic ma `flex-wrap`), więc korzysta z całej szerokości strony,
+    tak jak formularz najemcy na osobnej stronie.
+  */
   return (
-    <Card className="border-accent/40">
+    <Card className="w-full border-accent/40">
       <CardContent className="flex flex-col gap-4 p-4">
         <p className="text-sm font-semibold text-fg">Nowy koszt</p>
 
