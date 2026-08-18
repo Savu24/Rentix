@@ -47,6 +47,7 @@ export default async function SettingsPage() {
       <OrganizationForm
         defaultValues={{
           name: organization.name,
+          contactEmail: organization.contactEmail ?? "",
           taxId: organization.taxId ?? "",
           street: organization.street ?? "",
           postalCode: organization.postalCode ?? "",

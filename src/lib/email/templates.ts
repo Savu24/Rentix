@@ -72,6 +72,16 @@ function layout(options: {
 
   return `<!doctype html>
 <html lang="pl">
+  <head>
+    <!--
+      Deklaracja kodowania w samym dokumencie, mimo że nagłówek MIME wiadomości
+      też je podaje. Część klientów pocztowych czyta HTML w oderwaniu od koperty
+      (podgląd, przekazanie dalej, archiwum) i wtedy bez tej linijki polskie
+      znaki rozsypują się na krzaki — „płatności" zamienia się w „pĹ‚atnoĹ›ci".
+    -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
   <body style="margin:0;padding:24px;background:${COLORS.page};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:${COLORS.surface};border:1px solid ${COLORS.rule};border-radius:14px;">
       <tr>

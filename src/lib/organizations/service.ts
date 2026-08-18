@@ -20,6 +20,7 @@ export async function getOrganization(organizationId: string) {
       id: true,
       name: true,
       slug: true,
+      contactEmail: true,
       taxId: true,
       street: true,
       postalCode: true,
@@ -44,6 +45,7 @@ export async function updateOrganization(
     where: { id: organizationId },
     data: {
       name: data.name,
+      contactEmail: data.contactEmail,
       taxId: data.taxId,
       street: data.street,
       postalCode: data.postalCode,
@@ -52,6 +54,7 @@ export async function updateOrganization(
     select: {
       id: true,
       name: true,
+      contactEmail: true,
       taxId: true,
       street: true,
       postalCode: true,

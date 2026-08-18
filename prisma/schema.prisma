@@ -55,6 +55,13 @@ model Organization {
   /// Unikalny identyfikator w URL-ach i na publicznej stronie ofert: /o/<slug>
   slug String @unique
 
+  /// Adres kontaktowy wynajmującego, wstawiany w powiadomieniach jako Reply-To.
+  ///
+  /// Wiadomości wychodzą z adresu platformy, bo tylko jej domena ma rekordy SPF
+  /// i DKIM. Bez tego pola najemca odpisywałby na skrzynkę platformy zamiast do
+  /// swojego wynajmującego — czyli w próżnię.
+  contactEmail String?
+
   // Dane wystawcy faktur — sprzedawca w rozumieniu FA(2).
   taxId       String? // NIP
   street      String?

@@ -3,6 +3,8 @@ import { Resend } from "resend";
 
 import { env } from "@/lib/env";
 
+import { formatFrom } from "./sender";
+
 /**
  * Wysyłka e-maili — dwie drogi za jednym interfejsem.
  *
@@ -72,6 +74,13 @@ export type EmailContent = {
 
 export type EmailMessage = EmailContent & {
   to: string;
+  /**
+   * Nazwa wynajmującego w polu nadawcy. Adres pozostaje adresem platformy —
+   * tylko jej domena ma rekordy SPF i DKIM. Patrz `sender.ts`.
+   */
+  fromName?: string | null;
+  /** Adres kontaktowy wynajmującego; tam trafi odpowiedź najemcy. */
+  replyTo?: string | null;
   /** Dokumenty dołączone do wiadomości — najemca dostaje PDF, nie link. */
   attachments?: EmailAttachment[];
 };
@@ -84,12 +93,16 @@ export type EmailMessage = EmailContent & {
  * zablokować powiadomień dla pozostałych najemców.
  */
 export async function sendEmail(message: EmailMessage): Promise<SendEmailResult> {
+  const from = formatFrom(env.EMAIL_FROM, message.fromName);
+  const replyTo = message.replyTo?.trim() || undefined;
+
   const resend = resendClient();
 
   if (resend) {
     try {
       const { data, error } = await resend.emails.send({
-        from: env.EMAIL_FROM,
+        from,
+        ...(replyTo ? { replyTo } : {}),
         to: message.to,
         subject: message.subject,
         html: message.html,
@@ -116,7 +129,8 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
   if (smtp) {
     try {
       const info = await smtp.sendMail({
-        from: env.EMAIL_FROM,
+        from,
+        ...(replyTo ? { replyTo } : {}),
         to: message.to,
         subject: message.subject,
         html: message.html,

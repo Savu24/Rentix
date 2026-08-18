@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { passwordSchema } from "./auth";
+import { emailSchema, passwordSchema } from "./auth";
 import { optionalPostalCode, optionalTaxId, optionalText, requiredText } from "./common";
 
 /**
@@ -18,6 +18,18 @@ import { optionalPostalCode, optionalTaxId, optionalText, requiredText } from ".
  */
 export const organizationSettingsSchema = z.object({
   name: requiredText("Nazwa", 120),
+  /**
+   * Adres, pod który odpisze najemca.
+   *
+   * Nie jest to adres nadawcy — wiadomości wychodzą z domeny platformy, bo tylko
+   * ona ma rekordy SPF i DKIM. Ten trafia do nagłówka Reply-To, więc odpowiedź
+   * idzie do wynajmującego, a nie do platformy.
+   */
+  contactEmail: z
+    .union([z.literal(""), emailSchema])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional(),
   taxId: optionalTaxId,
   street: optionalText(120),
   postalCode: optionalPostalCode,

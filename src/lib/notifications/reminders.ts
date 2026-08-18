@@ -87,7 +87,7 @@ export async function sendPaymentNotifications({
       paidGrosze: true,
       status: true,
       organizationId: true,
-      organization: { select: { name: true } },
+      organization: { select: { name: true, contactEmail: true } },
       lease: {
         select: {
           tenants: {
@@ -162,7 +162,16 @@ export async function sendPaymentNotifications({
       }
     }
 
-    const result = await sendEmail({ to: tenant.email, ...content, attachments });
+    // Nazwa wynajmującego w polu nadawcy, jego adres w Reply-To — nocny przebieg
+    // obsługuje wszystkie organizacje naraz, więc nadawca musi wynikać
+    // z dokumentu, a nie z konfiguracji. Patrz `src/lib/email/sender.ts`.
+    const result = await sendEmail({
+      to: tenant.email,
+      fromName: invoice.organization.name,
+      replyTo: invoice.organization.contactEmail,
+      ...content,
+      attachments,
+    });
 
     await prisma.notification.create({
       data: {

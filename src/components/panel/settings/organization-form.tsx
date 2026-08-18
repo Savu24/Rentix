@@ -93,6 +93,22 @@ export function OrganizationForm({
             />
           </FormField>
 
+          <FormField
+            id="org-contactEmail"
+            label="Adres kontaktowy dla najemców"
+            error={errors.contactEmail?.message}
+            hint="Tu trafi odpowiedź, gdy najemca odpisze na powiadomienie o płatności."
+          >
+            <Input
+              {...fieldAria("org-contactEmail", { error: errors.contactEmail?.message })}
+              type="email"
+              inputMode="email"
+              placeholder="biuro@twojafirma.pl"
+              disabled={isSubmitting}
+              {...register("contactEmail")}
+            />
+          </FormField>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="org-taxId"

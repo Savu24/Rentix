@@ -48,6 +48,10 @@ export async function sendInvoiceToTenant(
 
   const result = await sendEmail({
     to: tenant.email,
+    // Najemca widzi w skrzynce swojego wynajmującego, a nie platformę,
+    // i odpisuje prosto do niego. Patrz `src/lib/email/sender.ts`.
+    fromName: invoice.organization.name,
+    replyTo: invoice.organization.contactEmail,
     ...content,
     attachments: [{ filename: pdf.filename, content: pdf.buffer }],
   });

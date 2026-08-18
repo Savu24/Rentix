@@ -241,6 +241,16 @@ czysta funkcja — bez bazy i bramki e-mail, żeby dało się ją sprawdzić tes
 Wezwanie do zapłaty ponawiamy co 7 dni. Codzienna wiadomość o tej samej
 zaległości trafia do spamu i przestaje działać.
 
+**Jeden nadawca, wiele tożsamości.** Wiadomości wychodzą z jednego adresu —
+`EMAIL_FROM`, należącego do platformy — bo tylko jej domena ma rekordy SPF
+i DKIM. Nazwa wyświetlana bierze się z nazwy organizacji, a adres kontaktowy
+wynajmującego (ustawienia konta) trafia do `Reply-To`. Najemca widzi w skrzynce
+swojego wynajmującego i odpisuje prosto do niego, z pominięciem platformy.
+
+Alternatywą byłoby trzymanie haseł do skrzynek wszystkich klientów — koszt
+nieproporcjonalny do zysku. Ten sam podział stosuje każdy SaaS wysyłający pocztę
+w cudzym imieniu.
+
 **Dwie drogi wysyłki.** `RESEND_API_KEY` włącza Resend (wymaga zweryfikowanej
 domeny nadawcy, najlepsza dostarczalność). Komplet `SMTP_HOST` / `SMTP_USER` /
 `SMTP_PASSWORD` włącza zwykły SMTP — wtedy wysyłasz z istniejącej skrzynki
