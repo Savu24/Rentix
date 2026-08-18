@@ -58,6 +58,8 @@ async function request<T>(
 export const api = {
   get: <T>(url: string) => request<T>(url, { method: "GET" }),
   post: <T>(url: string, json: unknown) => request<T>(url, { method: "POST", json }),
+  /** Podmiana całego zasobu pod znanym adresem — powtórzone żądanie daje ten sam stan. */
+  put: <T>(url: string, json: unknown) => request<T>(url, { method: "PUT", json }),
   patch: <T>(url: string, json: unknown) => request<T>(url, { method: "PATCH", json }),
   /**
    * DELETE z opcjonalnym ciałem — potrzebne tam, gdzie usunięcie wymaga
