@@ -21,6 +21,19 @@ const serverEnvSchema = z.object({
   AUTH_URL: z.url().optional(),
   AUTH_TRUST_HOST: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
+
+  /**
+   * Zwykły SMTP — alternatywa dla Resendu.
+   *
+   * Pozwala wysyłać z istniejącej skrzynki (Gmail, poczta hostingu, Brevo),
+   * czyli bez konfigurowania rekordów DNS dla własnej domeny. Wszystkie trzy
+   * pola razem albo żadne; komplet sprawdzamy poniżej, bo brak jednego cicho
+   * wyłączałby wysyłkę.
+   */
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
   EMAIL_FROM: z.string().default("Rentix <no-reply@rentix.pl>"),
   /** Publiczny adres aplikacji — linki w e-mailach do najemców. */
   APP_URL: z.url().optional(),
@@ -77,6 +90,13 @@ function loadEnv(): ServerEnv {
   }
 
   const env = parsed.data;
+
+  const smtpFields = [env.SMTP_HOST, env.SMTP_USER, env.SMTP_PASSWORD];
+  if (smtpFields.some(Boolean) && !smtpFields.every(Boolean)) {
+    throw new Error(
+      "Ustaw SMTP_HOST, SMTP_USER i SMTP_PASSWORD razem — niepełny komplet po cichu wyłącza wysyłkę poczty.",
+    );
+  }
 
   if (Boolean(env.UPSTASH_REDIS_REST_URL) !== Boolean(env.UPSTASH_REDIS_REST_TOKEN)) {
     throw new Error(

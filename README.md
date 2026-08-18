@@ -241,6 +241,17 @@ czysta funkcja — bez bazy i bramki e-mail, żeby dało się ją sprawdzić tes
 Wezwanie do zapłaty ponawiamy co 7 dni. Codzienna wiadomość o tej samej
 zaległości trafia do spamu i przestaje działać.
 
+**Dwie drogi wysyłki.** `RESEND_API_KEY` włącza Resend (wymaga zweryfikowanej
+domeny nadawcy, najlepsza dostarczalność). Komplet `SMTP_HOST` / `SMTP_USER` /
+`SMTP_PASSWORD` włącza zwykły SMTP — wtedy wysyłasz z istniejącej skrzynki
+(Gmail, poczta hostingu, Brevo) i nie musisz konfigurować rekordów DNS, bo
+adres, którego używasz, ma je już ustawione. Gdy skonfigurowane są obie,
+wygrywa Resend. `EMAIL_FROM` musi wskazywać adres, z którego wolno ci wysyłać —
+przy Gmailu ten sam, co `SMTP_USER`.
+
+Dokument jedzie do najemcy **jako PDF w załączniku**, nie linkiem: najemca nie
+ma konta w panelu, więc odnośnik prowadziłby go na ekran logowania.
+
 Wynik każdej wysyłki — także nieudanej — ląduje w tabeli `notifications`.
 Ponowny przebieg nie zdubluje wiadomości, która poszła, ale spróbuje jeszcze raz
 tej, która padła na błędzie bramki. Bez `RESEND_API_KEY` wysyłka kończy się

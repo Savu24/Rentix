@@ -1,21 +1,58 @@
+import nodemailer from "nodemailer";
 import { Resend } from "resend";
 
 import { env } from "@/lib/env";
 
 /**
- * Wysyłka e-maili przez Resend.
+ * Wysyłka e-maili — dwie drogi za jednym interfejsem.
  *
- * Klient powstaje leniwie i jest cache'owany na `globalThis` — hot reload
- * w trybie deweloperskim inaczej tworzyłby nowe połączenie przy każdej zmianie
- * pliku, tak samo jak robi to klient Prismy.
+ * - **Resend**, gdy ustawiony jest `RESEND_API_KEY`. Wymaga zweryfikowanej
+ *   domeny nadawcy, za to daje najlepszą dostarczalność i podgląd wysyłek.
+ * - **SMTP**, gdy ustawiony jest `SMTP_HOST`. Tu podłączysz cokolwiek: własną
+ *   skrzynkę na Gmailu, pocztę hostingu albo darmowy plan Brevo. Skrzynka,
+ *   którą już masz, nie wymaga konfigurowania rekordów DNS — wysyłasz
+ *   z własnego adresu, więc nikt nie musi potwierdzać, że wolno ci to robić.
+ *
+ * Sam wymóg potwierdzenia nadawcy nie jest kaprysem dostawcy: bez SPF i DKIM
+ * wiadomość ląduje w spamie, więc obejście go polega na użyciu adresu, który
+ * takie wpisy już ma — a nie na ich pominięciu.
+ *
+ * Gdy skonfigurowane są obie drogi, wygrywa Resend: jest wybrany świadomie,
+ * a SMTP bywa zostawiony po testach.
  */
 
-const globalForResend = globalThis as unknown as { resend?: Resend };
+const globalForMail = globalThis as unknown as {
+  resend?: Resend;
+  smtp?: nodemailer.Transporter;
+};
 
-function client(): Resend | null {
+function resendClient(): Resend | null {
   if (!env.RESEND_API_KEY) return null;
-  globalForResend.resend ??= new Resend(env.RESEND_API_KEY);
-  return globalForResend.resend;
+  globalForMail.resend ??= new Resend(env.RESEND_API_KEY);
+  return globalForMail.resend;
+}
+
+function smtpTransport(): nodemailer.Transporter | null {
+  if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASSWORD) return null;
+
+  globalForMail.smtp ??= nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    // Port 465 to TLS od pierwszego bajtu; 587 zaczyna jawnie i podnosi
+    // szyfrowanie STARTTLS-em. Pomyłka tutaj kończy się zawieszeniem
+    // połączenia, a nie czytelnym błędem.
+    secure: env.SMTP_PORT === 465,
+    auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD },
+  });
+
+  return globalForMail.smtp;
+}
+
+/** Którą drogą pójdzie wysyłka — do diagnostyki i komunikatów. */
+export function mailTransport(): "resend" | "smtp" | null {
+  if (resendClient()) return "resend";
+  if (smtpTransport()) return "smtp";
+  return null;
 }
 
 export type SendEmailResult = { ok: true; id: string | null } | { ok: false; error: string };
@@ -47,34 +84,59 @@ export type EmailMessage = EmailContent & {
  * zablokować powiadomień dla pozostałych najemców.
  */
 export async function sendEmail(message: EmailMessage): Promise<SendEmailResult> {
-  const resend = client();
+  const resend = resendClient();
 
-  if (!resend) {
-    // Bez klucza nie udajemy sukcesu: przypomnienie zostaje zapisane jako
-    // nieudane i pójdzie przy następnym przebiegu, gdy klucz się pojawi.
-    return { ok: false, error: "Brak RESEND_API_KEY — e-mail nie został wysłany." };
+  if (resend) {
+    try {
+      const { data, error } = await resend.emails.send({
+        from: env.EMAIL_FROM,
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+        ...(message.attachments?.length
+          ? {
+              attachments: message.attachments.map((file) => ({
+                filename: file.filename,
+                content: file.content,
+              })),
+            }
+          : {}),
+      });
+
+      if (error) return { ok: false, error: error.message };
+      return { ok: true, id: data?.id ?? null };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Nieznany błąd wysyłki" };
+    }
   }
 
-  try {
-    const { data, error } = await resend.emails.send({
-      from: env.EMAIL_FROM,
-      to: message.to,
-      subject: message.subject,
-      html: message.html,
-      text: message.text,
-      ...(message.attachments?.length
-        ? {
-            attachments: message.attachments.map((file) => ({
-              filename: file.filename,
-              content: file.content,
-            })),
-          }
-        : {}),
-    });
+  const smtp = smtpTransport();
 
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, id: data?.id ?? null };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Nieznany błąd wysyłki" };
+  if (smtp) {
+    try {
+      const info = await smtp.sendMail({
+        from: env.EMAIL_FROM,
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+        attachments: message.attachments?.map((file) => ({
+          filename: file.filename,
+          content: file.content,
+        })),
+      });
+
+      return { ok: true, id: info.messageId ?? null };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Nieznany błąd SMTP" };
+    }
   }
+
+  // Bez żadnej drogi nie udajemy sukcesu: przypomnienie zostaje zapisane jako
+  // nieudane i pójdzie przy następnym przebiegu, gdy poczta zostanie podpięta.
+  return {
+    ok: false,
+    error: "Poczta nie jest skonfigurowana — ustaw RESEND_API_KEY albo dane SMTP.",
+  };
 }
