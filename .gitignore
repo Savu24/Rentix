@@ -45,3 +45,7 @@ next-env.d.ts
 
 # graf wiedzy (graphify) — kilka MB wygenerowanych artefaktów, odtwarzalnych z kodu
 /graphify-out/
+
+# skille i lokalne ustawienia Claude Code — narzędzia, nie kod produktu
+/.claude/skills/
+/.claude/settings.local.json
