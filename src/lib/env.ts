@@ -35,7 +35,7 @@ const serverEnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   EMAIL_FROM: z.string().default("Rentix <no-reply@rentix.pl>"),
-  /** Publiczny adres aplikacji — linki w e-mailach do najemców. */
+  /** Publiczny adres aplikacji — baza `metadataBase` dla odnośników w metadanych. */
   APP_URL: z.url().optional(),
   /**
    * Wspólny sekret endpointu cronowego (`/api/cron/billing`). Bez niego
