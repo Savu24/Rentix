@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { unknownVariables } from "@/lib/email/render";
+import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
+
 import { emailSchema, passwordSchema } from "./auth";
 import { optionalPostalCode, optionalTaxId, optionalText, requiredText } from "./common";
 
@@ -106,3 +109,71 @@ export const accountDeleteSchema = z.object({
 
 export type AccountDeleteInput = z.input<typeof accountDeleteSchema>;
 export type AccountDeleteOutput = z.output<typeof accountDeleteSchema>;
+
+/**
+ * Rytm przypominania i nazwa nadawcy.
+ *
+ * Granice nie są dekoracją. Dolna przy ponawianiu wezwań bierze się stąd, że
+ * codzienna wiadomość o tej samej zaległości trafia do spamu i przestaje
+ * docierać — ustawienie „co 1 dzień" zaszkodziłoby temu, kto je wybierze.
+ * Górna przy przypomnieniu przed terminem: powyżej miesiąca dokument zwykle
+ * jeszcze nie istnieje, więc przypominać nie ma o czym.
+ */
+export const notificationSettingsSchema = z.object({
+  senderName: optionalText(120),
+  reminderDaysBefore: z.coerce
+    .number()
+    .int("Podaj pełne dni")
+    .min(1, "Przypomnienie musi wyprzedzać termin o co najmniej dzień")
+    .max(30, "Więcej niż 30 dni przed terminem to za wcześnie"),
+  overdueRepeatDays: z.coerce
+    .number()
+    .int("Podaj pełne dni")
+    .min(2, "Codzienne wezwania trafiają do spamu — ustaw co najmniej 2 dni")
+    .max(60, "Rzadziej niż co 60 dni wezwanie przestaje być wezwaniem"),
+});
+
+export type NotificationSettingsInput = z.input<typeof notificationSettingsSchema>;
+export type NotificationSettingsOutput = z.output<typeof notificationSettingsSchema>;
+
+/**
+ * Pole treści pisanej przez wynajmującego.
+ *
+ * Puste zapisujemy jako NULL, bo NULL znaczy „użyj domyślnego tekstu z kodu".
+ * Gdyby puste pole zapisywało pusty string, wyczyszczenie akapitu wysyłałoby
+ * najemcy wiadomość z dziurą zamiast przywracać tekst domyślny — a to jest to,
+ * czego ktoś kasujący zawartość pola się spodziewa.
+ */
+const templateField = (max: number) =>
+  optionalText(max).superRefine((value, ctx) => {
+    const unknown = value ? unknownVariables(value) : [];
+    if (unknown.length === 0) return;
+
+    // Wypisujemy nazwy, a nie samo „nieznana zmienna": literówka bywa
+    // jednoliterowa i bez pokazania winowajcy szuka się jej na oko.
+    ctx.addIssue({
+      code: "custom",
+      message: `Nieznane zmienne: ${unknown
+        .map((name) => `{{${name}}}`)
+        .join(", ")}. Sprawdź listę pod polem.`,
+    });
+  });
+
+/**
+ * Treść jednego rodzaju powiadomienia.
+ *
+ * Temat jest krótszy niż reszta nie dla porządku: klienci pocztowi ucinają go
+ * po kilkudziesięciu znakach, a temat ucięty w połowie kwoty jest gorszy niż
+ * temat krótki.
+ */
+export const emailTemplateSchema = z.object({
+  type: z.enum(EDITABLE_NOTIFICATION_TYPES),
+  enabled: z.boolean(),
+  subject: templateField(160),
+  heading: templateField(60),
+  intro: templateField(1200),
+  outro: templateField(1200),
+});
+
+export type EmailTemplateInput = z.input<typeof emailTemplateSchema>;
+export type EmailTemplateOutput = z.output<typeof emailTemplateSchema>;

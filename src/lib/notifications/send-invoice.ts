@@ -5,6 +5,9 @@ import { getInvoice } from "@/lib/invoices/service";
 import { periodLabel } from "@/lib/leases/billing";
 import { remainingGrosze } from "@/lib/invoices/status";
 import { prisma } from "@/lib/prisma";
+import { formatPropertyAddress } from "@/lib/properties/address";
+
+import { organizationMailSettings } from "./settings";
 
 /**
  * Wysyłka pojedynczego dokumentu do najemcy, na żądanie.
@@ -31,18 +34,33 @@ export async function sendInvoiceToTenant(
   const tenant = invoice.lease?.tenants[0]?.tenant;
   if (!tenant?.email) return { ok: false, reason: "NO_RECIPIENT" };
 
-  const content = invoiceIssuedEmail({
-    tenantFirstName: tenant.firstName,
-    landlordName: invoice.organization.name,
-    invoiceNumber: invoice.number,
-    amountGrosze: invoice.totalGrossGrosze,
-    remainingGrosze: remainingGrosze(invoice),
-    dueDate: invoice.dueDate,
-    periodLabel: invoice.periodStart
-      ? periodLabel(invoice.periodStart.getUTCFullYear(), invoice.periodStart.getUTCMonth())
-      : null,
-    attached: true,
-  });
+  const settings = await organizationMailSettings(organizationId);
+  const property = invoice.lease?.property;
+  const landlordName = settings.senderName || invoice.organization.name;
+
+  /*
+    Wyłączenie automatu w ustawieniach nie blokuje tej ścieżki. Wynajmujący
+    właśnie kliknął „wyślij" — odmowa z powołaniem na ustawienie harmonogramu
+    byłaby odmawianiem wykonania polecenia, które przed chwilą wydał. Treść
+    bierzemy z jego szablonu, bo to nadal jego wiadomość.
+  */
+  const content = invoiceIssuedEmail(
+    {
+      tenantFirstName: tenant.firstName,
+      tenantLastName: tenant.lastName,
+      propertyAddress: property ? formatPropertyAddress(property) : null,
+      landlordName,
+      invoiceNumber: invoice.number,
+      amountGrosze: invoice.totalGrossGrosze,
+      remainingGrosze: remainingGrosze(invoice),
+      dueDate: invoice.dueDate,
+      periodLabel: invoice.periodStart
+        ? periodLabel(invoice.periodStart.getUTCFullYear(), invoice.periodStart.getUTCMonth())
+        : null,
+      attached: true,
+    },
+    settings.templates.get("INVOICE_ISSUED"),
+  );
 
   const pdf = await renderInvoicePdf(invoice);
 
@@ -50,8 +68,8 @@ export async function sendInvoiceToTenant(
     to: tenant.email,
     // Najemca widzi w skrzynce swojego wynajmującego, a nie platformę,
     // i odpisuje prosto do niego. Patrz `src/lib/email/sender.ts`.
-    fromName: invoice.organization.name,
-    replyTo: invoice.organization.contactEmail,
+    fromName: landlordName,
+    replyTo: settings.replyTo,
     ...content,
     attachments: [{ filename: pdf.filename, content: pdf.buffer }],
   });

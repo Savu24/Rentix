@@ -136,3 +136,100 @@ describe("chooseNotification", () => {
     expect(result).toBeNull();
   });
 });
+
+describe("rytm ustawiony przez wynajmującego", () => {
+  it("przypomina wcześniej, gdy konto tak ustawiło", () => {
+    // Domyślnie okno przypomnień to 7 dni. Przy ustawieniu 14 dokument
+    // z terminem za 10 dni już się w nim mieści.
+    const result = chooseNotification(
+      candidate({
+        issueDate: utc(2026, 7, 1),
+        dueDate: utc(2026, 8, 20),
+        sent: [["INVOICE_ISSUED", utc(2026, 7, 1)]],
+      }),
+      utc(2026, 8, 10),
+      { reminderDaysBefore: 14, overdueRepeatDays: 7 },
+    );
+
+    expect(result).toBe("PAYMENT_REMINDER");
+  });
+
+  it("nie przypomina, gdy do terminu dalej niż ustawione okno", () => {
+    const result = chooseNotification(
+      candidate({
+        issueDate: utc(2026, 7, 1),
+        dueDate: utc(2026, 8, 20),
+        sent: [["INVOICE_ISSUED", utc(2026, 7, 1)]],
+      }),
+      utc(2026, 8, 10),
+      { reminderDaysBefore: 3, overdueRepeatDays: 7 },
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("ponawia wezwanie w rytmie konta, nie co tydzień na sztywno", () => {
+    const shared = {
+      issueDate: utc(2026, 7, 1),
+      dueDate: utc(2026, 8, 1),
+      sent: [["PAYMENT_OVERDUE", utc(2026, 8, 10)]] as Array<[NotificationType, Date]>,
+    };
+
+    // Trzy dni po ostatnim wezwaniu: przy rytmie co 3 dni już pora, przy 14 —
+    // jeszcze nie.
+    expect(
+      chooseNotification(candidate(shared), utc(2026, 8, 13), {
+        reminderDaysBefore: 7,
+        overdueRepeatDays: 3,
+      }),
+    ).toBe("PAYMENT_OVERDUE");
+
+    expect(
+      chooseNotification(candidate(shared), utc(2026, 8, 13), {
+        reminderDaysBefore: 7,
+        overdueRepeatDays: 14,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("wyłączone rodzaje powiadomień", () => {
+  const schedule = { reminderDaysBefore: OVERDUE_REPEAT_DAYS, overdueRepeatDays: OVERDUE_REPEAT_DAYS };
+
+  it("wyłączone wezwanie nie zamienia się w łagodniejsze przypomnienie", () => {
+    // Dokument jest po terminie. Gdyby wyłączenie wezwań przepuszczało go dalej,
+    // najemca dostałby „zbliża się termin" o płatności, która minęła — czyli
+    // obejście decyzji, którą ktoś świadomie podjął.
+    const result = chooseNotification(
+      candidate({ issueDate: utc(2026, 7, 1), dueDate: utc(2026, 8, 1) }),
+      utc(2026, 8, 10),
+      schedule,
+      new Set<NotificationType>(["PAYMENT_REMINDER", "INVOICE_ISSUED"]),
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("wyłączone przypomnienie nie blokuje zawiadomienia o wystawieniu", () => {
+    // To dwie różne wiadomości, a nie dwa natężenia tej samej.
+    const result = chooseNotification(
+      candidate({ issueDate: utc(2026, 8, 1), dueDate: utc(2026, 8, 5) }),
+      utc(2026, 8, 2),
+      schedule,
+      new Set<NotificationType>(["INVOICE_ISSUED"]),
+    );
+
+    expect(result).toBe("INVOICE_ISSUED");
+  });
+
+  it("pusty zbiór wyłącza wszystko", () => {
+    const result = chooseNotification(
+      candidate({ issueDate: utc(2026, 8, 1), dueDate: utc(2026, 9, 10) }),
+      utc(2026, 8, 2),
+      schedule,
+      new Set<NotificationType>(),
+    );
+
+    expect(result).toBeNull();
+  });
+});

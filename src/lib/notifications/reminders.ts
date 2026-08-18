@@ -5,13 +5,16 @@ import {
   paymentOverdueEmail,
   paymentReminderEmail,
   type InvoiceEmailData,
+  type TemplateFields,
 } from "@/lib/email/templates";
 import { getInvoice } from "@/lib/invoices/service";
 import { renderInvoicePdf } from "@/lib/invoices/render";
 import { daysOverdue, remainingGrosze } from "@/lib/invoices/status";
 import { periodLabel } from "@/lib/leases/billing";
 import { prisma } from "@/lib/prisma";
+import { formatPropertyAddress } from "@/lib/properties/address";
 
+import { mailSettingsLoader } from "./settings";
 import { chooseNotification } from "./schedule";
 
 /**
@@ -42,14 +45,15 @@ function buildEmail(
   type: NotificationType,
   data: InvoiceEmailData,
   overdueDaysCount: number,
+  fields?: TemplateFields | null,
 ): EmailContent {
   switch (type) {
     case "PAYMENT_OVERDUE":
-      return paymentOverdueEmail({ ...data, daysOverdue: overdueDaysCount });
+      return paymentOverdueEmail({ ...data, daysOverdue: overdueDaysCount }, fields);
     case "PAYMENT_REMINDER":
-      return paymentReminderEmail(data);
+      return paymentReminderEmail(data, fields);
     default:
-      return invoiceIssuedEmail(data);
+      return invoiceIssuedEmail(data, fields);
   }
 }
 
@@ -90,10 +94,29 @@ export async function sendPaymentNotifications({
       organization: { select: { name: true, contactEmail: true } },
       lease: {
         select: {
+          property: {
+            select: {
+              street: true,
+              buildingNumber: true,
+              apartmentNumber: true,
+              postalCode: true,
+              city: true,
+            },
+          },
           tenants: {
             orderBy: { isPrimary: "desc" },
             take: 1,
-            select: { tenant: { select: { id: true, firstName: true, email: true, userId: true } } },
+            select: {
+              tenant: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  userId: true,
+                },
+              },
+            },
           },
         },
       },
@@ -108,8 +131,12 @@ export async function sendPaymentNotifications({
   });
 
   const outcomes: NotificationOutcome[] = [];
+  // Ustawienia poczty wczytujemy raz na organizację, nie raz na dokument.
+  const mailSettings = mailSettingsLoader();
 
   for (const invoice of invoices) {
+    const settings = await mailSettings(invoice.organizationId);
+
     // Ostatnia udana wysyłka każdego rodzaju — lista jest posortowana malejąco,
     // więc pierwszy wpis danego typu jest tym najnowszym.
     const sentTypes = new Map<NotificationType, Date>();
@@ -117,7 +144,12 @@ export async function sendPaymentNotifications({
       if (!sentTypes.has(notification.type)) sentTypes.set(notification.type, notification.createdAt);
     }
 
-    const type = chooseNotification({ ...invoice, sentTypes }, now);
+    const type = chooseNotification(
+      { ...invoice, sentTypes },
+      now,
+      settings.schedule,
+      settings.enabled,
+    );
     if (!type) continue;
 
     const tenant = invoice.lease?.tenants[0]?.tenant;
@@ -131,9 +163,14 @@ export async function sendPaymentNotifications({
     }
 
     const remaining = remainingGrosze(invoice);
+    const property = invoice.lease?.property;
     const emailData: InvoiceEmailData = {
       tenantFirstName: tenant.firstName,
-      landlordName: invoice.organization.name,
+      tenantLastName: tenant.lastName,
+      propertyAddress: property ? formatPropertyAddress(property) : null,
+      // Nazwa, którą wynajmujący pokazuje najemcom — trafia i w treść, i w pole
+      // nadawcy, więc nie może się rozjechać między jednym a drugim.
+      landlordName: settings.senderName || invoice.organization.name,
       invoiceNumber: invoice.number,
       amountGrosze: invoice.totalGrossGrosze,
       remainingGrosze: remaining,
@@ -148,7 +185,12 @@ export async function sendPaymentNotifications({
       attached: type === "INVOICE_ISSUED",
     };
 
-    const content = buildEmail(type, emailData, daysOverdue(invoice.dueDate, now));
+    const content = buildEmail(
+      type,
+      emailData,
+      daysOverdue(invoice.dueDate, now),
+      settings.templates.get(type),
+    );
 
     // Dokument renderujemy dopiero tutaj, dla tej jednej wiadomości — nie ma
     // sensu składać PDF-a dla najemcy bez adresu e-mail ani dla dokumentu,
@@ -167,8 +209,8 @@ export async function sendPaymentNotifications({
     // z dokumentu, a nie z konfiguracji. Patrz `src/lib/email/sender.ts`.
     const result = await sendEmail({
       to: tenant.email,
-      fromName: invoice.organization.name,
-      replyTo: invoice.organization.contactEmail,
+      fromName: emailData.landlordName,
+      replyTo: settings.replyTo,
       ...content,
       attachments,
     });

@@ -62,6 +62,21 @@ model Organization {
   /// swojego wynajmującego — czyli w próżnię.
   contactEmail String?
 
+  /// Nazwa w polu nadawcy powiadomień, gdy ma się różnić od nazwy organizacji.
+  ///
+  /// Nazwa firmy na fakturze bywa urzędowa („Miret sp. z o.o."), a w skrzynce
+  /// najemcy lepiej wygląda ta, którą zna z rozmów. Puste pole = nazwa
+  /// organizacji.
+  senderName String?
+
+  /// Ile dni przed terminem wysłać przypomnienie o zbliżającej się płatności.
+  reminderDaysBefore Int @default(7)
+
+  /// Co ile dni ponawiać wezwanie po terminie. Codzienna wiadomość o tej samej
+  /// zaległości trafia do spamu i przestaje działać, stąd dolna granica
+  /// pilnowana walidacją, a nie tylko wartością domyślną.
+  overdueRepeatDays Int @default(7)
+
   // Dane wystawcy faktur — sprzedawca w rozumieniu FA(2).
   taxId       String? // NIP
   street      String?
@@ -87,6 +102,7 @@ model Organization {
   messages            Message[]
   documents           Document[]
   notifications       Notification[]
+  emailTemplates      EmailTemplate[]
   subscription        Subscription?
 
   @@index([createdAt])
@@ -1075,6 +1091,43 @@ model Notification {
   // Kolejka wysyłki: „co czeka na wysłanie".
   @@index([status, createdAt])
   @@map("notifications")
+}
+
+/// Treść powiadomienia napisana przez wynajmującego.
+///
+/// Puste pole znaczy „użyj domyślnego tekstu z kodu", a nie „wyślij pustkę".
+/// Domyślek świadomie nie kopiujemy do bazy przy zakładaniu konta: gdyby tam
+/// wylądowały, poprawka literówki w domyślnym tekście nigdy nie dotarłaby do
+/// kont założonych wcześniej.
+///
+/// Edytowalne są tylko cztery pola — temat, nadpis i dwa akapity. Tabela
+/// z numerem, kwotą i terminem zostaje po stronie systemu, bo to dane
+/// z dokumentu, a nie tekst; rama HTML zostaje, bo musi się nie rozsypać
+/// w Outlooku. Patrz `src/lib/email/templates.ts`.
+model EmailTemplate {
+  id             String           @id @default(cuid())
+  organizationId String
+  type           NotificationType
+
+  subject String?
+  heading String?
+  intro   String? @db.Text
+  outro   String? @db.Text
+
+  /// Czy powiadomienie wychodzi **automatycznie**.
+  ///
+  /// Ręcznej wysyłki z panelu nie blokuje: tam wynajmujący właśnie kliknął
+  /// „wyślij", więc odmowa z powołaniem na ustawienie automatu byłaby
+  /// odmawianiem wykonania polecenia, które ktoś przed chwilą wydał.
+  enabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+  @@map("email_templates")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
