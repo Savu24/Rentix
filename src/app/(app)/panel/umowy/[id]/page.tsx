@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getLease } from "@/lib/leases/service";
 import { INVOICE_STATUS_META, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { formatPropertyAddress } from "@/lib/properties/address";
@@ -155,6 +156,13 @@ export default async function LeaseDetailPage({ params }: Params) {
             <Term label="Dzień naliczania" value={`${lease.billingDay}. dzień miesiąca`} />
             <Term label="Termin płatności" value={`${lease.paymentTermDays} dni`} />
           </dl>
+
+          <div className="mt-4 border-t border-border pt-4">
+            <EmailDeliveryToggle
+              leaseId={lease.id}
+              enabled={lease.sendInvoicesByEmail}
+            />
+          </div>
         </CardContent>
       </Card>
 

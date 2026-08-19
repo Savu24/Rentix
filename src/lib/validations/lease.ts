@@ -104,6 +104,15 @@ export const leaseFormSchema = z
       .max(90, "Termin płatności nie może przekraczać 90 dni")
       .default(10),
 
+    /**
+     * Czy dokumenty z tej umowy wychodzą najemcy mailem.
+     *
+     * Domyślnie tak — to jest sens automatu i wyłączanie go co umowę byłoby
+     * pracą, której nikt nie chce wykonywać. Wyłączenie zostawiamy dla umów,
+     * gdzie najemca prosi o papier albo rozlicza się przez zarządcę budynku.
+     */
+    sendInvoicesByEmail: z.coerce.boolean().default(true),
+
     notes: optionalText(2000),
   })
   .refine((data) => !data.endDate || data.endDate >= data.startDate, {
@@ -147,6 +156,7 @@ export const leaseUpdateSchema = z
     utilitiesAdvanceGrosze: moneyInput("Zaliczka na media").optional(),
     billingDay: z.coerce.number().int().min(1).max(MAX_BILLING_DAY).optional(),
     paymentTermDays: z.coerce.number().int().min(0).max(90).optional(),
+    sendInvoicesByEmail: z.coerce.boolean().optional(),
     notes: optionalText(2000),
   })
   .refine(

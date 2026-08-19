@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CheckboxField } from "@/components/ui/checkbox-field";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -66,6 +67,7 @@ const EMPTY: LeaseFormInput = {
   utilitiesAdvanceGrosze: "",
   billingDay: 1,
   paymentTermDays: 10,
+  sendInvoicesByEmail: true,
   notes: "",
 };
 
@@ -496,6 +498,18 @@ export function LeaseForm({
               />
             </FormField>
           </div>
+
+          {/*
+            Przelacznik stoi przy polach rozliczeniowych, a nie w ustawieniach
+            konta: decyzja zapada przy konkretnym najemcy, ktory prosi
+            o papier — nie przy calym portfelu naraz.
+          */}
+          <CheckboxField
+            label="Wysyłaj rachunki mailem"
+            hint="Wyłącz, jeśli ten najemca ma dostawać dokumenty poza systemem. Ręczna wysyłka z widoku rachunku pozostaje dostępna."
+            disabled={isSubmitting}
+            {...register("sendInvoicesByEmail")}
+          />
 
           <FormField id="notes" label="Ustalenia dodatkowe" error={errors.notes?.message}>
             <Textarea

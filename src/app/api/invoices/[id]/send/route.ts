@@ -26,10 +26,10 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   switch (result.reason) {
     case "NOT_FOUND":
       return apiError("NOT_FOUND", "Nie znaleziono dokumentu.");
-    case "NO_LEASE":
+    case "NO_TENANT":
       return apiError(
         "CONFLICT",
-        "Dokument nie jest powiązany z umową, więc nie wiadomo, komu go wysłać. Odbiorcę bierzemy z umowy — wystaw dokument na umowie albo wyślij go najemcy poza systemem.",
+        "Dokument nie ma wskazanego nabywcy ani umowy, więc nie wiadomo, komu go wysłać.",
       );
     case "NO_RECIPIENT":
       return apiError(

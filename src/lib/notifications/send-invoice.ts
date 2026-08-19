@@ -3,6 +3,7 @@ import { invoiceIssuedEmail } from "@/lib/email/templates";
 import { renderInvoicePdf } from "@/lib/invoices/render";
 import { getInvoice } from "@/lib/invoices/service";
 import { periodLabel } from "@/lib/leases/billing";
+import { invoiceRecipient } from "@/lib/invoices/recipient";
 import { remainingGrosze } from "@/lib/invoices/status";
 import { prisma } from "@/lib/prisma";
 import { formatPropertyAddress } from "@/lib/properties/address";
@@ -19,8 +20,8 @@ import { organizationMailSettings } from "./settings";
 export type SendInvoiceResult =
   | { ok: true; toEmail: string }
   | { ok: false; reason: "NOT_FOUND" }
-  /** Dokument nie jest powiazany z umowa, wiec nie wiadomo, komu go wyslac. */
-  | { ok: false; reason: "NO_LEASE" }
+  /** Dokument nie ma wskazanego nabywcy ani umowy — nie wiadomo, komu go wyslac. */
+  | { ok: false; reason: "NO_TENANT" }
   | { ok: false; reason: "NO_RECIPIENT" }
   | { ok: false; reason: "CANCELLED" }
   | { ok: false; reason: "SEND_FAILED"; error: string };
@@ -42,8 +43,8 @@ export async function sendInvoiceToTenant(
     odsylal do kartoteki najemcy takze wtedy, gdy adres byl tam uzupelniony —
     czyli kazal szukac bledu w miejscu, w ktorym go nie ma.
   */
-  const tenant = invoice.lease?.tenants[0]?.tenant;
-  if (!tenant) return { ok: false, reason: "NO_LEASE" };
+  const tenant = invoiceRecipient(invoice);
+  if (!tenant) return { ok: false, reason: "NO_TENANT" };
   if (!tenant.email) return { ok: false, reason: "NO_RECIPIENT" };
 
   const settings = await organizationMailSettings(organizationId);

@@ -9,6 +9,7 @@ import {
 } from "@/lib/email/templates";
 import { getInvoice } from "@/lib/invoices/service";
 import { renderInvoicePdf } from "@/lib/invoices/render";
+import { invoiceRecipient } from "@/lib/invoices/recipient";
 import { daysOverdue, remainingGrosze } from "@/lib/invoices/status";
 import { periodLabel } from "@/lib/leases/billing";
 import { prisma } from "@/lib/prisma";
@@ -92,8 +93,14 @@ export async function sendPaymentNotifications({
       status: true,
       organizationId: true,
       organization: { select: { name: true, contactEmail: true } },
+      // Nabywca dokumentu wystawionego poza umowa — bez tego jednorazowy
+      // rachunek nie mial adresata i nie dostawal zadnych przypomnien.
+      tenant: {
+        select: { id: true, firstName: true, lastName: true, email: true, userId: true },
+      },
       lease: {
         select: {
+          sendInvoicesByEmail: true,
           property: {
             select: {
               street: true,
@@ -152,9 +159,20 @@ export async function sendPaymentNotifications({
     );
     if (!type) continue;
 
-    const tenant = invoice.lease?.tenants[0]?.tenant;
+    /*
+      Umowa z wyłączoną wysyłką nie dostaje niczego automatem. Sprawdzamy to
+      dopiero tutaj, a nie w zapytaniu: dokument bez umowy też ma wychodzić,
+      więc warunek „umowa pozwala albo umowy nie ma" nie zawęża zbioru, tylko
+      odsiewa konkretne przypadki.
+    */
+    if (invoice.lease && !invoice.lease.sendInvoicesByEmail) {
+      outcomes.push({ invoiceId: invoice.id, type, status: "SKIPPED", toEmail: null });
+      continue;
+    }
 
-    // Dokument jednorazowy bez umowy nie ma najemcy, a najemca bez adresu
+    const tenant = invoiceRecipient(invoice);
+
+    // Dokument bez nabywcy i bez umowy nie ma adresata, a najemca bez adresu
     // e-mail nie ma jak dostać wiadomości — w obu przypadkach nie ma czego
     // zapisywać w kolejce, więc tylko raportujemy pominięcie.
     if (!tenant?.email) {

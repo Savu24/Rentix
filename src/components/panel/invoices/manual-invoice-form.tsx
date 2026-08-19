@@ -9,6 +9,7 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CheckboxField } from "@/components/ui/checkbox-field";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -69,6 +70,13 @@ export function ManualInvoiceForm({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  /*
+    Wysylka nie jest polem dokumentu, tylko czynnoscia wykonywana po jego
+    wystawieniu — stad zwykly stan komponentu, a nie pole formularza. Domyslnie
+    odznaczone: maila nie da sie cofnac, wiec wychodzi wtedy, gdy ktos o to
+    poprosil, a nie wtedy, gdy zapomnial odznaczyc.
+  */
+  const [sendEmail, setSendEmail] = useState(false);
 
   const {
     register,
@@ -126,6 +134,27 @@ export function ManualInvoiceForm({
       return;
     }
 
+    /*
+      Wysyłka po wystawieniu, osobnym żądaniem.
+
+      Nie w jednej transakcji z wystawieniem, bo to dwie różne rzeczy pod
+      względem odwracalności: dokument da się anulować, wysłanego maila nie.
+      Gdyby wysyłka jechała razem z zapisem, jej błąd musiałby albo wywrócić
+      wystawiony już dokument, albo zostać przemilczany. Osobno wolno nam
+      powiedzieć wprost: dokument jest, poczta nie poszła.
+    */
+    if (sendEmail) {
+      const sent = await api.post<{ toEmail: string }>(
+        `/api/invoices/${result.data.id}/send`,
+        {},
+      );
+
+      if (!sent.ok) {
+        setFormError(`Dokument wystawiony, ale nie udało się go wysłać: ${sent.message}`);
+        return;
+      }
+    }
+
     router.push(`/panel/finanse/${result.data.id}`);
     router.refresh();
   }
@@ -172,13 +201,7 @@ export function ManualInvoiceForm({
               id="mi-leaseId"
               label="Umowa"
               error={errors.leaseId?.message}
-              /*
-                Konsekwencja pustego pola jest wieksza, niz brzmi: odbiorca
-                wiadomosci wisi na umowie, wiec dokument bez niej nie pojdzie
-                mailem ani teraz, ani nocnym przebiegiem — trzeba go przekazac
-                najemcy samemu.
-              */
-              hint="Puste = dokument jednorazowy, poza umową. Takiego nie wyślemy najemcy mailem — adresata bierzemy z umowy."
+              hint="Puste = dokument jednorazowy, poza umową. Wysyłka mailem działa tak czy inaczej — adresatem jest najemca, dla którego wystawiasz dokument."
             >
               <Select
                 {...fieldAria("mi-leaseId", { error: errors.leaseId?.message })}
@@ -418,10 +441,18 @@ export function ManualInvoiceForm({
             </span>
           </div>
 
+          <CheckboxField
+            label={`Wyślij mailem do: ${tenantName}`}
+            hint="Dokument pójdzie od razu po wystawieniu, z PDF-em w załączniku. Wysłanej wiadomości nie da się cofnąć."
+            checked={sendEmail}
+            disabled={isSubmitting}
+            onChange={(event) => setSendEmail(event.target.checked)}
+          />
+
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Wystaw dokument
+              {sendEmail ? "Wystaw i wyślij" : "Wystaw dokument"}
             </Button>
             <Button
               type="button"

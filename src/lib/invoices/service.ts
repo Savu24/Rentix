@@ -193,6 +193,7 @@ export async function getInvoice(organizationId: string, invoiceId: string) {
       lines: { orderBy: { position: "asc" } },
       payments: { orderBy: { paidAt: "desc" } },
       organization: true,
+      tenant: true,
       lease: {
         include: {
           property: true,
@@ -226,6 +227,9 @@ export async function getInvoicesForBatch(organizationId: string, ids: readonly 
       lines: { orderBy: { position: "asc" } },
       payments: { orderBy: { paidAt: "desc" } },
       organization: true,
+      // Ten sam ksztalt co `getInvoice` — renderer PDF-a przyjmuje jeden typ,
+      // wiec rozjazd miedzy zapytaniami psulby paczke, a nie pojedynczy dokument.
+      tenant: true,
       lease: {
         include: {
           property: true,
@@ -323,6 +327,9 @@ export async function createInvoice(
         data: {
           organizationId,
           leaseId: data.leaseId,
+          // Relacja obok migawki `buyer*`: tamta zamraza dane na dokumencie,
+          // ta daje wysylce aktualny adres e-mail nabywcy.
+          tenantId: data.tenantId,
           status: "ISSUED",
           kind,
           number,

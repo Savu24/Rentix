@@ -435,6 +435,7 @@ model Tenant {
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   leases              LeaseTenant[]
+  invoices            Invoice[]
   messageThreads      MessageThread[]
   maintenanceRequests MaintenanceRequest[]
   documents           Document[]
@@ -495,6 +496,14 @@ model Lease {
   billingDay      Int @default(1)
   /// Ile dni od wystawienia na zapłatę.
   paymentTermDays Int @default(10)
+
+  /// Czy dokumenty z tej umowy wychodzą najemcy mailem.
+  ///
+  /// Per umowa, nie per organizacja: jeden najemca prosi o papier albo rozlicza
+  /// się przez zarządcę budynku, a reszta portfela ma dostawać maile normalnie.
+  /// Wyłączenie zatrzymuje automat — ręczne „wyślij" pozostaje dostępne, bo to
+  /// osobne, świadome kliknięcie.
+  sendInvoicesByEmail Boolean @default(true)
 
   terminatedAt     DateTime?
   terminationNote  String?   @db.Text
@@ -600,6 +609,14 @@ model Invoice {
   organizationId String
   /// NULL dla faktur jednorazowych, niepowiązanych z umową (np. kaucja).
   leaseId        String?
+  /// Nabywca dokumentu.
+  ///
+  /// Dane najemcy i tak lądują na fakturze jako `buyer*` — to migawka z chwili
+  /// wystawienia i ma się nie zmieniać, gdy ktoś potem poprawi kartotekę.
+  /// Migawka nie wystarcza jednak do wysyłki: adres e-mail bywa poprawiany
+  /// właśnie dlatego, że był błędny. Relacja daje odbiorcę dokumentowi
+  /// wystawionemu poza umową, który wcześniej nie miał go w ogóle.
+  tenantId       String?
   status         InvoiceStatus @default(DRAFT)
   kind           InvoiceKind   @default(BILL)
 
@@ -649,6 +666,7 @@ model Invoice {
 
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lease         Lease?         @relation(fields: [leaseId], references: [id], onDelete: SetNull)
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   lines         InvoiceLine[]
   payments      Payment[]
   documents     Document[]
@@ -657,6 +675,7 @@ model Invoice {
   @@unique([organizationId, number])
   @@index([organizationId])
   @@index([leaseId])
+  @@index([tenantId])
   // Główny indeks dashboardu: „nieopłacone po terminie", „nadchodzące w tym
   // tygodniu" — filtr po statusie plus sortowanie po terminie płatności.
   @@index([organizationId, status, dueDate])
