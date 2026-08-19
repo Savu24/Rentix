@@ -16,7 +16,16 @@ import { api } from "@/lib/api/client";
  * wystawione dokumenty; ten przycisk jest po to, żeby nie czekać do rana
  * albo żeby ponowić wysyłkę po poprawieniu adresu.
  */
-export function SendInvoice({ invoiceId, tenantEmail }: { invoiceId: string; tenantEmail: string | null }) {
+export function SendInvoice({
+  invoiceId,
+  tenantEmail,
+  hasLease,
+}: {
+  invoiceId: string;
+  tenantEmail: string | null;
+  /** Odbiorca wisi na umowie — dokument jednorazowy nie ma go w ogole. */
+  hasLease: boolean;
+}) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -46,6 +55,20 @@ export function SendInvoice({ invoiceId, tenantEmail }: { invoiceId: string; ten
 
   if (sentTo) {
     return <Alert tone="success">Dokument wysłany na {sentTo}.</Alert>;
+  }
+
+  /*
+    Dwie przyczyny, dwa komunikaty. Wczesniej oba przypadki dostawaly zdanie
+    o brakujacym adresie, wiec dokument wystawiony poza umowa odsylal do
+    kartoteki najemcy, w ktorej adres byl juz uzupelniony.
+  */
+  if (!hasLease) {
+    return (
+      <Alert tone="warning">
+        Dokument nie jest powiązany z umową, więc nie wiadomo, komu go wysłać — odbiorcę bierzemy
+        z umowy. Żeby wysyłać go najemcy, wystaw dokument na jego umowie.
+      </Alert>
+    );
   }
 
   if (!tenantEmail) {

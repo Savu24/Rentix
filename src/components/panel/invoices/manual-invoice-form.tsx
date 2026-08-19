@@ -172,7 +172,13 @@ export function ManualInvoiceForm({
               id="mi-leaseId"
               label="Umowa"
               error={errors.leaseId?.message}
-              hint="Puste = dokument jednorazowy, poza umową."
+              /*
+                Konsekwencja pustego pola jest wieksza, niz brzmi: odbiorca
+                wiadomosci wisi na umowie, wiec dokument bez niej nie pojdzie
+                mailem ani teraz, ani nocnym przebiegiem — trzeba go przekazac
+                najemcy samemu.
+              */
+              hint="Puste = dokument jednorazowy, poza umową. Takiego nie wyślemy najemcy mailem — adresata bierzemy z umowy."
             >
               <Select
                 {...fieldAria("mi-leaseId", { error: errors.leaseId?.message })}

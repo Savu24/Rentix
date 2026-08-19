@@ -267,6 +267,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
           <SendInvoice
             invoiceId={invoice.id}
             tenantEmail={invoice.lease?.tenants[0]?.tenant.email ?? null}
+            hasLease={Boolean(invoice.lease?.tenants[0])}
           />
           {remaining > 0 ? (
             <RecordPayment invoiceId={invoice.id} remainingGrosze={remaining} />
