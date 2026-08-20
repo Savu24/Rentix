@@ -42,6 +42,10 @@ export default async function EditOwnerPage({ params }: Params) {
           postalCode: owner.postalCode ?? "",
           city: owner.city ?? "",
           bankAccount: owner.bankAccount ?? "",
+          // Daty leżą w bazie jako północ UTC, więc `slice` daje ten sam dzień,
+          // który wpisano — bez przesunięcia o strefę.
+          contractStartDate: owner.contractStartDate?.toISOString().slice(0, 10) ?? "",
+          contractEndDate: owner.contractEndDate?.toISOString().slice(0, 10) ?? "",
           notes: owner.notes ?? "",
         }}
       />

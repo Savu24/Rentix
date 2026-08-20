@@ -152,6 +152,35 @@ export function OwnerFields({
             {...register("bankAccount")}
           />
         </FormField>
+        <FormField
+          id={id("contractStartDate")}
+          label="Umowa od"
+          error={errors.contractStartDate?.message}
+          hint="Początek umowy o zarządzanie tym lokalem."
+          className="sm:col-span-3"
+        >
+          <Input
+            {...fieldAria(id("contractStartDate"), { error: errors.contractStartDate?.message })}
+            type="date"
+            disabled={disabled}
+            {...register("contractStartDate")}
+          />
+        </FormField>
+
+        <FormField
+          id={id("contractEndDate")}
+          label="Umowa do"
+          error={errors.contractEndDate?.message}
+          hint="Puste = czas nieokreślony."
+          className="sm:col-span-3"
+        >
+          <Input
+            {...fieldAria(id("contractEndDate"), { error: errors.contractEndDate?.message })}
+            type="date"
+            disabled={disabled}
+            {...register("contractEndDate")}
+          />
+        </FormField>
       </div>
 
       <FormField
@@ -180,5 +209,7 @@ export const EMPTY_OWNER: OwnerFormInput = {
   postalCode: "",
   city: "",
   bankAccount: "",
+  contractStartDate: "",
+  contractEndDate: "",
   notes: "",
 };

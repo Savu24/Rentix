@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBankAccount, ownerFormSchema } from "@/lib/validations/owner";
+import {
+  formatContractPeriod,
+  formatBankAccount,
+  ownerFormSchema,
+  ownerUpdateSchema,
+} from "@/lib/validations/owner";
 
 const VALID = { name: "Anna Nowak" };
 const ACCOUNT = "12345678901234567890123456";
@@ -64,5 +69,74 @@ describe("formatBankAccount", () => {
     // Rekordy z importu bywają krótsze; lepiej pokazać je surowo niż pociąć
     // w grupy sugerujące poprawny numer.
     expect(formatBankAccount("12345")).toBe("12345");
+  });
+});
+
+describe("okres umowy o zarządzanie", () => {
+  it("zapisuje obie daty jako północ UTC", () => {
+    const result = ownerFormSchema.parse({
+      ...VALID,
+      contractStartDate: "2026-09-01",
+      contractEndDate: "2027-08-31",
+    });
+
+    expect(result.contractStartDate?.toISOString()).toBe("2026-09-01T00:00:00.000Z");
+    expect(result.contractEndDate?.toISOString()).toBe("2027-08-31T00:00:00.000Z");
+  });
+
+  it("puste daty dają null, nie błąd", () => {
+    // Właściciela wpisuje się często zanim umowa zostanie podpisana.
+    const result = ownerFormSchema.parse({ ...VALID, contractStartDate: "", contractEndDate: "" });
+    expect(result.contractStartDate).toBeNull();
+    expect(result.contractEndDate).toBeNull();
+  });
+
+  it("sam początek znaczy czas nieokreślony", () => {
+    const result = ownerFormSchema.parse({ ...VALID, contractStartDate: "2026-09-01" });
+    expect(result.contractEndDate).toBeNull();
+  });
+
+  it("odrzuca koniec wcześniejszy niż początek", () => {
+    const result = ownerFormSchema.safeParse({
+      ...VALID,
+      contractStartDate: "2026-09-01",
+      contractEndDate: "2026-08-31",
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["contractEndDate"]);
+  });
+
+  it("dopuszcza umowę jednodniową", () => {
+    expect(
+      ownerFormSchema.safeParse({
+        ...VALID,
+        contractStartDate: "2026-09-01",
+        contractEndDate: "2026-09-01",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("PATCH z samym telefonem nie wymaga przysyłania dat", () => {
+    // `.partial()` na kształcie, nie na gotowym schemacie — inaczej sprawdzenie
+    // kolejności dat wywracałoby każdą częściową aktualizację.
+    expect(ownerUpdateSchema.safeParse({ phone: "601100200" }).success).toBe(true);
+  });
+});
+
+describe("formatContractPeriod", () => {
+  const start = new Date("2026-09-01T00:00:00.000Z");
+  const end = new Date("2027-08-31T00:00:00.000Z");
+
+  it("składa zakres z obu dat", () => {
+    expect(formatContractPeriod(start, end)).toBe("1 wrz 2026 – 31 sie 2027");
+  });
+
+  it("sam początek opisuje jako czas nieokreślony", () => {
+    expect(formatContractPeriod(start, null)).toBe("od 1 wrz 2026, czas nieokreślony");
+  });
+
+  it("bez dat nie ma czego pokazać", () => {
+    expect(formatContractPeriod(null, null)).toBeNull();
   });
 });

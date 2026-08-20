@@ -11,7 +11,7 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { formatPLN } from "@/lib/money";
 import { getOwner } from "@/lib/owners/service";
 import { formatPropertyAddress } from "@/lib/properties/address";
-import { formatBankAccount } from "@/lib/validations/owner";
+import { formatBankAccount, formatContractPeriod } from "@/lib/validations/owner";
 import {
   PROPERTY_TYPE_LABEL,
   RENTAL_STATUS_LABEL,
@@ -38,6 +38,8 @@ export default async function OwnerDetailPage({ params }: Params) {
   const address = [owner.street, [owner.postalCode, owner.city].filter(Boolean).join(" ")]
     .filter((part) => part && part.trim() !== "")
     .join(", ");
+
+  const contractPeriod = formatContractPeriod(owner.contractStartDate, owner.contractEndDate);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -89,9 +91,10 @@ export default async function OwnerDetailPage({ params }: Params) {
             {owner.bankAccount ? (
               <Term label="Rachunek" value={formatBankAccount(owner.bankAccount)} mono />
             ) : null}
+            {contractPeriod ? <Term label="Umowa" value={contractPeriod} /> : null}
           </dl>
 
-          {!owner.email && !owner.phone && !owner.taxId && !owner.bankAccount ? (
+          {!owner.email && !owner.phone && !owner.taxId && !owner.bankAccount && !contractPeriod ? (
             <p className="text-sm text-muted">
               Nie uzupełniono jeszcze danych kontaktowych ani numeru rachunku.
             </p>

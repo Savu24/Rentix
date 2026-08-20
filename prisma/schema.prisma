@@ -253,6 +253,13 @@ model PropertyOwner {
   /// Rachunek, na który przekazujemy czynsz po potrąceniu prowizji.
   bankAccount String?
 
+  /// Okres umowy o zarządzanie zawartej z właścicielem — nie mylić z umową
+  /// najmu, którą podpisuje najemca (`Lease`). Obie daty opcjonalne:
+  /// właściciela wpisuje się często zanim umowa zostanie podpisana,
+  /// a NULL w `contractEndDate` znaczy czas nieokreślony.
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+
   notes String? @db.Text
 
   /// Archiwizacja zamiast usuwania — nieruchomości i ich historia zostają.
