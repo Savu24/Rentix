@@ -421,6 +421,21 @@ model Tenant {
   /// NIP, gdy najemcą jest firma. Dla osoby fizycznej zostaje NULL.
   taxId      String?
 
+  /// Dokumenty tożsamości — wszystkie opcjonalne i niezależne od siebie.
+  /// Właściciel spisuje je z okazanego dokumentu przy podpisaniu umowy, a co
+  /// okaże najemca, zależy od niego: Polak zwykle dowód, cudzoziemiec paszport.
+  /// PESEL bywa potrzebny osobno — wchodzi do wniosku o najem okazjonalny.
+  idCardNumber   String?
+  pesel          String?
+  passportNumber String?
+
+  /// Osoba do kontaktu w nagłym wypadku. Trzy osobne kolumny, nie relacja:
+  /// to notatka na wypadek pożaru czy pogotowia, a nie kartoteka kolejnego
+  /// człowieka w systemie — nie ma czego z nią łączyć ani czym rozliczać.
+  emergencyContactFirstName String?
+  emergencyContactLastName  String?
+  emergencyContactPhone     String?
+
   /// Jaki dokument wystawiamy temu najemcy przy naliczaniu czynszu.
   /// BILL zostawia decyzję stawkom VAT (rachunek albo faktura), CHARGE oznacza
   /// samo naliczenie, które dowodem księgowym nie jest.

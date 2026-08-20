@@ -35,6 +35,12 @@ const EMPTY: TenantFormInput = {
   city: "",
   taxId: "",
   documentKind: "BILL",
+  idCardNumber: "",
+  pesel: "",
+  passportNumber: "",
+  emergencyContactFirstName: "",
+  emergencyContactLastName: "",
+  emergencyContactPhone: "",
   notes: "",
 };
 
@@ -154,6 +160,112 @@ export function TenantForm({
                   </option>
                 ))}
               </Select>
+            </FormField>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Dokumenty tożsamości</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Wszystkie pola opcjonalne — wpisz to, co najemca okazał.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <FormField
+              id="idCardNumber"
+              label="Dowód osobisty"
+              error={errors.idCardNumber?.message}
+            >
+              <Input
+                {...fieldAria("idCardNumber", { error: errors.idCardNumber?.message })}
+                placeholder="ABC123456"
+                autoCapitalize="characters"
+                disabled={isSubmitting}
+                {...register("idCardNumber")}
+              />
+            </FormField>
+
+            <FormField id="pesel" label="PESEL" error={errors.pesel?.message}>
+              <Input
+                {...fieldAria("pesel", { error: errors.pesel?.message })}
+                placeholder="90010112345"
+                inputMode="numeric"
+                disabled={isSubmitting}
+                {...register("pesel")}
+              />
+            </FormField>
+
+            <FormField
+              id="passportNumber"
+              label="Numer paszportu"
+              error={errors.passportNumber?.message}
+            >
+              <Input
+                {...fieldAria("passportNumber", { error: errors.passportNumber?.message })}
+                placeholder="AB1234567"
+                autoCapitalize="characters"
+                disabled={isSubmitting}
+                {...register("passportNumber")}
+              />
+            </FormField>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Kontakt na wypadek nagłego zdarzenia</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Osoba, do której zadzwonisz, gdy nie da się dodzwonić do najemcy.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <FormField
+              id="emergencyContactFirstName"
+              label="Imię"
+              error={errors.emergencyContactFirstName?.message}
+            >
+              <Input
+                {...fieldAria("emergencyContactFirstName", {
+                  error: errors.emergencyContactFirstName?.message,
+                })}
+                placeholder="Anna"
+                disabled={isSubmitting}
+                {...register("emergencyContactFirstName")}
+              />
+            </FormField>
+
+            <FormField
+              id="emergencyContactLastName"
+              label="Nazwisko"
+              error={errors.emergencyContactLastName?.message}
+            >
+              <Input
+                {...fieldAria("emergencyContactLastName", {
+                  error: errors.emergencyContactLastName?.message,
+                })}
+                placeholder="Kowalska"
+                disabled={isSubmitting}
+                {...register("emergencyContactLastName")}
+              />
+            </FormField>
+
+            <FormField
+              id="emergencyContactPhone"
+              label="Telefon"
+              error={errors.emergencyContactPhone?.message}
+            >
+              <Input
+                {...fieldAria("emergencyContactPhone", {
+                  error: errors.emergencyContactPhone?.message,
+                })}
+                type="tel"
+                placeholder="+48 601 100 200"
+                disabled={isSubmitting}
+                {...register("emergencyContactPhone")}
+              />
             </FormField>
           </div>
         </CardContent>

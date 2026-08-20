@@ -46,6 +46,12 @@ export default async function EditTenantPage({
           city: tenant.city ?? "",
           taxId: tenant.taxId ?? "",
           documentKind: tenant.documentKind,
+          idCardNumber: tenant.idCardNumber ?? "",
+          pesel: tenant.pesel ?? "",
+          passportNumber: tenant.passportNumber ?? "",
+          emergencyContactFirstName: tenant.emergencyContactFirstName ?? "",
+          emergencyContactLastName: tenant.emergencyContactLastName ?? "",
+          emergencyContactPhone: tenant.emergencyContactPhone ?? "",
           notes: tenant.notes ?? "",
         }}
       />

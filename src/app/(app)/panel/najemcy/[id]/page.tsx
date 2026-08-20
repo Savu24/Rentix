@@ -1,4 +1,13 @@
-import { ArrowLeft, DoorOpen, FileText, Mail, MessageSquare, Pencil, Phone } from "lucide-react";
+import {
+  ArrowLeft,
+  DoorOpen,
+  FileText,
+  IdCard,
+  Mail,
+  MessageSquare,
+  Pencil,
+  Phone,
+} from "lucide-react";
 
 import { ArchiveAction } from "@/components/panel/archive/archive-action";
 import type { Metadata } from "next";
@@ -48,6 +57,19 @@ export default async function TenantDetailPage({ params }: Params) {
     .filter((invoice) => ["ISSUED", "PARTIALLY_PAID"].includes(invoice.status))
     .reduce((total, invoice) => total + remainingGrosze(invoice), 0);
   const totalPaid = payments.reduce((total, payment) => total + payment.amountGrosze, 0);
+
+  const emergencyName = [tenant.emergencyContactFirstName, tenant.emergencyContactLastName]
+    .filter(Boolean)
+    .join(" ");
+  // Sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka z sześcioma
+  // kreskami tylko odsuwałaby rozliczenia w dół.
+  const hasIdentity = Boolean(
+    tenant.idCardNumber ||
+      tenant.pesel ||
+      tenant.passportNumber ||
+      emergencyName ||
+      tenant.emergencyContactPhone,
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -264,6 +286,24 @@ export default async function TenantDetailPage({ params }: Params) {
         )}
       </section>
 
+      {hasIdentity ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <IdCard className="h-4 w-4 text-muted" aria-hidden />
+            Dane identyfikacyjne
+          </h2>
+          <Card>
+            <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
+              <DetailItem label="Dowód osobisty" value={tenant.idCardNumber} />
+              <DetailItem label="PESEL" value={tenant.pesel} />
+              <DetailItem label="Paszport" value={tenant.passportNumber} />
+              <DetailItem label="Kontakt w nagłym wypadku" value={emergencyName || null} />
+              <DetailItem label="Telefon awaryjny" value={tenant.emergencyContactPhone} />
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
       {tenant.notes ? (
         <Card className="bg-surface-alt">
           <CardContent className="flex flex-col gap-1.5 p-4">
@@ -275,6 +315,18 @@ export default async function TenantDetailPage({ params }: Params) {
           </CardContent>
         </Card>
       ) : null}
+    </div>
+  );
+}
+
+/** Wiersz „etykieta + wartość"; brak wartości znaczy, że pole się nie pokazuje. */
+function DetailItem({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="truncate text-sm text-fg">{value}</p>
     </div>
   );
 }
