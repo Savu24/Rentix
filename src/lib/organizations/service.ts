@@ -2,6 +2,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import type {
   AccountDeleteOutput,
+  OrganizationLogoOutput,
   OrganizationSettingsOutput,
   PasswordChangeOutput,
   ProfileSettingsOutput,
@@ -61,6 +62,38 @@ export async function updateOrganization(
       city: true,
     },
   });
+}
+
+/**
+ * Logo wystawcy — osobne zapytanie, bo obrazek waży setki kilobajtów.
+ *
+ * `getOrganization` go nie zwraca celowo: ustawienia i renderer PDF-a proszą
+ * o logo wprost, a reszta panelu nie ciągnie go przy okazji.
+ */
+export async function getOrganizationLogo(organizationId: string) {
+  return prisma.organizationLogo.findUnique({
+    where: { organizationId },
+    select: { dataUrl: true, mimeType: true, updatedAt: true },
+  });
+}
+
+/** Wgranie logo podmienia poprzednie — jedna organizacja, jeden obrazek. */
+export async function saveOrganizationLogo(
+  organizationId: string,
+  data: OrganizationLogoOutput["dataUrl"],
+) {
+  return prisma.organizationLogo.upsert({
+    where: { organizationId },
+    create: { organizationId, dataUrl: data.dataUrl, mimeType: data.mimeType },
+    update: { dataUrl: data.dataUrl, mimeType: data.mimeType },
+    select: { mimeType: true, updatedAt: true },
+  });
+}
+
+/** Usunięcie logo wraca do dokumentu bez nagłówka graficznego. */
+export async function deleteOrganizationLogo(organizationId: string) {
+  const { count } = await prisma.organizationLogo.deleteMany({ where: { organizationId } });
+  return count > 0;
 }
 
 export async function updateProfile(userId: string, data: ProfileSettingsOutput) {

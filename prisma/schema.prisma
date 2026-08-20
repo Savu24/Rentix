@@ -104,9 +104,36 @@ model Organization {
   notifications       Notification[]
   emailTemplates      EmailTemplate[]
   subscription        Subscription?
+  logo                OrganizationLogo?
 
   @@index([createdAt])
   @@map("organizations")
+}
+
+/// Logo wystawcy drukowane na dokumentach.
+///
+/// Osobna tabela, a nie kolumna w `Organization`: obrazek waży setki kilobajtów,
+/// a `organization: true` w zapytaniach Prismy pobiera wszystkie kolumny naraz.
+/// Trzymany obok nazwy i NIP-u dokładałby ten balast każdemu zapytaniu, które
+/// o logo nie prosi — a prosi o nie tylko renderer PDF-a i podgląd w ustawieniach.
+model OrganizationLogo {
+  /// Klucz główny jest jednocześnie kluczem obcym: jedna organizacja, jedno logo.
+  organizationId String @id
+
+  /// Obrazek jako data URI („data:image/png;base64,…"). Trafia wprost do
+  /// <Image> renderera PDF-a i do <img> w podglądzie, bez pośredniej trasy
+  /// serwującej plik — a przy jednym obrazku na organizację nie ma czego
+  /// oszczędzać na osobnym magazynie plików.
+  dataUrl  String @db.Text
+  /// PNG albo JPEG — tylko te formaty renderer PDF-a rysuje. SVG i WebP
+  /// zniknęłyby z dokumentu po cichu, dlatego walidacja ich nie wpuszcza.
+  mimeType String
+
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_logos")
 }
 
 /// Powiązanie użytkownik ↔ organizacja. W MVP właściciel ma jedno członkostwo,

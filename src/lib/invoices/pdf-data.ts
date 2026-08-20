@@ -53,6 +53,8 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
       city: invoice.organization.city,
     },
 
+    logoDataUrl: invoice.organization.logo?.dataUrl ?? null,
+
     buyer: {
       name: invoice.buyerName,
       taxId: invoice.buyerTaxId,

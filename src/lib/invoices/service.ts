@@ -192,7 +192,10 @@ export async function getInvoice(organizationId: string, invoiceId: string) {
     include: {
       lines: { orderBy: { position: "asc" } },
       payments: { orderBy: { paidAt: "desc" } },
-      organization: true,
+      // Logo wchodzi jawnie, bo `organization: true` bierze same kolumny —
+      // a obrazek leży w osobnej tabeli właśnie po to, żeby nie doklejał się
+      // do zapytań, które go nie potrzebują.
+      organization: { include: { logo: true } },
       tenant: true,
       lease: {
         include: {
@@ -226,7 +229,7 @@ export async function getInvoicesForBatch(organizationId: string, ids: readonly 
     include: {
       lines: { orderBy: { position: "asc" } },
       payments: { orderBy: { paidAt: "desc" } },
-      organization: true,
+      organization: { include: { logo: true } },
       // Ten sam ksztalt co `getInvoice` — renderer PDF-a przyjmuje jeden typ,
       // wiec rozjazd miedzy zapytaniami psulby paczke, a nie pojedynczy dokument.
       tenant: true,

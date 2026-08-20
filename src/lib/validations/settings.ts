@@ -43,6 +43,60 @@ export type OrganizationSettingsInput = z.input<typeof organizationSettingsSchem
 export type OrganizationSettingsOutput = z.output<typeof organizationSettingsSchema>;
 
 /**
+ * Logo wystawcy — nieobowiązkowe. Bez niego dokument wygląda dokładnie tak,
+ * jak dotąd, więc nic tu nie jest wymagane poza formatem samego pliku.
+ *
+ * PNG i JPEG, bo tylko te formaty rysuje renderer PDF-a. SVG ani WebP nie
+ * zgłoszą błędu — po prostu nie pojawią się na dokumencie, a to gorsze niż
+ * odmowa przy wgrywaniu.
+ */
+export const LOGO_MIME_TYPES = ["image/png", "image/jpeg"] as const;
+
+/**
+ * 300 kB na obrazek. Logo to zwykle kilkadziesiąt kilobajtów; większy plik
+ * znaczy zdjęcie z telefonu, które i tak zostanie zmniejszone do paska
+ * nagłówka, a wagę PDF-a podniesie realnie.
+ */
+export const MAX_LOGO_BYTES = 300 * 1024;
+
+const DATA_URL_PATTERN = /^data:(image\/png|image\/jpeg);base64,([A-Za-z0-9+/]+=*)$/;
+
+/** Ile bajtów waży zakodowany base64 — bez dekodowania całości do pamięci. */
+function base64Bytes(base64: string): number {
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+export const organizationLogoSchema = z.object({
+  dataUrl: z
+    .string()
+    .max(MAX_LOGO_BYTES * 2, "Plik jest za duży")
+    .superRefine((value, ctx) => {
+      const match = DATA_URL_PATTERN.exec(value);
+
+      if (!match) {
+        ctx.addIssue({ code: "custom", message: "Wgraj obrazek PNG albo JPEG" });
+        return;
+      }
+      if (base64Bytes(match[2] as string) > MAX_LOGO_BYTES) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Obrazek może ważyć najwyżej ${Math.round(MAX_LOGO_BYTES / 1024)} kB`,
+        });
+      }
+    })
+    // Typ bierzemy z samego data URI, a nie z pola obok: klient mógłby podać
+    // dowolny, a zapisany rozjazd wyszedłby dopiero przy renderowaniu PDF-a.
+    .transform((value) => ({
+      dataUrl: value,
+      mimeType: (DATA_URL_PATTERN.exec(value)?.[1] ?? "image/png") as string,
+    })),
+});
+
+export type OrganizationLogoInput = z.input<typeof organizationLogoSchema>;
+export type OrganizationLogoOutput = z.output<typeof organizationLogoSchema>;
+
+/**
  * Profil użytkownika.
  *
  * E-maila nie ma na liście: jest loginem i identyfikatorem sesji, więc jego

@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import type { InvoiceKind, VatRate } from "@/generated/prisma/enums";
 import { formatPLN } from "@/lib/money";
@@ -48,6 +48,12 @@ const styles = StyleSheet.create({
   },
 
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  /**
+   * Logo wystawcy. Wysokość ustalona, szerokość dobiera się sama — inaczej
+   * herb w kwadracie i podłużny napis firmy zajmowałyby ten sam prostokąt,
+   * a jedno z nich wyszłoby rozciągnięte.
+   */
+  logo: { height: 34, maxWidth: 170, marginBottom: 8, objectFit: "contain" },
   title: { fontSize: 16, fontWeight: 700 },
   number: { fontSize: 11, fontWeight: 600, color: COLORS.accent, marginTop: 2 },
   headerDates: { alignItems: "flex-end" },
@@ -196,6 +202,12 @@ export type InvoicePdfData = {
     city: string | null;
   };
 
+  /**
+   * Logo wystawcy jako data URI. NULL = dokument bez nagłówka graficznego,
+   * czyli dokładnie taki, jak przed dołożeniem tej opcji.
+   */
+  logoDataUrl: string | null;
+
   buyer: {
     name: string;
     taxId: string | null;
@@ -266,6 +278,8 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
     <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- <Image> renderera PDF-a, nie <img>: atrybutu alt nie przyjmuje */}
+            {data.logoDataUrl ? <Image src={data.logoDataUrl} style={styles.logo} /> : null}
             <Text style={styles.title}>
               {INVOICE_KIND_LABEL[data.kind]}
               {data.cancelled ? " (ANULOWANY)" : ""}

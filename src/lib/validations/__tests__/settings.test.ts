@@ -4,6 +4,8 @@ import { isSellerComplete } from "@/lib/organizations/seller";
 import {
   ACCOUNT_DELETE_PHRASE,
   accountDeleteSchema,
+  MAX_LOGO_BYTES,
+  organizationLogoSchema,
   organizationSettingsSchema,
   passwordChangeSchema,
   profileSettingsSchema,
@@ -43,6 +45,52 @@ describe("organizationSettingsSchema", () => {
       "30-001",
     );
     expect(organizationSettingsSchema.parse({ ...VALID, postalCode: "" }).postalCode).toBeNull();
+  });
+});
+
+describe("organizationLogoSchema", () => {
+  const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==";
+
+  it("przyjmuje PNG i bierze typ z samego data URI", () => {
+    // Typ podany osobno przez klienta mógłby się rozjechać z zawartością,
+    // a rozjazd wyszedłby dopiero przy renderowaniu PDF-a.
+    const result = organizationLogoSchema.parse({ dataUrl: PNG });
+    expect(result.dataUrl.mimeType).toBe("image/png");
+    expect(result.dataUrl.dataUrl).toBe(PNG);
+  });
+
+  it("przyjmuje JPEG", () => {
+    const jpeg = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ==";
+    expect(organizationLogoSchema.parse({ dataUrl: jpeg }).dataUrl.mimeType).toBe("image/jpeg");
+  });
+
+  it("odrzuca SVG i WebP", () => {
+    // Renderer PDF-a ich nie rysuje — przepuszczone zniknęłyby z dokumentu
+    // po cichu, a to gorsze niż odmowa przy wgrywaniu.
+    expect(
+      organizationLogoSchema.safeParse({ dataUrl: "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" })
+        .success,
+    ).toBe(false);
+    expect(
+      organizationLogoSchema.safeParse({ dataUrl: "data:image/webp;base64,UklGRg==" }).success,
+    ).toBe(false);
+  });
+
+  it("odrzuca adres URL zamiast obrazka", () => {
+    expect(
+      organizationLogoSchema.safeParse({ dataUrl: "https://przyklad.pl/logo.png" }).success,
+    ).toBe(false);
+  });
+
+  it("odrzuca obrazek powyżej limitu", () => {
+    // 4 znaki base64 = 3 bajty, więc tyle znaków przekracza limit o włos.
+    const oversized = `data:image/png;base64,${"A".repeat(Math.ceil((MAX_LOGO_BYTES + 1) * 4 / 3))}`;
+    expect(organizationLogoSchema.safeParse({ dataUrl: oversized }).success).toBe(false);
+  });
+
+  it("przepuszcza obrazek tuż pod limitem", () => {
+    const justUnder = `data:image/png;base64,${"A".repeat(Math.floor((MAX_LOGO_BYTES - 3) * 4 / 3))}`;
+    expect(organizationLogoSchema.safeParse({ dataUrl: justUnder }).success).toBe(true);
   });
 });
 

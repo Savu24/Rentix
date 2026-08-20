@@ -1,13 +1,21 @@
 import { notFound } from "next/navigation";
 
+import { LogoForm } from "@/components/panel/settings/logo-form";
 import { OrganizationForm } from "@/components/panel/settings/organization-form";
 import { Alert } from "@/components/ui/alert";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { getOrganization, isSellerComplete } from "@/lib/organizations/service";
+import {
+  getOrganization,
+  getOrganizationLogo,
+  isSellerComplete,
+} from "@/lib/organizations/service";
 
 export default async function SettingsOrganizationPage() {
   const session = await requireOwnerSession("/panel/ustawienia");
-  const organization = await getOrganization(session.user.organizationId);
+  const [organization, logo] = await Promise.all([
+    getOrganization(session.user.organizationId),
+    getOrganizationLogo(session.user.organizationId),
+  ]);
 
   if (!organization) notFound();
 
@@ -30,6 +38,8 @@ export default async function SettingsOrganizationPage() {
           city: organization.city ?? "",
         }}
       />
+
+      <LogoForm logo={logo?.dataUrl ?? null} />
     </div>
   );
 }

@@ -2,12 +2,14 @@ import { ArrowRight, Building2, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { overdueWhere } from "@/lib/invoices/status";
 import { formatPLN } from "@/lib/money";
+import { getOrganization, isSellerComplete } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "Pulpit" };
@@ -16,7 +18,7 @@ export default async function OwnerDashboardPage() {
   const session = await requireOwnerSession("/panel");
   const organizationId = session.user.organizationId;
 
-  const [propertyCount, roomCount, occupiedCount, overdue] = await Promise.all([
+  const [propertyCount, roomCount, occupiedCount, overdue, organization] = await Promise.all([
     prisma.property.count({ where: { organizationId, archivedAt: null } }),
     prisma.room.count({ where: { organizationId, archivedAt: null } }),
     prisma.room.count({ where: { organizationId, archivedAt: null, status: "OCCUPIED" } }),
@@ -25,6 +27,7 @@ export default async function OwnerDashboardPage() {
       _sum: { totalGrossGrosze: true, paidGrosze: true },
       _count: true,
     }),
+    getOrganization(organizationId),
   ]);
 
   const overdueGrosze =
@@ -32,6 +35,11 @@ export default async function OwnerDashboardPage() {
   const occupancy = roomCount > 0 ? Math.round((occupiedCount / roomCount) * 100) : 0;
 
   const firstName = session.user.name?.split(" ")[0] ?? "właścicielu";
+
+  // Przypomnienie znika samo, gdy adres wystawcy zostanie uzupełniony — to nie
+  // jest komunikat do odklikania, tylko brak, który widać dopiero na wysłanym
+  // dokumencie. Pulpit jest jedynym ekranem, na który zagląda się codziennie.
+  const sellerIncomplete = organization !== null && !isSellerComplete(organization);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -50,6 +58,16 @@ export default async function OwnerDashboardPage() {
           </Link>
         </Button>
       </div>
+
+      {sellerIncomplete ? (
+        <Alert tone="warning">
+          Uzupełnij dane wystawcy — bez adresu rachunki i umowy wychodzą z samą nazwą.{" "}
+          <Link href="/panel/ustawienia" className="font-medium underline">
+            Przejdź do ustawień
+          </Link>
+          .
+        </Alert>
+      ) : null}
 
       {propertyCount === 0 ? (
         <EmptyState
