@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  CalendarClock,
   DoorOpen,
   FileText,
   IdCard,
@@ -21,6 +22,7 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { ManualInvoiceForm } from "@/components/panel/invoices/manual-invoice-form";
 import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { formatPLN } from "@/lib/money";
 import { getTenant } from "@/lib/tenants/service";
 import { LEASE_STATUS_LABEL, LEASE_STATUS_TONE } from "@/lib/validations/lease";
@@ -58,6 +60,13 @@ export default async function TenantDetailPage({ params }: Params) {
     .reduce((total, invoice) => total + remainingGrosze(invoice), 0);
   const totalPaid = payments.reduce((total, payment) => total + payment.amountGrosze, 0);
 
+  // Przy dwóch aktywnych umowach liczy się ta, która kończy się pierwsza —
+  // to ona wymaga decyzji najwcześniej.
+  const expiry = activeLeases
+    .map((lease) => resolveLeaseExpiry(lease.endDate, now))
+    .filter((value) => value !== null)
+    .sort((a, b) => a.days - b.days)[0];
+
   const emergencyName = [tenant.emergencyContactFirstName, tenant.emergencyContactLastName]
     .filter(Boolean)
     .join(" ");
@@ -91,6 +100,12 @@ export default async function TenantDetailPage({ params }: Params) {
               <Badge tone={TENANT_STATUS_TONE[tenant.status]}>
                 {TENANT_STATUS_LABEL[tenant.status]}
               </Badge>
+              {expiry ? (
+                <Badge tone={expiry.tone}>
+                  <CalendarClock className="h-3 w-3" aria-hidden />
+                  {expiry.label}
+                </Badge>
+              ) : null}
             </div>
 
             <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
