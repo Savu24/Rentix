@@ -4,6 +4,7 @@ import {
   buildBillingPeriod,
   buildRentInvoiceLines,
   periodLabel,
+  shouldBillPeriod,
   type BillingLease,
 } from "@/lib/leases/billing";
 import { prisma } from "@/lib/prisma";
@@ -406,7 +407,8 @@ export type SkippedLease = {
     | "OUTSIDE_LEASE_PERIOD"
     | "NO_TENANT"
     | "NOTHING_TO_BILL"
-    | "BILLING_DAY_AHEAD";
+    | "BILLING_DAY_AHEAD"
+    | "BEFORE_BILLING_START";
 };
 
 export type GenerateInvoicesResult = {
@@ -456,6 +458,7 @@ export async function generateInvoicesForMonth(
       utilitiesMode: true,
       utilitiesAdvanceGrosze: true,
       billingDay: true,
+      billingStartsAt: true,
       paymentTermDays: true,
       property: { select: { type: true } },
       tenants: {
@@ -483,6 +486,14 @@ export async function generateInvoicesForMonth(
     const period = buildBillingPeriod(billing, year, monthIndex);
     if (!period) {
       skipped.push({ leaseId: lease.id, reason: "OUTSIDE_LEASE_PERIOD" });
+      continue;
+    }
+
+    // Przed dniem naliczania, bo to warunek trwały: umowa przeniesiona z innego
+    // programu nigdy nie doczeka się dokumentu za stary miesiąc, a „dzień
+    // naliczania w przyszłości" sugerowałoby, że wystarczy poczekać.
+    if (!shouldBillPeriod(period, lease.billingStartsAt)) {
+      skipped.push({ leaseId: lease.id, reason: "BEFORE_BILLING_START" });
       continue;
     }
 

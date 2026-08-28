@@ -66,6 +66,7 @@ const EMPTY: LeaseFormInput = {
   utilitiesMode: "FLAT_RATE",
   utilitiesAdvanceGrosze: "",
   billingDay: 1,
+  billingStartsAt: "",
   paymentTermDays: 10,
   sendInvoicesByEmail: true,
   notes: "",
@@ -480,6 +481,25 @@ export function LeaseForm({
                 max={28}
                 disabled={isSubmitting}
                 {...register("billingDay")}
+              />
+            </FormField>
+
+            {/*
+              Pole stoi przy dniu naliczania, a nie przy datach umowy: dotyczy
+              rozliczeń, nie okresu najmu — umowa trwa od swojej daty początku
+              niezależnie od tego, od kiedy wystawiamy dokumenty.
+            */}
+            <FormField
+              id="billingStartsAt"
+              label="Nie naliczaj przed"
+              error={errors.billingStartsAt?.message}
+              hint="Dla umów przeniesionych z innego programu — wpisz pierwszy dzień miesiąca, od którego rozliczasz najemcę w Rentiksie. Puste = od początku umowy."
+            >
+              <Input
+                {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}
+                type="date"
+                disabled={isSubmitting}
+                {...register("billingStartsAt")}
               />
             </FormField>
 

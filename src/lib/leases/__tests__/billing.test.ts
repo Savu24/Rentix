@@ -7,6 +7,7 @@ import {
   clampBillingDay,
   daysInMonth,
   prorateRent,
+  shouldBillPeriod,
   type BillingLease,
 } from "@/lib/leases/billing";
 
@@ -220,5 +221,46 @@ describe("data wystawienia nie wyprzedza okresu", () => {
       expect(period.dueDate.getTime()).toBeGreaterThanOrEqual(period.issueDate.getTime());
       expect(period.issueDate.getTime()).toBeGreaterThanOrEqual(period.periodStart.getTime());
     }
+  });
+});
+
+
+describe("shouldBillPeriod", () => {
+  const periodFor = (year: number, month: number, overrides: Partial<BillingLease> = {}) =>
+    buildBillingPeriod(lease(overrides), year, month)!;
+
+  it("bez daty odcięcia nalicza wszystko", () => {
+    expect(shouldBillPeriod(periodFor(2026, 7), null)).toBe(true);
+    expect(shouldBillPeriod(periodFor(2026, 7), undefined)).toBe(true);
+  });
+
+  it("pomija miesiące rozliczone w poprzednim programie", () => {
+    const cutoff = utc("2026-09-01");
+
+    expect(shouldBillPeriod(periodFor(2026, 5), cutoff)).toBe(false); // czerwiec
+    expect(shouldBillPeriod(periodFor(2026, 6), cutoff)).toBe(false); // lipiec
+    expect(shouldBillPeriod(periodFor(2026, 7), cutoff)).toBe(false); // sierpień
+    expect(shouldBillPeriod(periodFor(2026, 8), cutoff)).toBe(true); // wrzesień
+    expect(shouldBillPeriod(periodFor(2026, 9), cutoff)).toBe(true); // październik
+  });
+
+  it("odcina całymi okresami — miesiąc zaczyna się przed datą, więc odpada w całości", () => {
+    // Data w środku miesiąca to zwykle pomyłka, ale nie może doprowadzić do
+    // dokumentu za dni, które rozliczył już poprzedni system.
+    expect(shouldBillPeriod(periodFor(2026, 8), utc("2026-09-15"))).toBe(false);
+    expect(shouldBillPeriod(periodFor(2026, 9), utc("2026-09-15"))).toBe(true);
+  });
+
+  it("pierwszy niepełny miesiąc liczy się od początku najmu, nie od pierwszego dnia miesiąca", () => {
+    // Umowa od 17 września, odcięcie na 10 września: okres zaczyna się 17.,
+    // czyli po dacie odcięcia — naliczamy.
+    const period = periodFor(2026, 8, { startDate: utc("2026-09-17") });
+
+    expect(shouldBillPeriod(period, utc("2026-09-10"))).toBe(true);
+    expect(shouldBillPeriod(period, utc("2026-09-18"))).toBe(false);
+  });
+
+  it("data wcześniejsza niż początek umowy niczego nie odcina", () => {
+    expect(shouldBillPeriod(periodFor(2026, 7), utc("2020-01-01"))).toBe(true);
   });
 });

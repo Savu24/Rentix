@@ -107,6 +107,26 @@ export function buildBillingPeriod(
 }
 
 /**
+ * Czy okres w ogóle podlega naliczeniu.
+ *
+ * `billingStartsAt` na umowie odcina wszystko, co poprzedni program już
+ * rozliczył — patrz komentarz przy polu w schemacie. Odcinamy całymi okresami,
+ * a nie dniami: dokument obejmujący choć jeden dzień sprzed przejęcia rozliczeń
+ * dublowałby dokument z tamtego systemu, a proporcja liczona od środka miesiąca
+ * dawałaby najemcy dwa różne rachunki za ten sam luty.
+ *
+ * Data wcześniejsza niż początek umowy niczego nie zmienia — wtedy po prostu
+ * nie ma czego odcinać.
+ */
+export function shouldBillPeriod(
+  period: BillingPeriod,
+  billingStartsAt: Date | null | undefined,
+): boolean {
+  if (!billingStartsAt) return true;
+  return startOfDay(period.periodStart) >= startOfDay(billingStartsAt);
+}
+
+/**
  * Czynsz proporcjonalny do liczby dni objętych umową.
  *
  * Dzielimy przez liczbę dni *danego* miesiąca, a nie przez 30: najemca

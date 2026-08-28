@@ -12,10 +12,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getLease } from "@/lib/leases/service";
 import { INVOICE_STATUS_META, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { BillingStartField } from "@/components/panel/leases/billing-start-field";
 import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { formatPropertyAddress } from "@/lib/properties/address";
+import { formatDate } from "@/lib/utils";
 import {
   LEASE_STATUS_LABEL,
   LEASE_STATUS_TONE,
@@ -157,7 +159,12 @@ export default async function LeaseDetailPage({ params }: Params) {
             <Term label="Termin płatności" value={`${lease.paymentTermDays} dni`} />
           </dl>
 
-          <div className="mt-4 border-t border-border pt-4">
+          <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4">
+            <BillingStartField
+              leaseId={lease.id}
+              billingStartsAt={lease.billingStartsAt?.toISOString().slice(0, 10) ?? ""}
+            />
+
             <EmailDeliveryToggle
               leaseId={lease.id}
               enabled={lease.sendInvoicesByEmail}
@@ -184,7 +191,12 @@ export default async function LeaseDetailPage({ params }: Params) {
           <Card>
             <CardContent className="p-4 text-sm text-muted">
               Do tej umowy nie wystawiono jeszcze dokumentów. Czynsz nalicza się automatycznie
-              w {lease.billingDay}. dniu miesiąca.
+              w {lease.billingDay}. dniu miesiąca
+              {/* Bez tego dopisku pusta lista wygląda jak awaria naliczania,
+                  a jest dokładnie tym, o co poprosił właściciel. */}
+              {lease.billingStartsAt
+                ? `, ale nie za okresy zaczynające się przed ${formatDate(lease.billingStartsAt)}.`
+                : "."}
             </CardContent>
           </Card>
         ) : (

@@ -28,6 +28,7 @@ const SKIP_REASON_LABEL: Record<string, string> = {
   NO_TENANT: "nie mają przypisanego najemcy",
   NOTHING_TO_BILL: "nie mają czego naliczyć",
   BILLING_DAY_AHEAD: "mają dzień naliczania w przyszłości",
+  BEFORE_BILLING_START: "są rozliczane w Rentiksie dopiero od późniejszego miesiąca",
 };
 
 /**

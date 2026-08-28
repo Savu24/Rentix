@@ -43,6 +43,16 @@ describe("leaseFormSchema", () => {
     expect(result.startDate.toISOString()).toBe("2026-09-01T00:00:00.000Z");
   });
 
+  it("puste „nie naliczaj przed” to brak odcięcia, nie błąd", () => {
+    expect(leaseFormSchema.parse(VALID_LEASE).billingStartsAt).toBeNull();
+    expect(leaseFormSchema.parse({ ...VALID_LEASE, billingStartsAt: "" }).billingStartsAt).toBeNull();
+  });
+
+  it("odcięcie naliczania trafia do UTC tak samo jak pozostałe daty", () => {
+    const result = leaseFormSchema.parse({ ...VALID_LEASE, billingStartsAt: "2026-09-01" });
+    expect(result.billingStartsAt?.toISOString()).toBe("2026-09-01T00:00:00.000Z");
+  });
+
   it("puste pole daty końcowej daje umowę bezterminową", () => {
     expect(leaseFormSchema.parse({ ...VALID_LEASE, endDate: "" }).endDate).toBeNull();
   });
@@ -137,6 +147,16 @@ describe("leaseUpdateSchema", () => {
   it("pozwala zmienić pojedyncze pole", () => {
     const result = leaseUpdateSchema.parse({ rentGrosze: "2 600,00" });
     expect(result.rentGrosze).toBe(260000);
+  });
+
+  it("pustym polem czyści odcięcie naliczania, a pominiętym go nie rusza", () => {
+    // Rozróżnienie jest istotne: PATCH z jednym polem nie może po cichu
+    // skasować daty, której formularz w ogóle nie przysłał.
+    expect(leaseUpdateSchema.parse({ billingStartsAt: "" }).billingStartsAt).toBeNull();
+    expect(leaseUpdateSchema.parse({ rentGrosze: "2 600,00" }).billingStartsAt).toBeUndefined();
+    expect(
+      leaseUpdateSchema.parse({ billingStartsAt: "2026-09-01" }).billingStartsAt?.toISOString(),
+    ).toBe("2026-09-01T00:00:00.000Z");
   });
 
   it("nie sprawdza spójności dat, gdy przyszła tylko jedna", () => {

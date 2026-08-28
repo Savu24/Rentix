@@ -97,6 +97,14 @@ export const leaseFormSchema = z
       .min(1, "Dzień naliczania musi mieścić się w zakresie 1–28")
       .max(MAX_BILLING_DAY, "Dzień naliczania musi mieścić się w zakresie 1–28")
       .default(1),
+
+    /**
+     * Odcięcie miesięcy rozliczonych poza Rentiksem — puste = naliczaj od
+     * początku umowy. Bez walidacji względem `startDate`: data wcześniejsza niż
+     * początek najmu jest bezczynna, a nie błędna, i odrzucanie jej blokowałoby
+     * przepisanie umowy, którą rozliczasz w Rentiksie od pierwszego dnia.
+     */
+    billingStartsAt: optionalDateInput("Nie naliczaj przed"),
     paymentTermDays: z.coerce
       .number()
       .int("Termin płatności musi być liczbą całkowitą")
@@ -155,6 +163,9 @@ export const leaseUpdateSchema = z
     utilitiesMode: z.enum(utilitiesModes).optional(),
     utilitiesAdvanceGrosze: moneyInput("Zaliczka na media").optional(),
     billingDay: z.coerce.number().int().min(1).max(MAX_BILLING_DAY).optional(),
+    // Puste pole czyści odcięcie — pomyłka przy zakładaniu umowy musi dawać się
+    // cofnąć z panelu, inaczej zostałyby tylko szkice i ręczne grzebanie w bazie.
+    billingStartsAt: optionalDateInput("Nie naliczaj przed").optional(),
     paymentTermDays: z.coerce.number().int().min(0).max(90).optional(),
     sendInvoicesByEmail: z.coerce.boolean().optional(),
     notes: optionalText(2000),

@@ -544,6 +544,21 @@ model Lease {
   /// żeby luty nie wymagał wyjątku).
   billingDay      Int @default(1)
 
+  /// Data, przed którą nie naliczamy nic z tej umowy. NULL = naliczaj od początku.
+  ///
+  /// Dla umów przeniesionych z innego programu: najem trwa od czerwca i tak ma
+  /// zostać w kartotece — proporcje, umowa w PDF i odliczanie dni do końca liczą
+  /// się od prawdziwej daty — ale dokumenty za czerwiec i lipiec wystawił już
+  /// poprzedni system. Bez tego pola jedynym wyjściem było przesunięcie
+  /// `startDate`, czyli skłamanie o umowie, albo trzymanie jej w szkicu do
+  /// pierwszego naliczenia.
+  ///
+  /// Odcina całe okresy, nie dni: pomijamy każdy miesiąc, którego okres zaczyna
+  /// się przed tą datą. Dokument obejmujący dni sprzed przejęcia rozliczeń
+  /// dublowałby ten z poprzedniego programu, więc w praktyce wpisuje się tu
+  /// pierwszy dzień miesiąca, od którego rozliczasz najemcę w Rentiksie.
+  billingStartsAt DateTime?
+
   /// Ile dni od wystawienia na zapłatę.
   paymentTermDays Int @default(10)
 
