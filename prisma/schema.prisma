@@ -543,6 +543,7 @@ model Lease {
   /// Dzień miesiąca, w którym wystawiana jest faktura (1–28; nie 29–31,
   /// żeby luty nie wymagał wyjątku).
   billingDay      Int @default(1)
+
   /// Ile dni od wystawienia na zapłatę.
   paymentTermDays Int @default(10)
 
@@ -1224,6 +1225,14 @@ model Subscription {
   /// podnieść limit pojedynczemu klientowi bez dokładania nowego planu.
   tenantLimit   Int? @default(20)
   propertyLimit Int?
+
+  /// Konto zwolnione z opłat: korzysta z planu, ale nie jest obciążane.
+  ///
+  /// Osobna flaga, a nie plan „PRO za darmo” — plan mówi, co konto może robić,
+  /// a to pole, czy w ogóle trafia do rozliczenia. Bez tego rozdziału konta
+  /// wewnętrzne (własna firma, demo, partner) szłyby do operatora płatności
+  /// razem z klientami i dostawały wezwania do zapłaty.
+  billingExempt Boolean @default(false)
 
   currentPeriodEnd DateTime?
   cancelledAt      DateTime?
