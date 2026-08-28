@@ -76,8 +76,10 @@ export default async function TenantDetailPage({ params }: Params) {
     tenant.idCardNumber ||
       tenant.pesel ||
       tenant.passportNumber ||
+      tenant.residenceCardNumber ||
       emergencyName ||
-      tenant.emergencyContactPhone,
+      tenant.emergencyContactPhone ||
+      tenant.emergencyContactEmail,
   );
 
   return (
@@ -312,8 +314,10 @@ export default async function TenantDetailPage({ params }: Params) {
               <DetailItem label="Dowód osobisty" value={tenant.idCardNumber} />
               <DetailItem label="PESEL" value={tenant.pesel} />
               <DetailItem label="Paszport" value={tenant.passportNumber} />
+              <DetailItem label="Karta pobytu" value={tenant.residenceCardNumber} />
               <DetailItem label="Kontakt w nagłym wypadku" value={emergencyName || null} />
               <DetailItem label="Telefon awaryjny" value={tenant.emergencyContactPhone} />
+              <DetailItem label="E-mail awaryjny" value={tenant.emergencyContactEmail} />
             </CardContent>
           </Card>
         </section>

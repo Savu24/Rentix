@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
@@ -38,9 +39,11 @@ const EMPTY: TenantFormInput = {
   idCardNumber: "",
   pesel: "",
   passportNumber: "",
+  residenceCardNumber: "",
   emergencyContactFirstName: "",
   emergencyContactLastName: "",
   emergencyContactPhone: "",
+  emergencyContactEmail: "",
   notes: "",
 };
 
@@ -105,7 +108,6 @@ export function TenantForm({
               <Input
                 {...fieldAria("firstName", { error: errors.firstName?.message })}
                 autoComplete="given-name"
-                placeholder="Jan"
                 disabled={isSubmitting}
                 {...register("firstName")}
               />
@@ -115,7 +117,6 @@ export function TenantForm({
               <Input
                 {...fieldAria("lastName", { error: errors.lastName?.message })}
                 autoComplete="family-name"
-                placeholder="Kowalski"
                 disabled={isSubmitting}
                 {...register("lastName")}
               />
@@ -131,7 +132,6 @@ export function TenantForm({
                 {...fieldAria("email", { error: errors.email?.message })}
                 type="email"
                 autoComplete="email"
-                placeholder="jan@przyklad.pl"
                 disabled={isSubmitting}
                 {...register("email")}
               />
@@ -142,7 +142,6 @@ export function TenantForm({
                 {...fieldAria("phone", { error: errors.phone?.message })}
                 type="tel"
                 autoComplete="tel"
-                placeholder="+48 601 100 200"
                 disabled={isSubmitting}
                 {...register("phone")}
               />
@@ -172,7 +171,7 @@ export function TenantForm({
             Wszystkie pola opcjonalne — wpisz to, co najemca okazał.
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="idCardNumber"
               label="Dowód osobisty"
@@ -180,7 +179,6 @@ export function TenantForm({
             >
               <Input
                 {...fieldAria("idCardNumber", { error: errors.idCardNumber?.message })}
-                placeholder="ABC123456"
                 autoCapitalize="characters"
                 disabled={isSubmitting}
                 {...register("idCardNumber")}
@@ -190,7 +188,6 @@ export function TenantForm({
             <FormField id="pesel" label="PESEL" error={errors.pesel?.message}>
               <Input
                 {...fieldAria("pesel", { error: errors.pesel?.message })}
-                placeholder="90010112345"
                 inputMode="numeric"
                 disabled={isSubmitting}
                 {...register("pesel")}
@@ -204,10 +201,24 @@ export function TenantForm({
             >
               <Input
                 {...fieldAria("passportNumber", { error: errors.passportNumber?.message })}
-                placeholder="AB1234567"
                 autoCapitalize="characters"
                 disabled={isSubmitting}
                 {...register("passportNumber")}
+              />
+            </FormField>
+
+            <FormField
+              id="residenceCardNumber"
+              label="Karta pobytu"
+              error={errors.residenceCardNumber?.message}
+            >
+              <Input
+                {...fieldAria("residenceCardNumber", {
+                  error: errors.residenceCardNumber?.message,
+                })}
+                autoCapitalize="characters"
+                disabled={isSubmitting}
+                {...register("residenceCardNumber")}
               />
             </FormField>
           </div>
@@ -221,7 +232,7 @@ export function TenantForm({
             Osoba, do której zadzwonisz, gdy nie da się dodzwonić do najemcy.
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="emergencyContactFirstName"
               label="Imię"
@@ -231,7 +242,6 @@ export function TenantForm({
                 {...fieldAria("emergencyContactFirstName", {
                   error: errors.emergencyContactFirstName?.message,
                 })}
-                placeholder="Anna"
                 disabled={isSubmitting}
                 {...register("emergencyContactFirstName")}
               />
@@ -246,7 +256,6 @@ export function TenantForm({
                 {...fieldAria("emergencyContactLastName", {
                   error: errors.emergencyContactLastName?.message,
                 })}
-                placeholder="Kowalska"
                 disabled={isSubmitting}
                 {...register("emergencyContactLastName")}
               />
@@ -262,9 +271,23 @@ export function TenantForm({
                   error: errors.emergencyContactPhone?.message,
                 })}
                 type="tel"
-                placeholder="+48 601 100 200"
                 disabled={isSubmitting}
                 {...register("emergencyContactPhone")}
+              />
+            </FormField>
+
+            <FormField
+              id="emergencyContactEmail"
+              label="E-mail"
+              error={errors.emergencyContactEmail?.message}
+            >
+              <Input
+                {...fieldAria("emergencyContactEmail", {
+                  error: errors.emergencyContactEmail?.message,
+                })}
+                type="email"
+                disabled={isSubmitting}
+                {...register("emergencyContactEmail")}
               />
             </FormField>
           </div>
@@ -287,7 +310,6 @@ export function TenantForm({
             >
               <Input
                 {...fieldAria("street", { error: errors.street?.message })}
-                placeholder="Kwiatowa 4/2"
                 disabled={isSubmitting}
                 {...register("street")}
               />
@@ -299,10 +321,8 @@ export function TenantForm({
               error={errors.postalCode?.message}
               className="sm:col-span-2"
             >
-              <Input
+              <PostalCodeInput
                 {...fieldAria("postalCode", { error: errors.postalCode?.message })}
-                placeholder="30-001"
-                inputMode="numeric"
                 disabled={isSubmitting}
                 {...register("postalCode")}
               />
@@ -316,7 +336,6 @@ export function TenantForm({
             >
               <Input
                 {...fieldAria("city", { error: errors.city?.message })}
-                placeholder="Kraków"
                 disabled={isSubmitting}
                 {...register("city")}
               />
@@ -331,7 +350,6 @@ export function TenantForm({
             >
               <Input
                 {...fieldAria("taxId", { error: errors.taxId?.message })}
-                placeholder="1234563218"
                 inputMode="numeric"
                 disabled={isSubmitting}
                 {...register("taxId")}
@@ -370,7 +388,6 @@ export function TenantForm({
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
-              placeholder="Preferowany kontakt telefoniczny…"
               disabled={isSubmitting}
               {...register("notes")}
             />

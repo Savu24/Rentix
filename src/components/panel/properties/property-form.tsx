@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckboxField } from "@/components/ui/checkbox-field";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { OwnerPicker, type OwnerOption } from "@/components/panel/owners/owner-picker";
@@ -128,7 +129,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             >
               <Input
                 {...fieldAria("name", { error: errors.name?.message })}
-                placeholder="Kwiatowa 4"
                 disabled={isSubmitting}
                 {...register("name")}
               />
@@ -160,7 +160,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                   type="number"
                   min={0}
                   max={MAX_ROOMS_PER_PROPERTY}
-                  placeholder="3"
                   disabled={isSubmitting}
                   {...register("roomCount")}
                 />
@@ -201,7 +200,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               <Input
                 {...fieldAria("street", { error: errors.street?.message })}
                 autoComplete="address-line1"
-                placeholder="Kwiatowa"
                 disabled={isSubmitting}
                 {...register("street")}
               />
@@ -215,7 +213,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             >
               <Input
                 {...fieldAria("buildingNumber", { error: errors.buildingNumber?.message })}
-                placeholder="4"
                 disabled={isSubmitting}
                 {...register("buildingNumber")}
               />
@@ -230,7 +227,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             >
               <Input
                 {...fieldAria("apartmentNumber", { error: errors.apartmentNumber?.message })}
-                placeholder="2"
                 disabled={isSubmitting}
                 {...register("apartmentNumber")}
               />
@@ -242,11 +238,8 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               error={errors.postalCode?.message}
               className="sm:col-span-2"
             >
-              <Input
+              <PostalCodeInput
                 {...fieldAria("postalCode", { error: errors.postalCode?.message })}
-                autoComplete="postal-code"
-                placeholder="30-001"
-                inputMode="numeric"
                 disabled={isSubmitting}
                 {...register("postalCode")}
               />
@@ -261,7 +254,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               <Input
                 {...fieldAria("city", { error: errors.city?.message })}
                 autoComplete="address-level2"
-                placeholder="Kraków"
                 disabled={isSubmitting}
                 {...register("city")}
               />
@@ -275,7 +267,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             >
               <Input
                 {...fieldAria("district", { error: errors.district?.message })}
-                placeholder="Podgórze"
                 disabled={isSubmitting}
                 {...register("district")}
               />
@@ -293,7 +284,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               <Input
                 {...fieldAria("areaM2", { error: errors.areaM2?.message })}
                 inputMode="decimal"
-                placeholder="48,50"
                 disabled={isSubmitting}
                 {...register("areaM2")}
               />
@@ -303,7 +293,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               <Input
                 {...fieldAria("floor", { error: errors.floor?.message })}
                 inputMode="numeric"
-                placeholder="1"
                 disabled={isSubmitting}
                 {...register("floor")}
               />
@@ -318,7 +307,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               <Input
                 {...fieldAria("askingRentGrosze", { error: errors.askingRentGrosze?.message })}
                 inputMode="decimal"
-                placeholder="2 400,00"
                 disabled={isSubmitting}
                 {...register("askingRentGrosze")}
               />
@@ -339,7 +327,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
           >
             <Textarea
               {...fieldAria("description", { error: errors.description?.message })}
-              placeholder="Dwupokojowe mieszkanie po remoncie, blisko tramwaju…"
               disabled={isSubmitting}
               {...register("description")}
             />
@@ -353,7 +340,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
-              placeholder="Kod do klatki, kontakt do administracji…"
               disabled={isSubmitting}
               {...register("notes")}
             />

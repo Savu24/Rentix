@@ -311,7 +311,6 @@ export function ManualInvoiceForm({
                     {...fieldAria(`mi-line-${index}-description`, {
                       error: errors.lines?.[index]?.description?.message,
                     })}
-                    placeholder="Kaucja zabezpieczająca"
                     disabled={isSubmitting}
                     {...register(`lines.${index}.description`)}
                   />
@@ -359,7 +358,6 @@ export function ManualInvoiceForm({
                       error: errors.lines?.[index]?.unitPriceNetGrosze?.message,
                     })}
                     inputMode="decimal"
-                    placeholder="2 400,00"
                     disabled={isSubmitting}
                     {...register(`lines.${index}.unitPriceNetGrosze`)}
                   />
@@ -428,7 +426,6 @@ export function ManualInvoiceForm({
           <FormField id="mi-notes" label="Uwagi na dokumencie" error={errors.notes?.message}>
             <Textarea
               {...fieldAria("mi-notes", { error: errors.notes?.message })}
-              placeholder="Opcjonalne."
               disabled={isSubmitting}
               {...register("notes")}
             />

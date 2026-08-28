@@ -389,7 +389,6 @@ export function LeaseForm({
             >
               <Input
                 {...fieldAria("number", { error: errors.number?.message })}
-                placeholder="2026/001"
                 disabled={isSubmitting}
                 {...register("number")}
               />
@@ -407,7 +406,6 @@ export function LeaseForm({
               <Input
                 {...fieldAria("rentGrosze", { error: errors.rentGrosze?.message })}
                 inputMode="decimal"
-                placeholder="2 400,00"
                 disabled={isSubmitting}
                 {...register("rentGrosze")}
               />
@@ -417,7 +415,6 @@ export function LeaseForm({
               <Input
                 {...fieldAria("depositGrosze", { error: errors.depositGrosze?.message })}
                 inputMode="decimal"
-                placeholder="2 400,00"
                 disabled={isSubmitting}
                 {...register("depositGrosze")}
               />
@@ -461,7 +458,6 @@ export function LeaseForm({
                     error: errors.utilitiesAdvanceGrosze?.message,
                   })}
                   inputMode="decimal"
-                  placeholder="450,00"
                   disabled={isSubmitting}
                   {...register("utilitiesAdvanceGrosze")}
                 />
@@ -534,7 +530,6 @@ export function LeaseForm({
           <FormField id="notes" label="Ustalenia dodatkowe" error={errors.notes?.message}>
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
-              placeholder="Zgoda na zwierzęta, miejsce postojowe…"
               disabled={isSubmitting}
               {...register("notes")}
             />

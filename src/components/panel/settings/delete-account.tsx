@@ -137,7 +137,6 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
                   id="delete-confirmation"
                   value={confirmation}
                   onChange={(event) => setConfirmation(event.target.value)}
-                  placeholder={ACCOUNT_DELETE_PHRASE}
                   disabled={busy}
                 />
               </FormField>

@@ -84,7 +84,6 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
             id="terminationNote"
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Wypowiedzenie ze strony najemcy…"
             disabled={busy}
           />
         </FormField>

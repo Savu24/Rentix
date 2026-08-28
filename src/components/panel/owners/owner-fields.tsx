@@ -4,6 +4,7 @@ import type { FieldErrors, UseFormRegister } from "react-hook-form";
 
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Textarea } from "@/components/ui/textarea";
 import type { OwnerFormInput } from "@/lib/validations/owner";
 
@@ -42,7 +43,6 @@ export function OwnerFields({
         >
           <Input
             {...fieldAria(id("name"), { error: errors.name?.message })}
-            placeholder="Anna Nowak"
             disabled={disabled}
             {...register("name")}
           />
@@ -57,7 +57,6 @@ export function OwnerFields({
         >
           <Input
             {...fieldAria(id("taxId"), { error: errors.taxId?.message })}
-            placeholder="1234563218"
             inputMode="numeric"
             disabled={disabled}
             {...register("taxId")}
@@ -73,7 +72,6 @@ export function OwnerFields({
           <Input
             {...fieldAria(id("email"), { error: errors.email?.message })}
             type="email"
-            placeholder="anna@przyklad.pl"
             disabled={disabled}
             {...register("email")}
           />
@@ -88,7 +86,6 @@ export function OwnerFields({
           <Input
             {...fieldAria(id("phone"), { error: errors.phone?.message })}
             type="tel"
-            placeholder="+48 601 100 200"
             disabled={disabled}
             {...register("phone")}
           />
@@ -102,7 +99,6 @@ export function OwnerFields({
         >
           <Input
             {...fieldAria(id("street"), { error: errors.street?.message })}
-            placeholder="Długa 14/3"
             disabled={disabled}
             {...register("street")}
           />
@@ -114,10 +110,8 @@ export function OwnerFields({
           error={errors.postalCode?.message}
           className="sm:col-span-2"
         >
-          <Input
+          <PostalCodeInput
             {...fieldAria(id("postalCode"), { error: errors.postalCode?.message })}
-            placeholder="30-001"
-            inputMode="numeric"
             disabled={disabled}
             {...register("postalCode")}
           />
@@ -131,7 +125,6 @@ export function OwnerFields({
         >
           <Input
             {...fieldAria(id("city"), { error: errors.city?.message })}
-            placeholder="Kraków"
             disabled={disabled}
             {...register("city")}
           />
@@ -146,7 +139,6 @@ export function OwnerFields({
         >
           <Input
             {...fieldAria(id("bankAccount"), { error: errors.bankAccount?.message })}
-            placeholder="12 3456 7890 1234 5678 9012 3456"
             inputMode="numeric"
             disabled={disabled}
             {...register("bankAccount")}
@@ -191,7 +183,6 @@ export function OwnerFields({
       >
         <Textarea
           {...fieldAria(id("notes"), { error: errors.notes?.message })}
-          placeholder="Prowizja 10%, rozliczenie do 10. dnia miesiąca…"
           disabled={disabled}
           {...register("notes")}
         />

@@ -91,7 +91,6 @@ export function NotificationForm({
           >
             <Input
               {...fieldAria("notif-senderName", { error: errors.senderName?.message })}
-              placeholder={organizationName}
               disabled={isSubmitting}
               {...register("senderName")}
             />

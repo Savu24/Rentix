@@ -84,7 +84,6 @@ export function RecordPayment({
               inputMode="decimal"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              placeholder="2 400,00"
               disabled={busy}
             />
           </FormField>
@@ -124,7 +123,6 @@ export function RecordPayment({
             id="payment-reference"
             value={reference}
             onChange={(event) => setReference(event.target.value)}
-            placeholder="Czynsz sierpień 2026"
             disabled={busy}
           />
         </FormField>

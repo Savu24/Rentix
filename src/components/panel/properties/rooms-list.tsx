@@ -331,7 +331,6 @@ function RoomForm({
             <FormField id={idFor("name")} label="Oznaczenie" error={errors.name?.message}>
               <Input
                 {...fieldAria(idFor("name"), { error: errors.name?.message })}
-                placeholder="Pokój 1"
                 disabled={isSubmitting}
                 {...register("name")}
               />
@@ -359,7 +358,6 @@ function RoomForm({
               <Input
                 {...fieldAria(idFor("rent"), { error: errors.monthlyRentGrosze?.message })}
                 inputMode="decimal"
-                placeholder="900,00"
                 disabled={isSubmitting}
                 {...register("monthlyRentGrosze")}
               />

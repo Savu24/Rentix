@@ -51,6 +51,21 @@ describe("tenantFormSchema — dokumenty tożsamości", () => {
     expect(tenantFormSchema.safeParse({ ...VALID, pesel: "9001011234A" }).success).toBe(false);
   });
 
+  it("normalizuje numer karty pobytu", () => {
+    expect(
+      tenantFormSchema.parse({ ...VALID, residenceCardNumber: "abc 1234567" })
+        .residenceCardNumber,
+    ).toBe("ABC1234567");
+  });
+
+  it("odrzuca kartę pobytu o długości paszportu", () => {
+    // Karta ma siedem cyfr, dowód sześć — bez tego rozróżnienia numer dowodu
+    // wpisany w złe pole przechodziłby jako karta pobytu.
+    expect(
+      tenantFormSchema.safeParse({ ...VALID, residenceCardNumber: "ABC123456" }).success,
+    ).toBe(false);
+  });
+
   it("przyjmuje zagraniczny numer paszportu", () => {
     // Każde państwo numeruje po swojemu — sprawdzamy tylko, że to numer,
     // a nie zdanie wpisane w złe pole.
@@ -88,6 +103,22 @@ describe("tenantFormSchema — kontakt na wypadek nagłego zdarzenia", () => {
   it("sprawdza format telefonu awaryjnego tak samo jak telefonu najemcy", () => {
     expect(
       tenantFormSchema.safeParse({ ...VALID, emergencyContactPhone: "zadzwoń do siostry" }).success,
+    ).toBe(false);
+  });
+
+  it("zapisuje e-mail kontaktu awaryjnego i puste pole zamienia na null", () => {
+    expect(
+      tenantFormSchema.parse({ ...VALID, emergencyContactEmail: "anna@przyklad.pl" })
+        .emergencyContactEmail,
+    ).toBe("anna@przyklad.pl");
+    expect(
+      tenantFormSchema.parse({ ...VALID, emergencyContactEmail: "" }).emergencyContactEmail,
+    ).toBeNull();
+  });
+
+  it("odrzuca e-mail awaryjny w złym formacie", () => {
+    expect(
+      tenantFormSchema.safeParse({ ...VALID, emergencyContactEmail: "anna(at)przyklad" }).success,
     ).toBe(false);
   });
 });

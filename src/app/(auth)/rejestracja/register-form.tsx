@@ -87,7 +87,6 @@ export function RegisterForm() {
         <Input
           {...fieldAria("name", { error: errors.name?.message })}
           autoComplete="name"
-          placeholder="Aleksandra Kowal"
           disabled={isSubmitting}
           {...register("name")}
         />
@@ -102,7 +101,6 @@ export function RegisterForm() {
         <Input
           {...fieldAria("organizationName", { error: errors.organizationName?.message })}
           autoComplete="organization"
-          placeholder="Kowal Nieruchomości"
           disabled={isSubmitting}
           {...register("organizationName")}
         />
@@ -113,7 +111,6 @@ export function RegisterForm() {
           {...fieldAria("email", { error: errors.email?.message })}
           type="email"
           autoComplete="email"
-          placeholder="jan@przyklad.pl"
           disabled={isSubmitting}
           {...register("email")}
         />
@@ -132,7 +129,6 @@ export function RegisterForm() {
           })}
           type="password"
           autoComplete="new-password"
-          placeholder="••••••••••"
           disabled={isSubmitting}
           {...register("password")}
         />

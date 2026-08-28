@@ -129,7 +129,6 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
               <Input
                 {...fieldAria("expense-amount", { error: errors.amountGrosze?.message })}
                 inputMode="decimal"
-                placeholder="450,00"
                 disabled={isSubmitting}
                 {...register("amountGrosze")}
               />
@@ -157,7 +156,6 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
           >
             <Input
               {...fieldAria("expense-description", { error: errors.description?.message })}
-              placeholder="Czynsz do wspólnoty za sierpień"
               disabled={isSubmitting}
               {...register("description")}
             />
@@ -187,7 +185,6 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
             <FormField id="expense-vendor" label="Dostawca" error={errors.vendor?.message}>
               <Input
                 {...fieldAria("expense-vendor", { error: errors.vendor?.message })}
-                placeholder="Wspólnota Długa 14"
                 disabled={isSubmitting}
                 {...register("vendor")}
               />
@@ -200,7 +197,6 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
             >
               <Input
                 {...fieldAria("expense-documentRef", { error: errors.documentRef?.message })}
-                placeholder="FV 12/2026"
                 disabled={isSubmitting}
                 {...register("documentRef")}
               />
@@ -210,7 +206,6 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
           <FormField id="expense-notes" label="Notatka" error={errors.notes?.message}>
             <Textarea
               {...fieldAria("expense-notes", { error: errors.notes?.message })}
-              placeholder="Opcjonalne."
               disabled={isSubmitting}
               {...register("notes")}
             />

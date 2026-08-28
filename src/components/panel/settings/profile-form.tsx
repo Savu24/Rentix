@@ -83,7 +83,6 @@ export function ProfileForm({
             <FormField id="profile-phone" label="Telefon" error={errors.phone?.message}>
               <Input
                 {...fieldAria("profile-phone", { error: errors.phone?.message })}
-                placeholder="+48 601 100 200"
                 disabled={isSubmitting}
                 {...register("phone")}
               />

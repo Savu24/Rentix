@@ -459,16 +459,20 @@ model Tenant {
   /// Właściciel spisuje je z okazanego dokumentu przy podpisaniu umowy, a co
   /// okaże najemca, zależy od niego: Polak zwykle dowód, cudzoziemiec paszport.
   /// PESEL bywa potrzebny osobno — wchodzi do wniosku o najem okazjonalny.
-  idCardNumber   String?
-  pesel          String?
-  passportNumber String?
+  /// Karta pobytu stoi obok paszportu, a nie zamiast niego: cudzoziemiec
+  /// mieszkający tu na stałe okazuje zwykle oba dokumenty naraz.
+  idCardNumber        String?
+  pesel               String?
+  passportNumber      String?
+  residenceCardNumber String?
 
-  /// Osoba do kontaktu w nagłym wypadku. Trzy osobne kolumny, nie relacja:
+  /// Osoba do kontaktu w nagłym wypadku. Osobne kolumny, nie relacja:
   /// to notatka na wypadek pożaru czy pogotowia, a nie kartoteka kolejnego
   /// człowieka w systemie — nie ma czego z nią łączyć ani czym rozliczać.
   emergencyContactFirstName String?
   emergencyContactLastName  String?
   emergencyContactPhone     String?
+  emergencyContactEmail     String?
 
   /// Jaki dokument wystawiamy temu najemcy przy naliczaniu czynszu.
   /// BILL zostawia decyzję stawkom VAT (rachunek albo faktura), CHARGE oznacza

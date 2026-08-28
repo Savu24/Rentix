@@ -66,7 +66,6 @@ export function LoginForm({
           {...fieldAria("email", { error: errors.email?.message })}
           type="email"
           autoComplete="email"
-          placeholder="jan@przyklad.pl"
           disabled={isSubmitting}
           {...register("email")}
         />
@@ -77,7 +76,6 @@ export function LoginForm({
           {...fieldAria("password", { error: errors.password?.message })}
           type="password"
           autoComplete="current-password"
-          placeholder="••••••••••"
           disabled={isSubmitting}
           {...register("password")}
         />

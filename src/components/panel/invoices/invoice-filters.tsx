@@ -201,7 +201,6 @@ export function InvoiceFilters({ total }: { total: number }) {
             <Input
               id="f-minAmount"
               inputMode="decimal"
-              placeholder="0"
               defaultValue={searchParams.get("minAmount") ?? ""}
               onBlur={(event) => setParam("minAmount", event.target.value)}
             />
@@ -211,7 +210,6 @@ export function InvoiceFilters({ total }: { total: number }) {
             <Input
               id="f-maxAmount"
               inputMode="decimal"
-              placeholder="bez limitu"
               defaultValue={searchParams.get("maxAmount") ?? ""}
               onBlur={(event) => setParam("maxAmount", event.target.value)}
             />

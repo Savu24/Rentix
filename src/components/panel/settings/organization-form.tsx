@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { api } from "@/lib/api/client";
 import {
   organizationSettingsSchema,
@@ -103,7 +104,6 @@ export function OrganizationForm({
               {...fieldAria("org-contactEmail", { error: errors.contactEmail?.message })}
               type="email"
               inputMode="email"
-              placeholder="biuro@twojafirma.pl"
               disabled={isSubmitting}
               {...register("contactEmail")}
             />
@@ -118,7 +118,6 @@ export function OrganizationForm({
             >
               <Input
                 {...fieldAria("org-taxId", { error: errors.taxId?.message })}
-                placeholder="123-456-32-18"
                 disabled={isSubmitting}
                 {...register("taxId")}
               />
@@ -127,16 +126,14 @@ export function OrganizationForm({
             <FormField id="org-street" label="Ulica i numer" error={errors.street?.message}>
               <Input
                 {...fieldAria("org-street", { error: errors.street?.message })}
-                placeholder="Długa 14/3"
                 disabled={isSubmitting}
                 {...register("street")}
               />
             </FormField>
 
             <FormField id="org-postalCode" label="Kod pocztowy" error={errors.postalCode?.message}>
-              <Input
+              <PostalCodeInput
                 {...fieldAria("org-postalCode", { error: errors.postalCode?.message })}
-                placeholder="30-001"
                 disabled={isSubmitting}
                 {...register("postalCode")}
               />
@@ -145,7 +142,6 @@ export function OrganizationForm({
             <FormField id="org-city" label="Miejscowość" error={errors.city?.message}>
               <Input
                 {...fieldAria("org-city", { error: errors.city?.message })}
-                placeholder="Kraków"
                 disabled={isSubmitting}
                 {...register("city")}
               />

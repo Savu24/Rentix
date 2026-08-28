@@ -49,9 +49,11 @@ export default async function EditTenantPage({
           idCardNumber: tenant.idCardNumber ?? "",
           pesel: tenant.pesel ?? "",
           passportNumber: tenant.passportNumber ?? "",
+          residenceCardNumber: tenant.residenceCardNumber ?? "",
           emergencyContactFirstName: tenant.emergencyContactFirstName ?? "",
           emergencyContactLastName: tenant.emergencyContactLastName ?? "",
           emergencyContactPhone: tenant.emergencyContactPhone ?? "",
+          emergencyContactEmail: tenant.emergencyContactEmail ?? "",
           notes: tenant.notes ?? "",
         }}
       />

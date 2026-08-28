@@ -120,7 +120,6 @@ export function RoomPricingForm({
                       value={room.name}
                       onChange={(event) => update(index, { name: event.target.value })}
                       aria-invalid={fieldErrors[index] ? true : undefined}
-                      placeholder={`Pokój ${index + 1}`}
                       disabled={busy}
                     />
                   </div>
@@ -135,7 +134,6 @@ export function RoomPricingForm({
                       onChange={(event) => update(index, { rent: event.target.value })}
                       aria-invalid={fieldErrors[index] ? true : undefined}
                       inputMode="decimal"
-                      placeholder="900,00"
                       disabled={busy}
                     />
                   </div>
