@@ -11,7 +11,7 @@ import {
 
 import type { UtilitiesMode } from "@/generated/prisma/enums";
 import { formatPLN } from "@/lib/money";
-import { formatPropertyAddress, formatUnitLabel } from "@/lib/properties/address";
+import { formatPropertyAddress, formatUnitLabel, roomDesignation } from "@/lib/properties/address";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { UTILITIES_MODE_LABEL } from "@/lib/validations/lease";
 
@@ -225,7 +225,7 @@ export function LeaseAgreementDocument({ data }: { data: LeasePdfData }) {
   // wynajęcie całego lokalu.
   const subjectDescription = data.room
     ? [
-        `pokój „${data.room.name}” w lokalu ${data.property.apartmentNumber ?? data.property.buildingNumber}`,
+        `pokój „${roomDesignation(data.room.name)}” w lokalu ${data.property.apartmentNumber ?? data.property.buildingNumber}`,
         data.property.floor !== null ? `położonym na ${data.property.floor} piętrze` : null,
       ]
         .filter(Boolean)

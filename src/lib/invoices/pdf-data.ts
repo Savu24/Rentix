@@ -1,5 +1,5 @@
 import type { VatRate } from "@/generated/prisma/enums";
-import { formatPropertyAddress } from "@/lib/properties/address";
+import { formatPropertyAddress, roomDesignation } from "@/lib/properties/address";
 
 import type { InvoicePdfData } from "./pdf";
 import type { getInvoice } from "./service";
@@ -28,7 +28,7 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
   const subject = property
     ? [
         property.name,
-        invoice.lease?.room ? `pokój ${invoice.lease.room.name}` : null,
+        invoice.lease?.room ? `pokój ${roomDesignation(invoice.lease.room.name)}` : null,
         formatPropertyAddress(property),
       ]
         .filter(Boolean)

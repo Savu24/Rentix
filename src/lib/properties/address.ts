@@ -47,6 +47,22 @@ export function formatPropertyAddress(property: PropertyAddress): string {
 }
 
 /**
+ * Samo oznaczenie pokoju, bez rzeczownika: „Pokój 1" → „1".
+ *
+ * Kreator zakłada pokoje pod nazwą „Pokój 1", a dokumenty dokładają do niej
+ * własne „pokój" — bez tego na fakturze stało „pokój Pokój 1". Nazwa własna
+ * („Od podwórza") przechodzi bez zmian, bo nie ma z czego jej obciąć.
+ */
+export function roomDesignation(name: string): string {
+  const trimmed = name.trim();
+  const bare = trimmed.replace(/^pok[oó]j(?=$|[\s.:_-])[\s.:_-]*/i, "").trim();
+
+  // Pokój nazwany samym „Pokój" nie zostawia po obcięciu nic — wtedy lepszy
+  // jest cały wpis niż pusty ogon po rzeczowniku.
+  return bare || trimmed;
+}
+
+/**
  * Opis samego lokalu na umowę: „lokal nr 3" albo „budynek nr 14".
  *
  * Bez numeru mieszkania przedmiotem najmu jest cały budynek — i tak trzeba to

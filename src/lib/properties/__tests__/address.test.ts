@@ -4,6 +4,7 @@ import {
   formatPropertyAddress,
   formatStreetLine,
   formatUnitLabel,
+  roomDesignation,
 } from "@/lib/properties/address";
 
 const FLAT = {
@@ -60,5 +61,30 @@ describe("formatUnitLabel", () => {
     // „Lokal nr 4" przy domu pod numerem 4 czytałoby się jak mieszkanie
     // o tym numerze, którego w tym budynku nie ma.
     expect(formatUnitLabel(HOUSE)).toBe("budynek nr 4");
+  });
+});
+
+describe("roomDesignation", () => {
+  it("obcina rzeczownik z nazwy zakładanej przez kreator", () => {
+    // Dokumenty doklejają własne „pokój" — bez tego na fakturze stało
+    // „Dotyczy: Kwiatowa 4, pokój Pokój 1, …".
+    expect(roomDesignation("Pokój 1")).toBe("1");
+    expect(roomDesignation("pokoj 2")).toBe("2");
+    expect(roomDesignation("POKÓJ A")).toBe("A");
+  });
+
+  it("nazwę własną zostawia w całości", () => {
+    expect(roomDesignation("Od podwórza")).toBe("Od podwórza");
+    expect(roomDesignation(" 3 ")).toBe("3");
+  });
+
+  it("nie obcina słowa, które tylko zaczyna się tak samo", () => {
+    expect(roomDesignation("Pokójek")).toBe("Pokójek");
+  });
+
+  it("pokój nazwany samym rzeczownikiem zostaje bez zmian", () => {
+    // Po obcięciu nie zostałoby nic, a „pokój " z pustym ogonem czyta się
+    // gorzej niż powtórzenie.
+    expect(roomDesignation("Pokój")).toBe("Pokój");
   });
 });
