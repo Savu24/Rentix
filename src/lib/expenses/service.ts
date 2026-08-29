@@ -1,4 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
+import type { ExpenseRecurrence } from "@/generated/prisma/enums";
+import { nextOccurrence } from "@/lib/expenses/schedule";
 import { prisma } from "@/lib/prisma";
 import type {
   ExpenseFormOutput,
@@ -39,22 +41,56 @@ function listWhere(organizationId: string, query: ExpenseListQuery): Prisma.Expe
   };
 }
 
+/** Jeden kształt wiersza dla zestawienia i dla karty nieruchomości. */
+const listSelect = {
+  id: true,
+  category: true,
+  amountGrosze: true,
+  paidAt: true,
+  description: true,
+  vendor: true,
+  documentRef: true,
+  recurrence: true,
+  recurrenceEveryDays: true,
+  recurrenceNextAt: true,
+  recurringFromId: true,
+  property: { select: { id: true, name: true } },
+} satisfies Prisma.ExpenseSelect;
+
+const listOrder = [
+  { paidAt: "desc" },
+  { createdAt: "desc" },
+] satisfies Prisma.ExpenseOrderByWithRelationInput[];
+
 export async function listExpenses(organizationId: string, query: ExpenseListQuery) {
   return prisma.expense.findMany({
     where: listWhere(organizationId, query),
-    select: {
-      id: true,
-      category: true,
-      amountGrosze: true,
-      paidAt: true,
-      description: true,
-      vendor: true,
-      documentRef: true,
-      property: { select: { id: true, name: true } },
-    },
-    orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+    select: listSelect,
+    orderBy: listOrder,
     take: 300,
   });
+}
+
+/**
+ * Koszty jednej nieruchomości — wycinek na jej kartę.
+ *
+ * Zwraca też sumę i liczbę wszystkich pozycji, nie tylko pobranych: karta
+ * pokazuje kilka ostatnich, a suma ma być z całości, inaczej po roku
+ * pokazywałaby ułamek tego, co ten lokal naprawdę kosztował.
+ */
+export async function propertyExpenses(organizationId: string, propertyId: string, limit = 5) {
+  const where: Prisma.ExpenseWhereInput = { organizationId, propertyId };
+
+  const [items, total] = await Promise.all([
+    prisma.expense.findMany({ where, select: listSelect, orderBy: listOrder, take: limit }),
+    prisma.expense.aggregate({ where, _sum: { amountGrosze: true }, _count: true }),
+  ]);
+
+  return {
+    items,
+    count: total._count,
+    totalGrosze: total._sum.amountGrosze ?? 0,
+  };
 }
 
 /**
@@ -113,7 +149,15 @@ export async function createExpense(
   }
 
   const expense = await prisma.expense.create({
-    data: { organizationId, ...data },
+    data: {
+      organizationId,
+      ...data,
+      // Wpisana pozycja jest pierwszym wystąpieniem, więc kolejny termin
+      // liczymy od niej, a nie od dzisiaj.
+      recurrenceNextAt: data.recurrence
+        ? nextOccurrence(data.paidAt, data.paidAt, data.recurrence, data.recurrenceEveryDays)
+        : null,
+    },
     select: { id: true },
   });
 
@@ -127,7 +171,13 @@ export async function updateExpense(
 ): Promise<CreateExpenseResult | { ok: false; reason: "NOT_FOUND" }> {
   const existing = await prisma.expense.findFirst({
     where: { id: expenseId, organizationId },
-    select: { id: true },
+    select: {
+      id: true,
+      paidAt: true,
+      recurrence: true,
+      recurrenceEveryDays: true,
+      recurrenceNextAt: true,
+    },
   });
   if (!existing) return { ok: false, reason: "NOT_FOUND" };
 
@@ -141,11 +191,50 @@ export async function updateExpense(
 
   const expense = await prisma.expense.update({
     where: { id: expenseId },
-    data,
+    data: { ...data, ...recurrenceUpdate(existing, data) },
     select: { id: true },
   });
 
   return { ok: true, expense };
+}
+
+type RecurrenceState = {
+  paidAt: Date;
+  recurrence: ExpenseRecurrence | null;
+  recurrenceEveryDays: number | null;
+  recurrenceNextAt: Date | null;
+};
+
+/**
+ * Termin kolejnego naliczenia po edycji.
+ *
+ * Zmiana cyklu albo daty poniesienia unieważnia zapisany termin, więc liczymy
+ * go od nowa. Bez tego zmiana „co rok" na „co miesiąc" nie ruszyłaby naliczania
+ * z miejsca aż do przyszłorocznego terminu.
+ */
+function recurrenceUpdate(
+  existing: RecurrenceState,
+  data: ExpenseUpdateOutput,
+): { recurrenceNextAt?: Date | null } {
+  const recurrence = "recurrence" in data ? (data.recurrence ?? null) : existing.recurrence;
+  if (!recurrence) return "recurrence" in data ? { recurrenceNextAt: null } : {};
+
+  const paidAt = data.paidAt ?? existing.paidAt;
+  const everyDays =
+    "recurrenceEveryDays" in data
+      ? (data.recurrenceEveryDays ?? null)
+      : existing.recurrenceEveryDays;
+
+  const unchanged =
+    recurrence === existing.recurrence &&
+    everyDays === existing.recurrenceEveryDays &&
+    paidAt.getTime() === existing.paidAt.getTime();
+
+  // Edycja opisu czy kwoty nie ma prawa cofnąć naliczania do już rozliczonych
+  // miesięcy — przy nietkniętym cyklu zostawiamy termin, jaki był.
+  if (unchanged && existing.recurrenceNextAt) return {};
+
+  return { recurrenceNextAt: nextOccurrence(paidAt, paidAt, recurrence, everyDays) };
 }
 
 /**

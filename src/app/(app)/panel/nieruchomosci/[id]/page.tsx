@@ -3,12 +3,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PropertyExpenses } from "@/components/panel/expenses/property-expenses";
 import { PropertyActions } from "@/components/panel/properties/property-actions";
 import { RoomsList, type RoomView } from "@/components/panel/properties/rooms-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
+import { propertyExpenses } from "@/lib/expenses/service";
 import { formatPLN } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getProperty } from "@/lib/properties/service";
@@ -36,6 +39,11 @@ export default async function PropertyDetailPage({ params }: Params) {
   // Cudze id trafia tutaj tak samo jak nieistniejące — zapytanie było zawężone
   // do organizacji z sesji, więc nic nie wycieka.
   if (!property) notFound();
+
+  // Zaległe pozycje cykliczne doliczamy przed odczytem, tak samo jak na liście
+  // kosztów — inaczej karta pokazywałaby sumę sprzed naliczenia.
+  await accrueRecurringExpenses(session.user.organizationId);
+  const expenses = await propertyExpenses(session.user.organizationId, property.id);
 
   const rooms: RoomView[] = property.rooms.map((room) => {
     const lease = room.leases[0];
@@ -179,6 +187,13 @@ export default async function PropertyDetailPage({ params }: Params) {
           </CardContent>
         </Card>
       ) : null}
+
+      <PropertyExpenses
+        propertyId={property.id}
+        expenses={expenses.items}
+        totalGrosze={expenses.totalGrosze}
+        count={expenses.count}
+      />
 
       {property.notes ? (
         <Card className="bg-surface-alt">

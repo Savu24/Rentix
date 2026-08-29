@@ -834,6 +834,16 @@ enum ExpenseCategory {
   OTHER
 }
 
+/// Jak często wraca ten sam koszt. NULL na wydatku = pozycja jednorazowa.
+enum ExpenseRecurrence {
+  WEEKLY // co tydzień
+  MONTHLY // co miesiąc
+  YEARLY // co rok
+  /// Własny odstęp w dniach — dla rachunków, które nie trzymają się kalendarza
+  /// (przegląd co 90 dni, opłata co 10 dni).
+  CUSTOM
+}
+
 /// Wydatek właściciela. Bez tej tabeli system znał wyłącznie wpływy, więc
 /// raport potrafiłby pokazać przychód, ale nigdy zysku.
 model Expense {
@@ -857,6 +867,19 @@ model Expense {
 
   notes String? @db.Text
 
+  /// Cykliczność. NULL = koszt jednorazowy, czyli zachowanie sprzed tej zmiany.
+  /// Wypełnione tylko na pozycji wpisanej ręcznie — to ona jest wzorcem, z
+  /// którego naliczają się kolejne.
+  recurrence          ExpenseRecurrence?
+  /// Odstęp w dniach dla `CUSTOM`; przy pozostałych wartościach NULL.
+  recurrenceEveryDays Int?
+  /// Dzień, w którym koszt naliczy się następnym razem. Trzymany w kolumnie,
+  /// a nie liczony z `paidAt`, bo przebieg musi wiedzieć, dokąd już doszedł —
+  /// inaczej po każdej przerwie w cronie liczyłby ten sam miesiąc od nowa.
+  recurrenceNextAt    DateTime?
+  /// Wzorzec, z którego naliczono tę pozycję. NULL na wpisanych ręcznie.
+  recurringFromId     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -864,12 +887,19 @@ model Expense {
   /// SetNull, a nie Cascade: po archiwizacji nieruchomości koszt zostaje
   /// w zestawieniu rocznym, bo pieniądze naprawdę wyszły.
   property     Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  /// Tak samo SetNull: skasowanie wzorca zatrzymuje naliczanie, ale nie kasuje
+  /// kosztów, które już poszły z konta.
+  recurringFrom Expense?  @relation("ExpenseRecurrenceSource", fields: [recurringFromId], references: [id], onDelete: SetNull)
+  occurrences   Expense[] @relation("ExpenseRecurrenceSource")
 
   @@index([organizationId])
   // Główny indeks raportu: koszty okresu, posortowane od najnowszych.
   @@index([organizationId, paidAt])
   @@index([organizationId, category])
   @@index([propertyId])
+  // Wyszukanie wzorców, którym minął termin — jedyne zapytanie przebiegu.
+  @@index([organizationId, recurrenceNextAt])
+  @@index([recurringFromId])
   @@map("expenses")
 }
 

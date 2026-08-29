@@ -1,8 +1,15 @@
 import { z } from "zod";
 
-import { ExpenseCategory } from "@/generated/prisma/enums";
+import { ExpenseCategory, ExpenseRecurrence } from "@/generated/prisma/enums";
 
-import { dateInput, idSchema, moneyInput, optionalText, requiredText } from "./common";
+import {
+  dateInput,
+  idSchema,
+  moneyInput,
+  optionalInt,
+  optionalText,
+  requiredText,
+} from "./common";
 
 const expenseCategories = Object.values(ExpenseCategory) as [
   ExpenseCategory,
@@ -49,7 +56,41 @@ export const EXPENSE_CATEGORY_ORDER: ExpenseCategory[] = [
   "OTHER",
 ];
 
-export const expenseFormSchema = z.object({
+const expenseRecurrences = Object.values(ExpenseRecurrence) as [
+  ExpenseRecurrence,
+  ...ExpenseRecurrence[],
+];
+
+/** Etykieta odpowiada na pytanie „co ile ponoszę ten koszt?". */
+export const EXPENSE_RECURRENCE_LABEL: Record<ExpenseRecurrence, string> = {
+  WEEKLY: "Co tydzień",
+  MONTHLY: "Co miesiąc",
+  YEARLY: "Co rok",
+  CUSTOM: "Niestandardowo",
+};
+
+export const EXPENSE_RECURRENCE_ORDER: ExpenseRecurrence[] = [
+  // Czynsz do wspólnoty i rata kredytu są miesięczne, więc miesiąc stoi
+  // pierwszy — najczęstszy wybór ma być tym domyślnym.
+  "MONTHLY",
+  "WEEKLY",
+  "YEARLY",
+  "CUSTOM",
+];
+
+/** Górna granica odstępu: dłuższy niż dekada to już nie jest cykl. */
+export const EXPENSE_RECURRENCE_MAX_DAYS = 3650;
+
+/** Krótki opis cyklu do listy kosztów: „co 90 dni", „co miesiąc". */
+export function describeRecurrence(
+  recurrence: ExpenseRecurrence,
+  everyDays: number | null,
+): string {
+  if (recurrence !== "CUSTOM") return EXPENSE_RECURRENCE_LABEL[recurrence].toLowerCase();
+  return everyDays ? `co ${everyDays} dni` : "niestandardowo";
+}
+
+const expenseBaseSchema = z.object({
   /** Puste = koszt ogólny konta, nieprzypisany do nieruchomości. */
   propertyId: z
     .union([z.literal(""), idSchema])
@@ -67,12 +108,79 @@ export const expenseFormSchema = z.object({
   vendor: optionalText(120),
   documentRef: optionalText(80),
   notes: optionalText(2000),
+
+  /**
+   * Checkbox „koszt cykliczny". Trzymany osobno od `recurrence`, bo pole
+   * wyboru cyklu zostaje wypełnione także po odznaczeniu checkboxa — i bez
+   * tego rozróżnienia odznaczenie nie miałoby jak wyłączyć naliczania.
+   *
+   * Do bazy nie trafia: transformacja niżej zamienia je na `recurrence: null`.
+   *
+   * `default(false)` dotyczy tylko zapisu nowego kosztu — `.partial()` przy
+   * edycji zdejmuje domyślną wartość, więc PATCH bez tego pola zostawia cykl
+   * w spokoju, zamiast go po cichu kasować.
+   */
+  recurring: z.coerce.boolean().default(false),
+  recurrence: z.enum(expenseRecurrences).nullable().optional(),
+  /** Odstęp w dniach — pytany tylko przy cyklu „niestandardowo". */
+  recurrenceEveryDays: optionalInt("Odstęp", { min: 1, max: EXPENSE_RECURRENCE_MAX_DAYS }),
 });
 
-export type ExpenseFormInput = z.input<typeof expenseFormSchema>;
+type RecurrenceFields = {
+  recurring?: boolean;
+  recurrence?: ExpenseRecurrence | null;
+  recurrenceEveryDays?: number | null;
+};
+
+/**
+ * Cykl niestandardowy bez liczby dni nie ma znaczenia — naliczanie nie
+ * wiedziałoby, co ile ma wracać. Sprawdzamy na całym obiekcie, bo warunek
+ * wiąże dwa pola.
+ */
+function checkRecurrence(value: RecurrenceFields, ctx: z.RefinementCtx) {
+  if (!value.recurring) return;
+
+  if (value.recurrence === "CUSTOM" && !value.recurrenceEveryDays) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["recurrenceEveryDays"],
+      message: "Podaj, co ile dni wraca ten koszt",
+    });
+  }
+}
+
+/**
+ * Pola formularza → kolumny. Odznaczony checkbox kasuje cykl, a odstęp w dniach
+ * zostaje wyłącznie przy „niestandardowo" — inaczej w bazie leżałaby liczba
+ * dni obok cyklu miesięcznego, który jej nie używa.
+ */
+function toRecurrenceColumns<T extends RecurrenceFields>(value: T) {
+  const { recurring, ...rest } = value;
+
+  // PATCH bez pola cykliczności niczego w niej nie zmienia.
+  if (recurring === undefined) return rest;
+
+  if (!recurring) return { ...rest, recurrence: null, recurrenceEveryDays: null };
+
+  const recurrence = rest.recurrence ?? "MONTHLY";
+  return {
+    ...rest,
+    recurrence,
+    recurrenceEveryDays: recurrence === "CUSTOM" ? (rest.recurrenceEveryDays ?? null) : null,
+  };
+}
+
+export const expenseFormSchema = expenseBaseSchema
+  .superRefine(checkRecurrence)
+  .transform(toRecurrenceColumns);
+
+export type ExpenseFormInput = z.input<typeof expenseBaseSchema>;
 export type ExpenseFormOutput = z.output<typeof expenseFormSchema>;
 
-export const expenseUpdateSchema = expenseFormSchema.partial();
+export const expenseUpdateSchema = expenseBaseSchema
+  .partial()
+  .superRefine(checkRecurrence)
+  .transform(toRecurrenceColumns);
 export type ExpenseUpdateOutput = z.output<typeof expenseUpdateSchema>;
 
 export const expenseListQuerySchema = z.object({

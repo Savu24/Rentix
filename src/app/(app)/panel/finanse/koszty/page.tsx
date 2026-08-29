@@ -1,22 +1,21 @@
 import { Wallet } from "lucide-react";
 import type { Metadata } from "next";
 
-import { DeleteExpense } from "@/components/panel/expenses/delete-expense";
 import { ExpenseFilters } from "@/components/panel/expenses/expense-filters";
 import { ExpenseForm } from "@/components/panel/expenses/expense-form";
+import { ExpenseRow } from "@/components/panel/expenses/expense-row";
 import { FinanceTabs } from "@/components/panel/finance-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { expenseSummary, expenseYears, listExpenses } from "@/lib/expenses/service";
 import { formatPLN } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { EXPENSE_CATEGORY_LABEL, expenseListQuerySchema } from "@/lib/validations/expense";
 
 export const metadata: Metadata = { title: "Koszty" };
-
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function ExpensesPage({
   searchParams,
@@ -29,6 +28,11 @@ export default async function ExpensesPage({
 
   const parsed = expenseListQuerySchema.safeParse(params);
   const query = parsed.success ? parsed.data : expenseListQuerySchema.parse({});
+
+  // Naliczenie przed odczytem, żeby zaległe pozycje weszły do tej samej listy
+  // i tej samej sumy. Nocny cron robi to samo dla wszystkich kont — tutaj
+  // chodzi o to, by właściciel nie oglądał stanu sprzed doliczenia.
+  await accrueRecurringExpenses(organizationId);
 
   const [expenses, summary, years, properties] = await Promise.all([
     listExpenses(organizationId, query),
@@ -99,35 +103,8 @@ export default async function ExpensesPage({
         <Card>
           <CardContent className="flex flex-col p-0">
             {expenses.map((expense, index) => (
-              <div
-                key={expense.id}
-                className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 ${
-                  index > 0 ? "border-t border-border" : ""
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-medium text-fg">{expense.description}</p>
-                    {/* `whitespace-normal` znosi domyślne `nowrap` znacznika:
-                        „Podatek od nieruchomości" jest szersze niż kolumna
-                        opisu na telefonie i wychodziło poza wiersz. */}
-                    <Badge className="whitespace-normal text-left">
-                      {EXPENSE_CATEGORY_LABEL[expense.category]}
-                    </Badge>
-                  </div>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                    <span>{dateFormat.format(expense.paidAt)}</span>
-                    <span>{expense.property?.name ?? "koszt ogólny"}</span>
-                    {expense.vendor ? <span>{expense.vendor}</span> : null}
-                    {expense.documentRef ? <span>{expense.documentRef}</span> : null}
-                  </p>
-                </div>
-
-                <p className="tabular font-mono text-sm text-fg">
-                  {formatPLN(expense.amountGrosze)}
-                </p>
-
-                <DeleteExpense expenseId={expense.id} />
+              <div key={expense.id} className={index > 0 ? "border-t border-border" : ""}>
+                <ExpenseRow expense={expense} />
               </div>
             ))}
           </CardContent>

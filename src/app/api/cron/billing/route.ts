@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { apiError, ok } from "@/lib/api/response";
 import { env } from "@/lib/env";
+import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { generateInvoicesForMonth } from "@/lib/invoices/service";
 import { sendPaymentNotifications } from "@/lib/notifications/reminders";
 import { prisma } from "@/lib/prisma";
@@ -42,7 +43,13 @@ async function run(request: NextRequest) {
   const organizations = await prisma.organization.findMany({ select: { id: true } });
 
   let createdCount = 0;
-  const perOrganization: Array<{ organizationId: string; created: number; skipped: number }> = [];
+  let expensesCreated = 0;
+  const perOrganization: Array<{
+    organizationId: string;
+    created: number;
+    skipped: number;
+    expenses: number;
+  }> = [];
 
   for (const organization of organizations) {
     const result = await generateInvoicesForMonth(
@@ -53,11 +60,18 @@ async function run(request: NextRequest) {
       { notBefore: now },
     );
 
+    // Koszty cykliczne właściciela — druga strona tego samego rachunku.
+    // Idempotentne tak samo jak naliczanie czynszu, więc powtórzony przebieg
+    // niczego nie dubluje.
+    const expenses = await accrueRecurringExpenses(organization.id, now);
+
     createdCount += result.created.length;
+    expensesCreated += expenses.created;
     perOrganization.push({
       organizationId: organization.id,
       created: result.created.length,
       skipped: result.skipped.length,
+      expenses: expenses.created,
     });
   }
 
@@ -70,6 +84,7 @@ async function run(request: NextRequest) {
     period: { year, month },
     organizations: organizations.length,
     invoicesCreated: createdCount,
+    expensesCreated,
     perOrganization,
     notifications: {
       sent: notifications.sent,

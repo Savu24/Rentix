@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CheckboxField } from "@/components/ui/checkbox-field";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -17,6 +18,8 @@ import { api } from "@/lib/api/client";
 import {
   EXPENSE_CATEGORY_LABEL,
   EXPENSE_CATEGORY_ORDER,
+  EXPENSE_RECURRENCE_LABEL,
+  EXPENSE_RECURRENCE_ORDER,
   expenseFormSchema,
   type ExpenseFormInput,
   type ExpenseFormOutput,
@@ -33,6 +36,9 @@ const EMPTY: ExpenseFormInput = {
   vendor: "",
   documentRef: "",
   notes: "",
+  recurring: false,
+  recurrence: "MONTHLY",
+  recurrenceEveryDays: "",
 };
 
 /**
@@ -42,7 +48,18 @@ const EMPTY: ExpenseFormInput = {
  * wpisuje się seriami z wyciągu bankowego, a nawigacja tam i z powrotem po
  * każdej pozycji kosztowałaby więcej czasu niż samo wpisywanie.
  */
-export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[] }) {
+export function ExpenseForm({
+  properties = [],
+  /**
+   * Nieruchomość narzucona przez kontekst — formularz na karcie nieruchomości.
+   * Wtedy nie pytamy, do czego przypisać koszt: odpowiedź stoi w adresie,
+   * więc lista pozostałych nieruchomości jest tam zbędna.
+   */
+  lockedPropertyId = null,
+}: {
+  properties?: ExpensePropertyOption[];
+  lockedPropertyId?: string | null;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -53,11 +70,19 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
     getValues,
     reset,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormInput, unknown, ExpenseFormOutput>({
     resolver: zodResolver(expenseFormSchema),
-    defaultValues: { ...EMPTY, paidAt: new Date().toISOString().slice(0, 10) },
+    defaultValues: {
+      ...EMPTY,
+      propertyId: lockedPropertyId ?? "",
+      paidAt: new Date().toISOString().slice(0, 10),
+    },
   });
+
+  const recurring = watch("recurring");
+  const recurrence = watch("recurrence");
 
   /** Surowe wartości pól — patrz komentarz w `property-form.tsx`. */
   async function onSubmit() {
@@ -73,8 +98,9 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
       return;
     }
 
-    // Data i kategoria zostają — kolejna pozycja z wyciągu jest zwykle z tego
-    // samego dnia i tej samej kategorii.
+    // Cykliczność wraca do wyłączonej, choć data i kategoria zostają: drugi
+    // wzorzec zapisany przez pomyłkę naliczałby ten sam koszt podwójnie,
+    // a zauważyłoby się to dopiero po miesiącu.
     reset({
       ...EMPTY,
       paidAt: getValues("paidAt"),
@@ -161,26 +187,32 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
             />
           </FormField>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField
-              id="expense-propertyId"
-              label="Nieruchomość"
-              error={errors.propertyId?.message}
-              hint="Puste = koszt ogólny konta."
-            >
-              <Select
-                {...fieldAria("expense-propertyId", { error: errors.propertyId?.message })}
-                disabled={isSubmitting}
-                {...register("propertyId")}
+          <div className={`grid gap-4 ${lockedPropertyId ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+            {lockedPropertyId ? (
+              // Pole i tak jedzie w żądaniu — ukryte, żeby nie dało się tu przypiąć
+              // kosztu do innej nieruchomości niż ta otwarta na ekranie.
+              <input type="hidden" {...register("propertyId")} />
+            ) : (
+              <FormField
+                id="expense-propertyId"
+                label="Nieruchomość"
+                error={errors.propertyId?.message}
+                hint="Puste = koszt ogólny konta."
               >
-                <option value="">— koszt ogólny —</option>
-                {properties.map((property) => (
-                  <option key={property.id} value={property.id}>
-                    {property.name}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
+                <Select
+                  {...fieldAria("expense-propertyId", { error: errors.propertyId?.message })}
+                  disabled={isSubmitting}
+                  {...register("propertyId")}
+                >
+                  <option value="">— koszt ogólny —</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            )}
 
             <FormField id="expense-vendor" label="Dostawca" error={errors.vendor?.message}>
               <Input
@@ -201,6 +233,58 @@ export function ExpenseForm({ properties }: { properties: ExpensePropertyOption[
                 {...register("documentRef")}
               />
             </FormField>
+          </div>
+
+          {/* Cykliczność pod polami samej pozycji: najpierw „ile i za co”, dopiero
+              potem „czy to wraca”. Pola cyklu pojawiają się po zaznaczeniu, bo dla
+              większości kosztów odpowiedź brzmi „nie”. */}
+          <div className="flex flex-col gap-3 rounded-card border border-border bg-surface-alt p-3.5">
+            <CheckboxField
+              label="Koszt cykliczny"
+              hint="Rentix sam dopisze kolejne pozycje, gdy minie ich termin."
+              disabled={isSubmitting}
+              {...register("recurring")}
+            />
+
+            {recurring ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  id="expense-recurrence"
+                  label="Co ile ponosisz ten koszt"
+                  error={errors.recurrence?.message}
+                >
+                  <Select
+                    {...fieldAria("expense-recurrence", { error: errors.recurrence?.message })}
+                    disabled={isSubmitting}
+                    {...register("recurrence")}
+                  >
+                    {EXPENSE_RECURRENCE_ORDER.map((value) => (
+                      <option key={value} value={value}>
+                        {EXPENSE_RECURRENCE_LABEL[value]}
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+
+                {recurrence === "CUSTOM" ? (
+                  <FormField
+                    id="expense-recurrenceEveryDays"
+                    label="Co ile dni"
+                    error={errors.recurrenceEveryDays?.message}
+                    hint="Np. 90 przy przeglądzie kwartalnym."
+                  >
+                    <Input
+                      {...fieldAria("expense-recurrenceEveryDays", {
+                        error: errors.recurrenceEveryDays?.message,
+                      })}
+                      inputMode="numeric"
+                      disabled={isSubmitting}
+                      {...register("recurrenceEveryDays")}
+                    />
+                  </FormField>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <FormField id="expense-notes" label="Notatka" error={errors.notes?.message}>

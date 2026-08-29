@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  describeRecurrence,
   EXPENSE_CATEGORY_LABEL,
   EXPENSE_CATEGORY_ORDER,
+  EXPENSE_RECURRENCE_LABEL,
+  EXPENSE_RECURRENCE_ORDER,
   expenseFormSchema,
 } from "@/lib/validations/expense";
 
@@ -54,6 +57,68 @@ describe("expenseFormSchema", () => {
   });
 });
 
+describe("koszt cykliczny", () => {
+  it("bez zaznaczonego checkboxa nie zapisuje cyklu", () => {
+    // Samo pole wyboru zostaje wypełnione domyślną wartością, więc gdyby
+    // decydowało ono, każdy koszt naliczałby się co miesiąc.
+    const result = expenseFormSchema.parse({ ...VALID, recurrence: "MONTHLY" });
+    expect(result.recurrence).toBeNull();
+  });
+
+  it("zaznaczony checkbox zapisuje wybrany cykl", () => {
+    const result = expenseFormSchema.parse({
+      ...VALID,
+      recurring: true,
+      recurrence: "YEARLY",
+    });
+    expect(result.recurrence).toBe("YEARLY");
+  });
+
+  it("bez wybranego cyklu przyjmuje miesiąc", () => {
+    expect(expenseFormSchema.parse({ ...VALID, recurring: true }).recurrence).toBe("MONTHLY");
+  });
+
+  it("cykl niestandardowy wymaga liczby dni", () => {
+    const result = expenseFormSchema.safeParse({
+      ...VALID,
+      recurring: true,
+      recurrence: "CUSTOM",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("liczba dni zostaje wyłącznie przy cyklu niestandardowym", () => {
+    const custom = expenseFormSchema.parse({
+      ...VALID,
+      recurring: true,
+      recurrence: "CUSTOM",
+      recurrenceEveryDays: "90",
+    });
+    expect(custom.recurrenceEveryDays).toBe(90);
+
+    const monthly = expenseFormSchema.parse({
+      ...VALID,
+      recurring: true,
+      recurrence: "MONTHLY",
+      recurrenceEveryDays: "90",
+    });
+    expect(monthly.recurrenceEveryDays).toBeNull();
+  });
+
+  it("nie przepuszcza pola formularza do kolumn", () => {
+    // `recurring` istnieje tylko po to, by odznaczenie checkboxa dało się
+    // odróżnić od braku pola — w bazie nie ma takiej kolumny.
+    expect(expenseFormSchema.parse({ ...VALID, recurring: true })).not.toHaveProperty(
+      "recurring",
+    );
+  });
+
+  it("opis cyklu bierze liczbę dni tylko z niestandardowego", () => {
+    expect(describeRecurrence("MONTHLY", null)).toBe("co miesiąc");
+    expect(describeRecurrence("CUSTOM", 90)).toBe("co 90 dni");
+  });
+});
+
 describe("katalog kategorii", () => {
   it("kolejność na liście pokrywa wszystkie kategorie", () => {
     // Kategoria pominięta w kolejności zniknęłaby z listy wyboru, choć dalej
@@ -64,5 +129,10 @@ describe("katalog kategorii", () => {
 
   it("nie powtarza pozycji", () => {
     expect(new Set(EXPENSE_CATEGORY_ORDER).size).toBe(EXPENSE_CATEGORY_ORDER.length);
+  });
+
+  it("kolejność cykli pokrywa wszystkie wartości", () => {
+    const labelled = Object.keys(EXPENSE_RECURRENCE_LABEL).sort();
+    expect([...EXPENSE_RECURRENCE_ORDER].sort()).toEqual(labelled);
   });
 });
