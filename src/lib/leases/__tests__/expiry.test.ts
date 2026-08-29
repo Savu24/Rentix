@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  addMonthsUtc,
   LEASE_EXPIRY_WINDOW_DAYS,
   daysUntilLeaseEnd,
   resolveLeaseExpiry,
@@ -68,5 +69,32 @@ describe("resolveLeaseExpiry", () => {
   it("umowa bezterminowa i już zakończona nie mają licznika", () => {
     expect(resolveLeaseExpiry(null, NOW)).toBeNull();
     expect(resolveLeaseExpiry(endIn(-1), NOW)).toBeNull();
+  });
+});
+
+describe("addMonthsUtc", () => {
+  const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+  const iso = (date: Date) => date.toISOString().slice(0, 10);
+
+  it("przedłużenie o rok trafia w ten sam dzień", () => {
+    expect(iso(addMonthsUtc(utc("2026-10-31"), 12))).toBe("2027-10-31");
+  });
+
+  it("przedłużenie o pół roku liczy miesiącami, nie dniami", () => {
+    expect(iso(addMonthsUtc(utc("2026-08-15"), 6))).toBe("2027-02-15");
+  });
+
+  it("przycina dzień do długości miesiąca docelowego", () => {
+    // 31 kwietnia nie istnieje — umowa kończy się ostatniego dnia miesiąca.
+    expect(iso(addMonthsUtc(utc("2026-03-31"), 1))).toBe("2026-04-30");
+    expect(iso(addMonthsUtc(utc("2026-01-31"), 1))).toBe("2026-02-28");
+  });
+
+  it("29 lutego przedłużone o rok cofa się na 28.", () => {
+    expect(iso(addMonthsUtc(utc("2028-02-29"), 12))).toBe("2029-02-28");
+  });
+
+  it("przechodzi przez koniec roku", () => {
+    expect(iso(addMonthsUtc(utc("2026-11-30"), 3))).toBe("2027-02-28");
   });
 });

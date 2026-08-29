@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { leaseFormSchema, leaseUpdateSchema } from "@/lib/validations/lease";
+import {
+  leaseEditSchema,
+  leaseFormSchema,
+  leaseUpdateSchema,
+} from "@/lib/validations/lease";
 import { tenantFormSchema } from "@/lib/validations/tenant";
 
 const VALID_LEASE = {
@@ -211,5 +215,108 @@ describe("tenantFormSchema", () => {
     for (const phone of ["+48 601 100 200", "601100200", "(12) 345-67-89"]) {
       expect(tenantFormSchema.safeParse({ ...VALID, phone }).success).toBe(true);
     }
+  });
+});
+
+const EDIT_VALID = {
+  number: "12/2026",
+  startDate: "2026-01-01",
+  endDate: "2026-12-31",
+  rentGrosze: "2 400,00",
+  depositGrosze: "2 400,00",
+  utilitiesMode: "FLAT_RATE" as const,
+  utilitiesAdvanceGrosze: "300,00",
+  billingDay: 1,
+  billingStartsAt: "",
+  paymentTermDays: 10,
+  sendInvoicesByEmail: true,
+  notes: "",
+};
+
+describe("leaseUpdateSchema", () => {
+  it("pominięte pola nie pojawiają się w wyniku", () => {
+    // Przełącznik wysyłki maili wysyła jedno pole. Gdyby kaucja czy zaliczka
+    // wracały z niego jako zero, każde jego kliknięcie kasowałoby kwoty.
+    const result = leaseUpdateSchema.parse({ sendInvoicesByEmail: false });
+    expect(result).toEqual({ sendInvoicesByEmail: false });
+  });
+
+  it("puste pole kwoty znaczy zero, a nie błąd", () => {
+    const result = leaseUpdateSchema.parse({ depositGrosze: "", utilitiesAdvanceGrosze: "" });
+    expect(result.depositGrosze).toBe(0);
+    expect(result.utilitiesAdvanceGrosze).toBe(0);
+  });
+
+  it("przedłużenie to sama data zakończenia", () => {
+    const result = leaseUpdateSchema.parse({ endDate: "2027-12-31" });
+    expect(result.endDate?.toISOString()).toBe("2027-12-31T00:00:00.000Z");
+  });
+
+  it("puste pole daty zakończenia robi umowę bezterminową", () => {
+    expect(leaseUpdateSchema.parse({ endDate: "" }).endDate).toBeNull();
+  });
+
+  it("nie przepuszcza końca wcześniejszego niż początek", () => {
+    const result = leaseUpdateSchema.safeParse({
+      startDate: "2026-06-01",
+      endDate: "2026-05-31",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("nie wymusza zaliczki, gdy pole nie przyszło w żądaniu", () => {
+    // Sam tryb bez kwoty znaczy „zostaw zaliczkę, jaka jest" — inaczej
+    // zmiana trybu z widoku umowy byłaby nie do zapisania.
+    expect(leaseUpdateSchema.safeParse({ utilitiesMode: "FLAT_RATE" }).success).toBe(true);
+  });
+});
+
+describe("leaseEditSchema", () => {
+  it("przyjmuje komplet warunków", () => {
+    const result = leaseEditSchema.parse(EDIT_VALID);
+    expect(result.rentGrosze).toBe(240000);
+    expect(result.depositGrosze).toBe(240000);
+    expect(result.billingStartsAt).toBeNull();
+  });
+
+  it("pusta data zakończenia to czas nieokreślony", () => {
+    expect(leaseEditSchema.parse({ ...EDIT_VALID, endDate: "" }).endDate).toBeNull();
+  });
+
+  it("pusta kaucja to zero, nie błąd", () => {
+    expect(leaseEditSchema.parse({ ...EDIT_VALID, depositGrosze: "" }).depositGrosze).toBe(0);
+  });
+
+  it("przy zaliczce na media wymaga kwoty", () => {
+    const result = leaseEditSchema.safeParse({ ...EDIT_VALID, utilitiesAdvanceGrosze: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("bez zaliczki tryb 'media w czynszu' nie potrzebuje kwoty", () => {
+    const result = leaseEditSchema.safeParse({
+      ...EDIT_VALID,
+      utilitiesMode: "INCLUDED",
+      utilitiesAdvanceGrosze: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("nie przepuszcza końca wcześniejszego niż początek", () => {
+    const result = leaseEditSchema.safeParse({ ...EDIT_VALID, endDate: "2025-12-31" });
+    expect(result.success).toBe(false);
+  });
+
+  it("nie zna lokalu, najemców ani statusu", () => {
+    // Te pola mają własne drogi zmiany — gdyby przeciekły tutaj, PATCH
+    // przepiąłby umowę bez zwolnienia poprzedniej jednostki.
+    const result = leaseEditSchema.parse({
+      ...EDIT_VALID,
+      propertyId: "prop_1",
+      tenantIds: ["t1"],
+      status: "TERMINATED",
+    } as never);
+    expect(result).not.toHaveProperty("propertyId");
+    expect(result).not.toHaveProperty("tenantIds");
+    expect(result).not.toHaveProperty("status");
   });
 });

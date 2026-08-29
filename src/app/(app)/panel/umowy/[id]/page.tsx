@@ -1,15 +1,17 @@
-import { ArrowLeft, Download, Home, User } from "lucide-react";
+import { ArrowLeft, Download, Home, Pencil, User } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArchiveAction } from "@/components/panel/archive/archive-action";
+import { ExtendLease } from "@/components/panel/leases/extend-lease";
 import { TerminateLease } from "@/components/panel/leases/terminate-lease";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { getLease } from "@/lib/leases/service";
 import { INVOICE_STATUS_META, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { BillingStartField } from "@/components/panel/leases/billing-start-field";
@@ -47,6 +49,12 @@ export default async function LeaseDetailPage({ params }: Params) {
   const now = new Date();
   const canTerminate = lease.status === "ACTIVE" || lease.status === "DRAFT";
 
+  // Przedłużać jest co tylko wtedy, gdy umowa ma koniec i jeszcze trwa —
+  // przy bezterminowej nie ma czego przesuwać, a po wypowiedzeniu nowa data
+  // końca niczego nie wskrzesi.
+  const canExtend = Boolean(lease.endDate) && canTerminate && !lease.terminatedAt;
+  const expiry = resolveLeaseExpiry(lease.endDate, now);
+
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
       <div className="flex flex-col gap-3">
@@ -69,20 +77,34 @@ export default async function LeaseDetailPage({ params }: Params) {
               </Badge>
             </div>
 
-            <p className="text-sm text-muted">
-              {dateFormat.format(lease.startDate)} –{" "}
-              {lease.endDate ? dateFormat.format(lease.endDate) : "czas nieokreślony"}
+            <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+              <span>
+                {dateFormat.format(lease.startDate)} –{" "}
+                {lease.endDate ? dateFormat.format(lease.endDate) : "czas nieokreślony"}
+              </span>
+              {/* Odliczanie na karcie umowy, nie tylko przy najemcy: to tutaj
+                  właściciel trafia, gdy ma zdecydować o przedłużeniu. */}
+              {expiry ? <Badge tone={expiry.tone}>{expiry.label}</Badge> : null}
             </p>
           </div>
 
-          <Button asChild size="sm">
-            {/* target="_blank": PDF otwiera się w podglądzie, a użytkownik
-                nie traci widoku umowy. */}
-            <a href={`/api/leases/${lease.id}/pdf`} target="_blank" rel="noopener noreferrer">
-              <Download className="h-4 w-4" aria-hidden />
-              Pobierz PDF
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="secondary">
+              <Link href={`/panel/umowy/${lease.id}/edytuj`}>
+                <Pencil className="h-4 w-4" aria-hidden />
+                Edytuj
+              </Link>
+            </Button>
+
+            <Button asChild size="sm">
+              {/* target="_blank": PDF otwiera się w podglądzie, a użytkownik
+                  nie traci widoku umowy. */}
+              <a href={`/api/leases/${lease.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                <Download className="h-4 w-4" aria-hidden />
+                Pobierz PDF
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -177,6 +199,10 @@ export default async function LeaseDetailPage({ params }: Params) {
           zakłada się raz, a rozliczenia wystawia co miesiąc. */}
       {UTILITIES_MODE_INCOMPLETE[lease.utilitiesMode] ? (
         <Alert tone="warning">{UTILITIES_MODE_INCOMPLETE[lease.utilitiesMode]}</Alert>
+      ) : null}
+
+      {canExtend && lease.endDate ? (
+        <ExtendLease leaseId={lease.id} endDate={lease.endDate.toISOString().slice(0, 10)} />
       ) : null}
 
       <section className="flex flex-col gap-2">

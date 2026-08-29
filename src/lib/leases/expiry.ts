@@ -39,6 +39,25 @@ export function daysUntilLeaseEnd(endDate: Date, now: Date): number {
   return Math.round((startOfDayUtc(endDate) - startOfDayUtc(now)) / DAY_MS);
 }
 
+/**
+ * Data przesunięta o `months` miesięcy do przodu, w UTC.
+ *
+ * Do przedłużania umowy: „o rok" ma znaczyć ten sam dzień miesiąca, a nie
+ * 365 dni, bo aneks pisze się datami, nie liczbą dni. Dzień przycinamy do
+ * długości miesiąca docelowego — umowa do 31 marca przedłużona o miesiąc
+ * kończy się 30 kwietnia, bo 31 kwietnia nie istnieje.
+ */
+export function addMonthsUtc(date: Date, months: number): Date {
+  const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+
+  return new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(date.getUTCDate(), lastDay)),
+  );
+}
+
 export type LeaseExpiry = {
   /** Ile dni zostało. 0 = kończy się dziś. */
   days: number;

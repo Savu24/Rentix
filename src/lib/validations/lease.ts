@@ -146,6 +146,20 @@ export type LeaseFormInput = z.input<typeof leaseFormSchema>;
 export type LeaseFormOutput = z.output<typeof leaseFormSchema>;
 
 /**
+ * Kwota, której puste pole znaczy zero, a nieobecność — „nie ruszaj".
+ *
+ * `.optional()` musi zostać na wierzchu: `optionalMoneyInput` ma je w środku,
+ * więc pominięty klucz i tak przechodziłby przez transformację i wracał jako
+ * zero. Przy PATCH-u, który wysyła jedno pole, wyzerowałoby to kaucję na
+ * każdej umowie dotkniętej przełącznikiem wysyłki maili.
+ */
+const patchMoney = (label: string) =>
+  z
+    .union([z.literal(""), moneyInput(label)])
+    .transform((value) => (value === "" ? 0 : value))
+    .optional();
+
+/**
  * Aktualizacja umowy.
  *
  * `.partial()` nie działa na schemacie z `.refine()`, więc pola powtarzamy.
@@ -159,9 +173,9 @@ export const leaseUpdateSchema = z
     startDate: dateInput("Data rozpoczęcia").optional(),
     endDate: optionalDateInput("Data zakończenia").optional(),
     rentGrosze: moneyInput("Czynsz").optional(),
-    depositGrosze: moneyInput("Kaucja").optional(),
+    depositGrosze: patchMoney("Kaucja"),
     utilitiesMode: z.enum(utilitiesModes).optional(),
-    utilitiesAdvanceGrosze: moneyInput("Zaliczka na media").optional(),
+    utilitiesAdvanceGrosze: patchMoney("Zaliczka na media"),
     billingDay: z.coerce.number().int().min(1).max(MAX_BILLING_DAY).optional(),
     // Puste pole czyści odcięcie — pomyłka przy zakładaniu umowy musi dawać się
     // cofnąć z panelu, inaczej zostałyby tylko szkice i ręczne grzebanie w bazie.
@@ -176,7 +190,74 @@ export const leaseUpdateSchema = z
       message: "Data zakończenia nie może być wcześniejsza niż rozpoczęcia",
       path: ["endDate"],
     },
+  )
+  .refine(
+    (data) =>
+      data.utilitiesMode === "FLAT_RATE" || data.utilitiesMode === "MIXED"
+        ? // `undefined` = pole nie przyszło w tym żądaniu, więc zaliczka
+          // zostaje ta, która jest w bazie — nie ma czego sprawdzać.
+          data.utilitiesAdvanceGrosze === undefined || data.utilitiesAdvanceGrosze > 0
+        : true,
+    {
+      message: "Przy zaliczce na media podaj jej kwotę",
+      path: ["utilitiesAdvanceGrosze"],
+    },
   );
+
+/**
+ * Edycja warunków zawartej umowy.
+ *
+ * Bez nieruchomości, pokoju, najemców i statusu: przepięcie umowy na inny lokal
+ * albo na inną osobę to nie poprawka, tylko nowa umowa, a zmiana statusu ma
+ * własne drogi — wypowiedzenie i przywrócenie z archiwum — które zwalniają
+ * jednostkę i przestawiają najemcę. Formularz, który by je omijał, zostawiłby
+ * lokal zajęty przez umowę, której już nie ma.
+ */
+export const leaseEditSchema = z
+  .object({
+    number: optionalText(40),
+    startDate: dateInput("Data rozpoczęcia"),
+    endDate: optionalDateInput("Data zakończenia"),
+    rentGrosze: moneyInput("Czynsz"),
+    depositGrosze: patchMoney("Kaucja"),
+    utilitiesMode: z.enum(utilitiesModes),
+    utilitiesAdvanceGrosze: patchMoney("Zaliczka na media"),
+    billingDay: z.coerce
+      .number()
+      .int("Dzień naliczania musi być liczbą całkowitą")
+      .min(1, "Dzień naliczania musi mieścić się w zakresie 1–28")
+      .max(MAX_BILLING_DAY, "Dzień naliczania musi mieścić się w zakresie 1–28"),
+    billingStartsAt: optionalDateInput("Nie naliczaj przed"),
+    paymentTermDays: z.coerce
+      .number()
+      .int("Termin płatności musi być liczbą całkowitą")
+      .min(0, "Termin płatności nie może być ujemny")
+      .max(90, "Termin płatności nie może przekraczać 90 dni"),
+    sendInvoicesByEmail: z.coerce.boolean(),
+    notes: optionalText(2000),
+  })
+  .refine((data) => !data.endDate || data.endDate >= data.startDate, {
+    message: "Data zakończenia nie może być wcześniejsza niż rozpoczęcia",
+    path: ["endDate"],
+  })
+  .refine(
+    (data) =>
+      data.utilitiesMode === "FLAT_RATE" || data.utilitiesMode === "MIXED"
+        ? (data.utilitiesAdvanceGrosze ?? 0) > 0
+        : true,
+    {
+      message: "Przy zaliczce na media podaj jej kwotę",
+      path: ["utilitiesAdvanceGrosze"],
+    },
+  );
+
+export type LeaseEditInput = z.input<typeof leaseEditSchema>;
+export type LeaseEditOutput = z.output<typeof leaseEditSchema>;
+
+/** Przedłużenie umowy — jedyne, co się zmienia, to data zakończenia. */
+export const leaseExtendSchema = z.object({
+  endDate: dateInput("Nowa data zakończenia"),
+});
 
 export const leaseListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
