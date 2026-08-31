@@ -5,6 +5,7 @@ import {
   FileText,
   IdCard,
   Mail,
+  LifeBuoy,
   MessageSquare,
   Pencil,
   Phone,
@@ -70,16 +71,15 @@ export default async function TenantDetailPage({ params }: Params) {
   const emergencyName = [tenant.emergencyContactFirstName, tenant.emergencyContactLastName]
     .filter(Boolean)
     .join(" ");
-  // Sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka z sześcioma
-  // kreskami tylko odsuwałaby rozliczenia w dół.
+  // Każda sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka
+  // z kreskami tylko odsuwałaby rozliczenia w dół.
   const hasIdentity = Boolean(
-    tenant.idCardNumber ||
-      tenant.pesel ||
-      tenant.passportNumber ||
-      tenant.residenceCardNumber ||
-      emergencyName ||
-      tenant.emergencyContactPhone ||
-      tenant.emergencyContactEmail,
+    tenant.idCardNumber || tenant.pesel || tenant.passportNumber || tenant.residenceCardNumber,
+  );
+  // Kontakt awaryjny ma własną ramkę: to nie jest dokument najemcy, tylko
+  // numer do obcej osoby, po który sięga się w zupełnie innej sytuacji.
+  const hasEmergency = Boolean(
+    emergencyName || tenant.emergencyContactPhone || tenant.emergencyContactEmail,
   );
 
   return (
@@ -315,9 +315,22 @@ export default async function TenantDetailPage({ params }: Params) {
               <DetailItem label="PESEL" value={tenant.pesel} />
               <DetailItem label="Paszport" value={tenant.passportNumber} />
               <DetailItem label="Karta pobytu" value={tenant.residenceCardNumber} />
-              <DetailItem label="Kontakt w nagłym wypadku" value={emergencyName || null} />
-              <DetailItem label="Telefon awaryjny" value={tenant.emergencyContactPhone} />
-              <DetailItem label="E-mail awaryjny" value={tenant.emergencyContactEmail} />
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {hasEmergency ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <LifeBuoy className="h-4 w-4 text-muted" aria-hidden />
+            Kontakt w nagłym wypadku
+          </h2>
+          <Card>
+            <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
+              <DetailItem label="Osoba" value={emergencyName || null} />
+              <DetailItem label="Telefon" value={tenant.emergencyContactPhone} />
+              <DetailItem label="E-mail" value={tenant.emergencyContactEmail} />
             </CardContent>
           </Card>
         </section>
