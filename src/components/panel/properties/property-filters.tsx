@@ -107,6 +107,7 @@ export function PropertyFilters({ total }: { total: number }) {
             <option value="all">Wszystkie</option>
             <option value="vacant">Z wolnymi</option>
             <option value="occupied">Wynajęte</option>
+            <option value="unavailable">W remoncie</option>
           </Select>
         </div>
       </div>

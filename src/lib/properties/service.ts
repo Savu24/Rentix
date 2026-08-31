@@ -36,8 +36,11 @@ export async function listProperties(organizationId: string, query: PropertyList
       ...(query.includeArchived ? {} : { archivedAt: null }),
       ...(query.type ? { type: query.type } : {}),
       ...buildSearchFilter(query.q),
-      ...(query.occupancy === "vacant" ? { status: { not: "OCCUPIED" } } : {}),
+      // „Z wolnymi" to lokale do wynajęcia, więc remont się tu nie łapie —
+      // ma własną pozycję w filtrze.
+      ...(query.occupancy === "vacant" ? { status: "AVAILABLE" } : {}),
       ...(query.occupancy === "occupied" ? { status: "OCCUPIED" } : {}),
+      ...(query.occupancy === "unavailable" ? { status: "UNAVAILABLE" } : {}),
     },
     select: {
       id: true,

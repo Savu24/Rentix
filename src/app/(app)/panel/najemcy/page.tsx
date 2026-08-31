@@ -52,7 +52,7 @@ export default async function TenantsPage({
         {/* Archiwum obok dodawania, bo to para: jedno chowa, drugie
             przywraca. Schowane w menu byłoby nie do znalezienia. */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {tenants.length > 1 ? <TenantSort /> : null}
+          <TenantSort />
 
           <Button asChild size="sm" variant="secondary">
             <Link href="/panel/najemcy/archiwum">

@@ -328,4 +328,33 @@ describe("propertyListQuerySchema", () => {
   it("odrzuca nieznaną wartość filtra dostępności", () => {
     expect(propertyListQuerySchema.safeParse({ occupancy: "maybe" }).success).toBe(false);
   });
+
+  it("zna filtr lokali w remoncie", () => {
+    expect(propertyListQuerySchema.parse({ occupancy: "unavailable" }).occupancy).toBe(
+      "unavailable",
+    );
+  });
+});
+
+describe("status nieruchomości", () => {
+  it("przyjmuje remont i dostępność", () => {
+    expect(propertyFormSchema.parse({ ...VALID_PROPERTY, status: "UNAVAILABLE" }).status).toBe(
+      "UNAVAILABLE",
+    );
+    expect(propertyFormSchema.parse({ ...VALID_PROPERTY, status: "AVAILABLE" }).status).toBe(
+      "AVAILABLE",
+    );
+  });
+
+  it("nie pozwala ustawić 'wynajęte' z ręki", () => {
+    // Zajętość bierze się z umowy — z listy wyboru zrobiłaby się nieruchomość
+    // wynajęta bez najemcy.
+    expect(propertyFormSchema.safeParse({ ...VALID_PROPERTY, status: "OCCUPIED" }).success).toBe(
+      false,
+    );
+  });
+
+  it("bez pola zostawia status bez zmian", () => {
+    expect(propertyFormSchema.parse(VALID_PROPERTY).status).toBeUndefined();
+  });
 });

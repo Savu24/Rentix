@@ -14,6 +14,12 @@ import { PROPERTY_TYPE_LABEL } from "@/lib/validations/property";
  * nieaktualny.
  */
 function occupancyBadge(property: PropertyListItem) {
+  // Remont przykrywa rachunek pokoi: lokal wyłączony z najmu nie jest „wolny",
+  // choćby wszystkie pokoje stały puste.
+  if (property.status === "UNAVAILABLE") {
+    return { tone: "neutral" as const, label: "W remoncie" };
+  }
+
   // Bez pokoi wynajmuje się całość — wtedy liczy się status nieruchomości.
   if (property.roomCount === 0) {
     return property.status === "OCCUPIED"

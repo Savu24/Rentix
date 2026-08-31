@@ -46,6 +46,9 @@ export default async function EditPropertyPage({
         propertyId={property.id}
         defaultValues={{
           name: property.name,
+          // Wynajęta = brak wartości, więc formularz nie pokaże selecta i nie
+          // wyśle statusu; zmienia go umowa, nie poprawka opisu lokalu.
+          status: property.status === "OCCUPIED" ? undefined : property.status,
           type: property.type,
           areaM2: property.areaM2 ? property.areaM2.toFixed(2) : "",
           floor: property.floor ?? "",

@@ -21,7 +21,9 @@ import { api } from "@/lib/api/client";
 import {
   HEATING_TYPE_LABEL,
   MAX_ROOMS_PER_PROPERTY,
+  PROPERTY_SETTABLE_STATUSES,
   PROPERTY_TYPE_LABEL,
+  RENTAL_STATUS_LABEL,
   propertyCreateSchema,
   type PropertyCreateInput,
   type PropertyCreateOutput,
@@ -37,6 +39,7 @@ type Props = {
 const EMPTY: PropertyCreateInput = {
   name: "",
   type: "APARTMENT",
+  status: "AVAILABLE",
   ownerId: "",
   roomCount: "",
   street: "",
@@ -86,6 +89,10 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(propertyId);
+
+  // Wynajętej nieruchomości nie przestawia się z ręki — status pilnuje umowa,
+  // więc strona edycji nie podaje wtedy wartości i pole się nie renderuje.
+  const canSetStatus = !isEdit || Boolean(defaultValues?.status);
 
   const {
     register,
@@ -180,6 +187,27 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 ))}
               </Select>
             </FormField>
+
+            {canSetStatus ? (
+              <FormField
+                id="status"
+                label="Status"
+                error={errors.status?.message}
+                hint="Remont wyłącza lokal z listy wolnych."
+              >
+                <Select
+                  {...fieldAria("status", { error: errors.status?.message })}
+                  disabled={isSubmitting}
+                  {...register("status")}
+                >
+                  {PROPERTY_SETTABLE_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {RENTAL_STATUS_LABEL[value]}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            ) : null}
 
             {!isEdit ? (
               <FormField

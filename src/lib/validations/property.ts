@@ -31,8 +31,17 @@ export const PROPERTY_TYPE_LABEL: Record<PropertyType, string> = {
 export const RENTAL_STATUS_LABEL: Record<RentalStatus, string> = {
   AVAILABLE: "Wolne",
   OCCUPIED: "Wynajęte",
-  UNAVAILABLE: "Niedostępne",
+  UNAVAILABLE: "W remoncie",
 };
+
+/**
+ * Statusy, które właściciel ustawia sam.
+ *
+ * „Wynajęte" bierze się z umowy, a nie z listy wyboru: gdyby dało się je
+ * kliknąć, mieszkanie byłoby zajęte bez najemcy — i odwrotnie, wybór „wolne"
+ * przy trwającej umowie kłamałby na liście wolnych lokali.
+ */
+export const PROPERTY_SETTABLE_STATUSES = ["AVAILABLE", "UNAVAILABLE"] as const;
 
 export const RENTAL_STATUS_TONE: Record<RentalStatus, "good" | "warning" | "neutral"> = {
   AVAILABLE: "warning",
@@ -136,6 +145,12 @@ export const MAX_ROOMS_PER_PROPERTY = 30;
 export const propertyFormSchema = z.object({
   name: requiredText("Nazwa", 120),
   type: z.enum(propertyTypes),
+
+  /**
+   * Brak pola = status zostaje bez zmian. Formularz pokazuje go tylko przy
+   * nieruchomości, która nie jest wynajęta — tamten status pilnuje umowa.
+   */
+  status: z.enum(PROPERTY_SETTABLE_STATUSES).optional(),
 
   /** Puste = nieruchomość własna; ustawione = podnajem albo zarządzanie. */
   ownerId: z
@@ -277,7 +292,7 @@ export type RoomsBulkUpdateInput = z.input<typeof roomsBulkUpdateSchema>;
 export const propertyListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
   type: z.enum(propertyTypes).optional(),
-  occupancy: z.enum(["all", "vacant", "occupied"]).default("all"),
+  occupancy: z.enum(["all", "vacant", "occupied", "unavailable"]).default("all"),
   includeArchived: z
     .union([z.boolean(), z.string()])
     .transform((value) => value === true || value === "true")
