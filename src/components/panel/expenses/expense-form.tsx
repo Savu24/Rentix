@@ -43,11 +43,13 @@ const EMPTY: ExpenseFormInput = {
 };
 
 /**
- * Dopisanie kosztu.
+ * Dopisanie kosztu — i poprawienie już wpisanego.
  *
  * Formularz rozwija się na miejscu zamiast prowadzić na osobną stronę: koszty
  * wpisuje się seriami z wyciągu bankowego, a nawigacja tam i z powrotem po
- * każdej pozycji kosztowałaby więcej czasu niż samo wpisywanie.
+ * każdej pozycji kosztowałaby więcej czasu niż samo wpisywanie. Edycja działa
+ * tak samo — wchodzi w miejsce wiersza, bo poprawia się zwykle jedną literówkę
+ * w kwocie, a nie cały wpis.
  */
 export function ExpenseForm({
   properties = [],
@@ -57,12 +59,23 @@ export function ExpenseForm({
    * więc lista pozostałych nieruchomości jest tam zbędna.
    */
   lockedPropertyId = null,
+  /** Podany = edycja istniejącego kosztu, a nie dopisanie nowego. */
+  expenseId,
+  defaultValues,
+  /** Wyjście z edycji — wiersz wraca na swoje miejsce. */
+  onClose,
 }: {
   properties?: ExpensePropertyOption[];
   lockedPropertyId?: string | null;
+  expenseId?: string;
+  defaultValues?: Partial<ExpenseFormInput>;
+  onClose?: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const isEdit = Boolean(expenseId);
+  // Edycja startuje rozwinięta: właściciel kliknął już ołówek przy wierszu,
+  // drugi klik na „pokaż formularz" nie wnosiłby nic.
+  const [open, setOpen] = useState(isEdit);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -79,8 +92,18 @@ export function ExpenseForm({
       ...EMPTY,
       propertyId: lockedPropertyId ?? "",
       paidAt: new Date().toISOString().slice(0, 10),
+      ...defaultValues,
     },
   });
+
+  /*
+    Prefiks w identyfikatorach pól.
+
+    Formularz edycji stoi w tym samym drzewie co formularz dopisywania — przy
+    stałych `id` obie kontrolki „Kwota" miałyby ten sam identyfikator, a
+    kliknięcie etykiety ustawiałoby kursor w cudzym polu.
+  */
+  const fieldId = (name: string) => `expense-${expenseId ?? "new"}-${name}`;
 
   const recurring = watch("recurring");
   const recurrence = watch("recurrence");
@@ -89,13 +112,23 @@ export function ExpenseForm({
   async function onSubmit() {
     setFormError(null);
 
-    const result = await api.post("/api/expenses", getValues());
+    const result = isEdit
+      ? await api.patch(`/api/expenses/${expenseId}`, getValues())
+      : await api.post("/api/expenses", getValues());
 
     if (!result.ok) {
       for (const [field, messages] of Object.entries(result.fields ?? {})) {
         if (messages[0]) setError(field as keyof ExpenseFormInput, { message: messages[0] });
       }
       setFormError(result.message);
+      return;
+    }
+
+    // Po edycji formularz znika, więc nie ma czego czyścić — wiersz wraca
+    // z odświeżonymi danymi.
+    if (isEdit) {
+      onClose?.();
+      router.refresh();
       return;
     }
 
@@ -111,7 +144,7 @@ export function ExpenseForm({
     router.refresh();
   }
 
-  if (!open) {
+  if (!open && !isEdit) {
     return (
       <Button size="sm" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" aria-hidden />
@@ -132,15 +165,15 @@ export function ExpenseForm({
   return (
     <Card className="w-full border-accent/40">
       <CardContent className="flex flex-col gap-4 p-4">
-        <p className="text-sm font-semibold text-fg">Nowy koszt</p>
+        <p className="text-sm font-semibold text-fg">{isEdit ? "Edycja kosztu" : "Nowy koszt"}</p>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id="expense-category" label="Kategoria" error={errors.category?.message}>
+            <FormField id={fieldId("category")} label="Kategoria" error={errors.category?.message}>
               <Select
-                {...fieldAria("expense-category", { error: errors.category?.message })}
+                {...fieldAria(fieldId("category"), { error: errors.category?.message })}
                 disabled={isSubmitting}
                 {...register("category")}
               >
@@ -152,9 +185,9 @@ export function ExpenseForm({
               </Select>
             </FormField>
 
-            <FormField id="expense-amount" label="Kwota" error={errors.amountGrosze?.message}>
+            <FormField id={fieldId("amount")} label="Kwota" error={errors.amountGrosze?.message}>
               <Input
-                {...fieldAria("expense-amount", { error: errors.amountGrosze?.message })}
+                {...fieldAria(fieldId("amount"), { error: errors.amountGrosze?.message })}
                 inputMode="decimal"
                 disabled={isSubmitting}
                 {...register("amountGrosze")}
@@ -162,12 +195,12 @@ export function ExpenseForm({
             </FormField>
 
             <FormField
-              id="expense-paidAt"
+              id={fieldId("paidAt")}
               label="Data poniesienia"
               error={errors.paidAt?.message}
             >
               <DateInput
-                {...fieldAria("expense-paidAt", { error: errors.paidAt?.message })}
+                {...fieldAria(fieldId("paidAt"), { error: errors.paidAt?.message })}
                 disabled={isSubmitting}
                 {...register("paidAt")}
               />
@@ -175,13 +208,13 @@ export function ExpenseForm({
           </div>
 
           <FormField
-            id="expense-description"
+            id={fieldId("description")}
             label="Opis"
             error={errors.description?.message}
             hint="Co to był za wydatek — trafi na zestawienie."
           >
             <Input
-              {...fieldAria("expense-description", { error: errors.description?.message })}
+              {...fieldAria(fieldId("description"), { error: errors.description?.message })}
               disabled={isSubmitting}
               {...register("description")}
             />
@@ -194,13 +227,13 @@ export function ExpenseForm({
               <input type="hidden" {...register("propertyId")} />
             ) : (
               <FormField
-                id="expense-propertyId"
+                id={fieldId("propertyId")}
                 label="Nieruchomość"
                 error={errors.propertyId?.message}
                 hint="Puste = koszt ogólny konta."
               >
                 <Select
-                  {...fieldAria("expense-propertyId", { error: errors.propertyId?.message })}
+                  {...fieldAria(fieldId("propertyId"), { error: errors.propertyId?.message })}
                   disabled={isSubmitting}
                   {...register("propertyId")}
                 >
@@ -214,21 +247,21 @@ export function ExpenseForm({
               </FormField>
             )}
 
-            <FormField id="expense-vendor" label="Dostawca" error={errors.vendor?.message}>
+            <FormField id={fieldId("vendor")} label="Dostawca" error={errors.vendor?.message}>
               <Input
-                {...fieldAria("expense-vendor", { error: errors.vendor?.message })}
+                {...fieldAria(fieldId("vendor"), { error: errors.vendor?.message })}
                 disabled={isSubmitting}
                 {...register("vendor")}
               />
             </FormField>
 
             <FormField
-              id="expense-documentRef"
+              id={fieldId("documentRef")}
               label="Nr dokumentu"
               error={errors.documentRef?.message}
             >
               <Input
-                {...fieldAria("expense-documentRef", { error: errors.documentRef?.message })}
+                {...fieldAria(fieldId("documentRef"), { error: errors.documentRef?.message })}
                 disabled={isSubmitting}
                 {...register("documentRef")}
               />
@@ -249,12 +282,12 @@ export function ExpenseForm({
             {recurring ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
-                  id="expense-recurrence"
+                  id={fieldId("recurrence")}
                   label="Co ile ponosisz ten koszt"
                   error={errors.recurrence?.message}
                 >
                   <Select
-                    {...fieldAria("expense-recurrence", { error: errors.recurrence?.message })}
+                    {...fieldAria(fieldId("recurrence"), { error: errors.recurrence?.message })}
                     disabled={isSubmitting}
                     {...register("recurrence")}
                   >
@@ -268,13 +301,13 @@ export function ExpenseForm({
 
                 {recurrence === "CUSTOM" ? (
                   <FormField
-                    id="expense-recurrenceEveryDays"
+                    id={fieldId("recurrenceEveryDays")}
                     label="Co ile dni"
                     error={errors.recurrenceEveryDays?.message}
                     hint="Np. 90 przy przeglądzie kwartalnym."
                   >
                     <Input
-                      {...fieldAria("expense-recurrenceEveryDays", {
+                      {...fieldAria(fieldId("recurrenceEveryDays"), {
                         error: errors.recurrenceEveryDays?.message,
                       })}
                       inputMode="numeric"
@@ -287,9 +320,9 @@ export function ExpenseForm({
             ) : null}
           </div>
 
-          <FormField id="expense-notes" label="Notatka" error={errors.notes?.message}>
+          <FormField id={fieldId("notes")} label="Notatka" error={errors.notes?.message}>
             <Textarea
-              {...fieldAria("expense-notes", { error: errors.notes?.message })}
+              {...fieldAria(fieldId("notes"), { error: errors.notes?.message })}
               disabled={isSubmitting}
               {...register("notes")}
             />
@@ -298,16 +331,19 @@ export function ExpenseForm({
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Zapisz koszt
+              {isEdit ? "Zapisz zmiany" : "Zapisz koszt"}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="secondary"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                onClose?.();
+              }}
               disabled={isSubmitting}
             >
-              Zamknij
+              {isEdit ? "Anuluj" : "Zamknij"}
             </Button>
           </div>
         </form>

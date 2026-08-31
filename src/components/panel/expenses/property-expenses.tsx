@@ -56,7 +56,7 @@ export function PropertyExpenses({
           <CardContent className="flex flex-col p-0">
             {expenses.map((expense, index) => (
               <div key={expense.id} className={index > 0 ? "border-t border-border" : ""}>
-                <ExpenseRow expense={expense} showProperty={false} />
+                <ExpenseRow expense={expense} showProperty={false} lockedPropertyId={propertyId} />
               </div>
             ))}
 

@@ -50,6 +50,9 @@ const listSelect = {
   description: true,
   vendor: true,
   documentRef: true,
+  // Notatka nie pokazuje się w wierszu, ale wchodzi do formularza edycji —
+  // bez niej zapis poprawionej kwoty kasowałby to, co właściciel dopisał.
+  notes: true,
   recurrence: true,
   recurrenceEveryDays: true,
   recurrenceNextAt: true,

@@ -104,7 +104,7 @@ export default async function ExpensesPage({
           <CardContent className="flex flex-col p-0">
             {expenses.map((expense, index) => (
               <div key={expense.id} className={index > 0 ? "border-t border-border" : ""}>
-                <ExpenseRow expense={expense} />
+                <ExpenseRow expense={expense} properties={properties} />
               </div>
             ))}
           </CardContent>

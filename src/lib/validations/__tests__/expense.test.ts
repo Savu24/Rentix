@@ -7,6 +7,7 @@ import {
   EXPENSE_RECURRENCE_LABEL,
   EXPENSE_RECURRENCE_ORDER,
   expenseFormSchema,
+  expenseUpdateSchema,
 } from "@/lib/validations/expense";
 
 const VALID = {
@@ -134,5 +135,53 @@ describe("katalog kategorii", () => {
   it("kolejność cykli pokrywa wszystkie wartości", () => {
     const labelled = Object.keys(EXPENSE_RECURRENCE_LABEL).sort();
     expect([...EXPENSE_RECURRENCE_ORDER].sort()).toEqual(labelled);
+  });
+});
+
+describe("expenseUpdateSchema — edycja wpisanego kosztu", () => {
+  it("przyjmuje komplet pól tak, jak wysyła je formularz edycji", () => {
+    const result = expenseUpdateSchema.parse({
+      ...VALID,
+      amountGrosze: "480,00",
+      vendor: "Wspólnota Kwiatowa 4",
+      recurring: false,
+    });
+
+    expect(result.amountGrosze).toBe(48000);
+    expect(result.vendor).toBe("Wspólnota Kwiatowa 4");
+  });
+
+  it("odznaczony checkbox kasuje cykl, zamiast zostawiać go po staremu", () => {
+    // Formularz edycji zawsze wysyła `recurring`, więc odznaczenie musi
+    // dojechać do bazy jako `null` — inaczej koszt naliczałby się dalej.
+    const result = expenseUpdateSchema.parse({ ...VALID, recurring: false });
+    expect(result.recurrence).toBeNull();
+    expect(result.recurrenceEveryDays).toBeNull();
+  });
+
+  it("zaznaczony cykl zapisuje razem z odstępem tylko przy niestandardowym", () => {
+    expect(
+      expenseUpdateSchema.parse({
+        ...VALID,
+        recurring: true,
+        recurrence: "MONTHLY",
+        recurrenceEveryDays: "90",
+      }).recurrenceEveryDays,
+    ).toBeNull();
+
+    expect(
+      expenseUpdateSchema.parse({
+        ...VALID,
+        recurring: true,
+        recurrence: "CUSTOM",
+        recurrenceEveryDays: "90",
+      }).recurrenceEveryDays,
+    ).toBe(90);
+  });
+
+  it("cykl niestandardowy bez liczby dni nie przechodzi", () => {
+    expect(
+      expenseUpdateSchema.safeParse({ ...VALID, recurring: true, recurrence: "CUSTOM" }).success,
+    ).toBe(false);
   });
 });
