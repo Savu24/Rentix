@@ -181,7 +181,26 @@ export type TenantFormOutput = z.output<typeof tenantFormSchema>;
 
 export const tenantUpdateSchema = tenantFormSchema.partial();
 
+/**
+ * Porządki listy najemców.
+ *
+ * Nazwisko jest domyślne, bo tak się szuka konkretnej osoby. Reszta odpowiada
+ * na pytania zadawane całej liście naraz: kto gdzie mieszka (adres), kto zalega
+ * (saldo) i na jakim etapie jest jego umowa.
+ */
+export const TENANT_SORT_LABEL = {
+  name: "Nazwisko",
+  address: "Adres mieszkania",
+  debt: "Zaległość",
+  leaseStatus: "Status umowy",
+} as const;
+
+export const TENANT_SORT_OPTIONS = ["name", "address", "debt", "leaseStatus"] as const;
+
+export type TenantSort = (typeof TENANT_SORT_OPTIONS)[number];
+
 export const tenantListQuerySchema = z.object({
+  sort: z.enum(TENANT_SORT_OPTIONS).default("name"),
   q: z.string().trim().max(120).optional(),
   status: z.enum(tenantStatuses).optional(),
   /** Tylko najemcy z zaległościami — najczęstszy filtr właściciela. */

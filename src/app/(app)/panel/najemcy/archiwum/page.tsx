@@ -14,6 +14,7 @@ export default async function ArchivedTenantsPage() {
   const tenants = await listTenants(session.user.organizationId, {
     includeArchived: true,
     overdue: false,
+    sort: "name",
   });
 
   const archived = tenants.filter((tenant) => tenant.archivedAt !== null);

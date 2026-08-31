@@ -1,6 +1,8 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { resolveInvoiceStatus, remainingGrosze } from "@/lib/invoices/status";
 import { prisma } from "@/lib/prisma";
+import { formatPropertyAddress } from "@/lib/properties/address";
+import { sortTenants } from "@/lib/tenants/sort";
 import type { TenantFormOutput, TenantListQuery } from "@/lib/validations/tenant";
 
 /**
@@ -56,7 +58,17 @@ export async function listTenants(organizationId: string, query: TenantListQuery
               status: true,
               rentGrosze: true,
               endDate: true,
-              property: { select: { id: true, name: true } },
+              property: {
+                select: {
+                  id: true,
+                  name: true,
+                  street: true,
+                  buildingNumber: true,
+                  apartmentNumber: true,
+                  postalCode: true,
+                  city: true,
+                },
+              },
               room: { select: { id: true, name: true } },
               invoices: {
                 where: { status: { in: ["ISSUED", "PARTIALLY_PAID"] } },
@@ -79,7 +91,15 @@ export async function listTenants(organizationId: string, query: TenantListQuery
   const now = new Date();
 
   const mapped = tenants.map(({ leases, ...tenant }) => {
-    const activeLease = leases.map((entry) => entry.lease).find((lease) => lease.status === "ACTIVE");
+    // Aktywna umowa przed rezerwacją, rezerwacja przed szkicem: na liście
+    // pokazujemy jedną i ma to być ta, która najwięcej mówi o najemcy.
+    const candidates = leases.map((entry) => entry.lease);
+    const lease =
+      candidates.find((entry) => entry.status === "ACTIVE") ??
+      candidates.find((entry) => entry.status === "RESERVED") ??
+      candidates.find((entry) => entry.status === "DRAFT") ??
+      null;
+
     const invoices = leases.flatMap((entry) => entry.lease.invoices);
 
     let outstandingGrosze = 0;
@@ -92,14 +112,16 @@ export async function listTenants(organizationId: string, query: TenantListQuery
 
     return {
       ...tenant,
-      activeLease: activeLease
+      lease: lease
         ? {
-            id: activeLease.id,
-            rentGrosze: activeLease.rentGrosze,
-            endDate: activeLease.endDate,
-            roomName: activeLease.room?.name ?? null,
-            propertyId: activeLease.property.id,
-            propertyName: activeLease.property.name,
+            id: lease.id,
+            status: lease.status,
+            rentGrosze: lease.rentGrosze,
+            endDate: lease.endDate,
+            roomName: lease.room?.name ?? null,
+            propertyId: lease.property.id,
+            propertyName: lease.property.name,
+            propertyAddress: formatPropertyAddress(lease.property),
           }
         : null,
       outstandingGrosze,
@@ -107,7 +129,9 @@ export async function listTenants(organizationId: string, query: TenantListQuery
     };
   });
 
-  return query.overdue ? mapped.filter((tenant) => tenant.overdueCount > 0) : mapped;
+  const filtered = query.overdue ? mapped.filter((tenant) => tenant.overdueCount > 0) : mapped;
+
+  return sortTenants(filtered, query.sort);
 }
 
 /** Karta najemcy: umowy, faktury, wpłaty i wątki rozmów. */

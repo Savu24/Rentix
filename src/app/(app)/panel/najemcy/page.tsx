@@ -2,6 +2,7 @@ import { Archive, CalendarClock, Plus, UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { TenantSort } from "@/components/panel/tenants/tenant-sort";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { formatPLN } from "@/lib/money";
 import { listTenants } from "@/lib/tenants/service";
+import { LEASE_STATUS_LABEL, LEASE_STATUS_TONE } from "@/lib/validations/lease";
 import {
   TENANT_STATUS_LABEL,
   TENANT_STATUS_TONE,
@@ -50,6 +52,8 @@ export default async function TenantsPage({
         {/* Archiwum obok dodawania, bo to para: jedno chowa, drugie
             przywraca. Schowane w menu byłoby nie do znalezienia. */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {tenants.length > 1 ? <TenantSort /> : null}
+
           <Button asChild size="sm" variant="secondary">
             <Link href="/panel/najemcy/archiwum">
               <Archive className="h-4 w-4" aria-hidden />
@@ -85,7 +89,13 @@ export default async function TenantsPage({
            byłby nieczytelny, a to widok używany w biegu. */
         <div className="flex flex-col gap-2">
           {tenants.map((tenant) => {
-            const expiry = resolveLeaseExpiry(tenant.activeLease?.endDate, now);
+            // Odliczanie tylko dla umowy, która trwa: przy szkicu i rezerwacji
+            // „kończy się za 14 dni" mówiłoby o czymś, co się nie zaczęło.
+            const lease = tenant.lease;
+            const expiry = resolveLeaseExpiry(
+              lease?.status === "ACTIVE" ? lease.endDate : null,
+              now,
+            );
 
             return (
               <Card key={tenant.id} className="transition-colors hover:border-muted">
@@ -111,17 +121,20 @@ export default async function TenantsPage({
                       </div>
 
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                        {tenant.activeLease ? (
-                          /* Adres ciemniejszy niż e-mail i telefon: po liście
-                             szuka się „kto mieszka gdzie", a nie kontaktu. */
-                          <span className="font-medium text-fg">
-                            {tenant.activeLease.propertyName}
-                            {tenant.activeLease.roomName
-                              ? ` · ${tenant.activeLease.roomName}`
-                              : ""}
-                          </span>
+                        {lease ? (
+                          <>
+                            {/* Adres ciemniejszy niż e-mail i telefon: po liście
+                                szuka się „kto mieszka gdzie", a nie kontaktu. */}
+                            <span className="font-medium text-fg">
+                              {lease.propertyAddress}
+                              {lease.roomName ? ` · ${lease.roomName}` : ""}
+                            </span>
+                            <Badge tone={LEASE_STATUS_TONE[lease.status]}>
+                              {LEASE_STATUS_LABEL[lease.status]}
+                            </Badge>
+                          </>
                         ) : (
-                          <span>Bez aktywnej umowy</span>
+                          <span>Bez umowy</span>
                         )}
                         {tenant.email ? <span className="truncate">{tenant.email}</span> : null}
                         {tenant.phone ? <span>{tenant.phone}</span> : null}
