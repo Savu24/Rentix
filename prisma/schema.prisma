@@ -635,6 +635,7 @@ model Tenant {
 
 enum LeaseStatus {
   DRAFT // szkic, jeszcze nie podpisana
+  RESERVED // rezerwacja — lokal trzymany dla najemcy, najem jeszcze nie trwa
   ACTIVE // obowiązuje
   TERMINATED // wypowiedziana przed terminem
   EXPIRED // wygasła w terminie

@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import { formatAmount } from "@/lib/money";
 import {
+  LEASE_SETTABLE_STATUSES,
   LEASE_STATUS_LABEL,
   UTILITIES_MODE_HINT,
   UTILITIES_MODE_INCOMPLETE,
@@ -372,7 +373,7 @@ export function LeaseForm({
                 disabled={isSubmitting}
                 {...register("status")}
               >
-                {(["DRAFT", "ACTIVE"] as const).map((value) => (
+                {LEASE_SETTABLE_STATUSES.map((value) => (
                   <option key={value} value={value}>
                     {LEASE_STATUS_LABEL[value]}
                   </option>

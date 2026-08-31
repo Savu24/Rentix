@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import type { LeaseStatus } from "@/generated/prisma/enums";
 import { remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -225,18 +226,111 @@ export async function createLease(
   return { ok: true, lease };
 }
 
+const findLease = (organizationId: string, leaseId: string) =>
+  prisma.lease.findFirst({ where: { id: leaseId, organizationId } });
+
+export type UpdateLeaseResult =
+  | { ok: true; lease: Awaited<ReturnType<typeof findLease>> }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "UNIT_OCCUPIED"; conflictingLeaseId: string };
+
+/**
+ * Poprawka warunków umowy — razem ze zmianą statusu.
+ *
+ * Sam status to za mało: umowa przestawiona na „aktywną" zajmuje lokal
+ * i robi z najemców najemców czynnych, a cofnięta do szkicu albo rezerwacji
+ * musi ten lokal oddać. Bez tego lista nieruchomości pokazywałaby wolne
+ * mieszkanie, w którym ktoś mieszka — albo zajęte, w którym nie mieszka nikt.
+ * Dlatego status i pozostałe pola idą jedną transakcją.
+ */
 export async function updateLease(
   organizationId: string,
   leaseId: string,
   data: Record<string, unknown>,
-) {
-  const { count } = await prisma.lease.updateMany({
+): Promise<UpdateLeaseResult> {
+  const { status, ...fields } = data as { status?: LeaseStatus } & Record<string, unknown>;
+
+  const lease = await prisma.lease.findFirst({
     where: { id: leaseId, organizationId },
-    data,
+    select: {
+      id: true,
+      status: true,
+      propertyId: true,
+      roomId: true,
+      tenants: { select: { tenantId: true } },
+    },
+  });
+  if (!lease) return { ok: false, reason: "NOT_FOUND" };
+
+  const activating = status === "ACTIVE" && lease.status !== "ACTIVE";
+  const releasing = status !== undefined && status !== "ACTIVE" && lease.status === "ACTIVE";
+
+  if (activating) {
+    // Ten sam warunek co przy zakładaniu umowy: pokój blokuje sam siebie,
+    // najem całości koliduje z każdą aktywną umową na nieruchomości.
+    const conflict = await prisma.lease.findFirst({
+      where: {
+        organizationId,
+        status: "ACTIVE",
+        id: { not: leaseId },
+        ...(lease.roomId ? { roomId: lease.roomId } : { propertyId: lease.propertyId }),
+      },
+      select: { id: true },
+    });
+    if (conflict) {
+      return { ok: false, reason: "UNIT_OCCUPIED", conflictingLeaseId: conflict.id };
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.lease.update({
+      where: { id: leaseId },
+      data: { ...fields, ...(status ? { status } : {}) },
+    });
+
+    if (activating) {
+      if (lease.roomId) {
+        await tx.room.update({ where: { id: lease.roomId }, data: { status: "OCCUPIED" } });
+
+        // Nieruchomość jest wynajęta dopiero, gdy zajęte są wszystkie pokoje —
+        // tak samo liczy to zakładanie umowy.
+        const free = await tx.room.count({
+          where: { propertyId: lease.propertyId, archivedAt: null, status: { not: "OCCUPIED" } },
+        });
+        await tx.property.update({
+          where: { id: lease.propertyId },
+          data: { status: free === 0 ? "OCCUPIED" : "AVAILABLE" },
+        });
+      } else {
+        await tx.property.update({ where: { id: lease.propertyId }, data: { status: "OCCUPIED" } });
+      }
+
+      await tx.tenant.updateMany({
+        where: { id: { in: lease.tenants.map(({ tenantId }) => tenantId) } },
+        data: { status: "ACTIVE" },
+      });
+    }
+
+    if (releasing) {
+      if (lease.roomId) {
+        await tx.room.update({ where: { id: lease.roomId }, data: { status: "AVAILABLE" } });
+      }
+      await tx.property.update({ where: { id: lease.propertyId }, data: { status: "AVAILABLE" } });
+
+      for (const { tenantId } of lease.tenants) {
+        const stillActive = await tx.leaseTenant.count({
+          where: { tenantId, lease: { status: "ACTIVE", id: { not: leaseId } } },
+        });
+        // „Zainteresowany", a nie „były najemca": umowa wróciła do szkicu albo
+        // rezerwacji, czyli najem się jeszcze nie zaczął, a nie skończył.
+        if (stillActive === 0) {
+          await tx.tenant.update({ where: { id: tenantId }, data: { status: "PROSPECT" } });
+        }
+      }
+    }
   });
 
-  if (count === 0) return null;
-  return prisma.lease.findFirst({ where: { id: leaseId, organizationId } });
+  return { ok: true, lease: await findLease(organizationId, leaseId) };
 }
 
 /**

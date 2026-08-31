@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArchiveAction } from "@/components/panel/archive/archive-action";
+import { ActivateLease } from "@/components/panel/leases/activate-lease";
 import { ExtendLease } from "@/components/panel/leases/extend-lease";
 import { TerminateLease } from "@/components/panel/leases/terminate-lease";
 import { Alert } from "@/components/ui/alert";
@@ -47,7 +48,8 @@ export default async function LeaseDetailPage({ params }: Params) {
   if (!lease) notFound();
 
   const now = new Date();
-  const canTerminate = lease.status === "ACTIVE" || lease.status === "DRAFT";
+  const canTerminate =
+    lease.status === "ACTIVE" || lease.status === "DRAFT" || lease.status === "RESERVED";
 
   // Przedłużać jest co tylko wtedy, gdy umowa ma koniec i jeszcze trwa —
   // przy bezterminowej nie ma czego przesuwać, a po wypowiedzeniu nowa data
@@ -270,6 +272,10 @@ export default async function LeaseDetailPage({ params }: Params) {
             <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{lease.notes}</p>
           </CardContent>
         </Card>
+      ) : null}
+
+      {lease.status === "DRAFT" || lease.status === "RESERVED" ? (
+        <ActivateLease leaseId={lease.id} status={lease.status} />
       ) : null}
 
       {lease.terminatedAt ? (

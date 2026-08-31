@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  LEASE_SETTABLE_STATUSES,
   leaseEditSchema,
   leaseFormSchema,
   leaseUpdateSchema,
@@ -306,17 +307,34 @@ describe("leaseEditSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("nie zna lokalu, najemców ani statusu", () => {
+  it("nie zna lokalu ani najemców", () => {
     // Te pola mają własne drogi zmiany — gdyby przeciekły tutaj, PATCH
     // przepiąłby umowę bez zwolnienia poprzedniej jednostki.
     const result = leaseEditSchema.parse({
       ...EDIT_VALID,
       propertyId: "prop_1",
       tenantIds: ["t1"],
-      status: "TERMINATED",
     } as never);
     expect(result).not.toHaveProperty("propertyId");
     expect(result).not.toHaveProperty("tenantIds");
-    expect(result).not.toHaveProperty("status");
+  });
+
+  it("przepuszcza statusy ustawiane ręcznie", () => {
+    for (const status of LEASE_SETTABLE_STATUSES) {
+      expect(leaseEditSchema.parse({ ...EDIT_VALID, status }).status).toBe(status);
+    }
+  });
+
+  it("nie da się wybrać wypowiedzenia ani wygaśnięcia", () => {
+    // Jedno i drugie bierze się ze zdarzenia: wypowiedzenie zwalnia lokal
+    // i zapisuje datę, a wygaśnięcie wynika z końca umowy. Z listy wyboru
+    // zostałaby umowa zakończona z nazwy, z lokalem dalej zajętym.
+    expect(leaseEditSchema.safeParse({ ...EDIT_VALID, status: "TERMINATED" }).success).toBe(false);
+    expect(leaseEditSchema.safeParse({ ...EDIT_VALID, status: "EXPIRED" }).success).toBe(false);
+  });
+
+  it("bez statusu zostawia umowę tam, gdzie była", () => {
+    // Umowa wypowiedziana nie dostaje selecta, więc formularz nie przysyła pola.
+    expect(leaseEditSchema.parse(EDIT_VALID).status).toBeUndefined();
   });
 });

@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getLease } from "@/lib/leases/service";
 import { formatAmount } from "@/lib/money";
+import { LEASE_SETTABLE_STATUSES } from "@/lib/validations/lease";
 
 export const metadata: Metadata = { title: "Edycja umowy" };
 
@@ -22,6 +23,8 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
   if (!lease) notFound();
 
   const title = lease.number ? `Umowa ${lease.number}` : "Umowa najmu";
+
+  const settableStatus = LEASE_SETTABLE_STATUSES.find((value) => value === lease.status);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
@@ -45,14 +48,18 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
       {/* Mówimy wprost, czego tu nie ma, zamiast zostawiać użytkownika
           z szukaniem pola, którego nie znajdzie. */}
       <Alert tone="info">
-        Lokalu, najemców i statusu nie zmienia się tutaj — to byłaby inna umowa, a nie poprawka.
-        Zakończenie najmu i archiwizacja są na karcie umowy.
+        Lokalu i najemców nie zmienia się tutaj — to byłaby inna umowa, a nie poprawka.
+        Wypowiedzenie najmu i archiwizacja są na karcie umowy.
       </Alert>
 
       <LeaseEditForm
         leaseId={lease.id}
         defaultValues={{
           number: lease.number ?? "",
+          // Umowa wypowiedziana albo wygasła nie dostaje selecta: przestawienie
+          // jej z powrotem na aktywną wymaga decyzji o lokalu, a nie wyboru
+          // z listy. Brak wartości = formularz nie rusza statusu.
+          status: settableStatus,
           startDate: toInputDate(lease.startDate),
           endDate: toInputDate(lease.endDate),
           rentGrosze: formatAmount(lease.rentGrosze),

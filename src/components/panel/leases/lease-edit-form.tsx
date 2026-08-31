@@ -17,6 +17,8 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import {
+  LEASE_SETTABLE_STATUSES,
+  LEASE_STATUS_LABEL,
   leaseEditSchema,
   type LeaseEditInput,
   type LeaseEditOutput,
@@ -84,7 +86,7 @@ export function LeaseEditForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Okres</h2>
+          <h2 className="text-[15px] font-semibold text-fg">Okres i status</h2>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField id="startDate" label="Data rozpoczęcia" error={errors.startDate?.message}>
@@ -107,6 +109,27 @@ export function LeaseEditForm({
                 {...register("endDate")}
               />
             </FormField>
+
+            {defaultValues.status ? (
+              <FormField
+                id="status"
+                label="Status"
+                error={errors.status?.message}
+                hint="Aktywna zajmuje lokal i włącza naliczanie."
+              >
+                <Select
+                  {...fieldAria("status", { error: errors.status?.message })}
+                  disabled={isSubmitting}
+                  {...register("status")}
+                >
+                  {LEASE_SETTABLE_STATUSES.map((value) => (
+                    <option key={value} value={value}>
+                      {LEASE_STATUS_LABEL[value]}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+            ) : null}
 
             <FormField
               id="number"

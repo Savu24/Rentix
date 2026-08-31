@@ -16,6 +16,7 @@ const utilitiesModes = Object.values(UtilitiesMode) as [UtilitiesMode, ...Utilit
 
 export const LEASE_STATUS_LABEL: Record<LeaseStatus, string> = {
   DRAFT: "Szkic",
+  RESERVED: "Rezerwacja",
   ACTIVE: "Aktywna",
   TERMINATED: "Wypowiedziana",
   EXPIRED: "Wygasła",
@@ -23,10 +24,23 @@ export const LEASE_STATUS_LABEL: Record<LeaseStatus, string> = {
 
 export const LEASE_STATUS_TONE: Record<LeaseStatus, "neutral" | "good" | "warning" | "critical"> = {
   DRAFT: "neutral",
+  RESERVED: "warning",
   ACTIVE: "good",
   TERMINATED: "critical",
   EXPIRED: "warning",
 };
+
+/**
+ * Statusy, które właściciel ustawia sam — na formularzu i przy edycji umowy.
+ *
+ * „Wypowiedziana" i „Wygasła" biorą się ze zdarzeń, a nie z wyboru z listy:
+ * wypowiedzenie ma własną akcję (zapisuje datę i zwalnia lokal), a wygaśnięcie
+ * wynika z daty końca umowy. Wybranie ich z selecta zostawiłoby umowę
+ * zakończoną tylko z nazwy, z lokalem dalej zajętym.
+ */
+export const LEASE_SETTABLE_STATUSES = ["DRAFT", "RESERVED", "ACTIVE"] as const;
+
+export type LeaseSettableStatus = (typeof LEASE_SETTABLE_STATUSES)[number];
 
 export const UTILITIES_MODE_LABEL: Record<UtilitiesMode, string> = {
   INCLUDED: "Media w czynszu",
@@ -77,7 +91,7 @@ export const leaseFormSchema = z
       .max(6, "Maksymalnie sześciu najemców na umowie"),
 
     number: optionalText(40),
-    status: z.enum(leaseStatuses).default("DRAFT"),
+    status: z.enum(LEASE_SETTABLE_STATUSES).default("DRAFT"),
 
     startDate: dateInput("Data rozpoczęcia"),
     endDate: optionalDateInput("Data zakończenia"),
@@ -169,7 +183,7 @@ const patchMoney = (label: string) =>
 export const leaseUpdateSchema = z
   .object({
     number: optionalText(40),
-    status: z.enum(leaseStatuses).optional(),
+    status: z.enum(LEASE_SETTABLE_STATUSES).optional(),
     startDate: dateInput("Data rozpoczęcia").optional(),
     endDate: optionalDateInput("Data zakończenia").optional(),
     rentGrosze: moneyInput("Czynsz").optional(),
@@ -216,6 +230,12 @@ export const leaseUpdateSchema = z
 export const leaseEditSchema = z
   .object({
     number: optionalText(40),
+    /**
+     * Brak pola = status zostaje bez zmian. Formularz pokazuje select tylko
+     * dla umowy szkicowej, zarezerwowanej albo aktywnej: wypowiedzianej nie
+     * wskrzesza się wyborem z listy, bo lokal jest już oddany.
+     */
+    status: z.enum(LEASE_SETTABLE_STATUSES).optional(),
     startDate: dateInput("Data rozpoczęcia"),
     endDate: optionalDateInput("Data zakończenia"),
     rentGrosze: moneyInput("Czynsz"),

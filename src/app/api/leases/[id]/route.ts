@@ -37,8 +37,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const { id } = await params;
   const updated = await updateLease(auth.organizationId, id, parsed.data);
 
-  if (!updated) return apiError("NOT_FOUND", "Nie znaleziono umowy.");
-  return ok(updated);
+  if (!updated.ok) {
+    if (updated.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+
+    return apiError(
+      "CONFLICT",
+      "Ten lokal ma już aktywną umowę. Zakończ ją najpierw — dwie aktywne umowy na jednej jednostce rozjechałyby stan zajętości.",
+    );
+  }
+
+  return ok(updated.lease);
 }
 
 /**
