@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import type { PropertyListItem } from "@/lib/properties/service";
-import { formatPLN } from "@/lib/money";
 import { plural } from "@/lib/utils";
 import { PROPERTY_TYPE_LABEL } from "@/lib/validations/property";
 
@@ -81,8 +80,10 @@ export function PropertyCard({ property }: { property: PropertyListItem }) {
           {property.areaM2 ? (
             <span className="tabular">{property.areaM2.replace(".", ",")} m²</span>
           ) : null}
-          {property.askingRentGrosze ? (
-            <span className="tabular">{formatPLN(property.askingRentGrosze)}</span>
+          {/* Kod do domofonu na liście, bo po niego się tu wraca — zwykle
+              stojąc przed budynkiem z telefonem w ręku. */}
+          {property.intercomCode ? (
+            <span className="tabular">domofon {property.intercomCode}</span>
           ) : null}
           {property.archivedAt ? (
             <span className="font-medium text-warn">Zarchiwizowana</span>
