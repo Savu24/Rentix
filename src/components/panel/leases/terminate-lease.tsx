@@ -7,8 +7,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 
@@ -69,9 +69,8 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="terminatedAt" label="Data zakończenia">
-            <Input
+            <DateInput
               id="terminatedAt"
-              type="date"
               value={terminatedAt}
               onChange={(event) => setTerminatedAt(event.target.value)}
               disabled={busy}

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { parsePLN } from "@/lib/money";
 
+import { emailSchema } from "./auth";
+
 /**
  * Bloki wspólne dla formularzy i API routes. Ta sama definicja po obu stronach —
  * komunikaty nie rozjeżdżają się między walidacją w przeglądarce a serwerem.
@@ -38,6 +40,36 @@ export const postalCodeSchema = z
 /** Kod pocztowy opcjonalny — puste pole daje NULL, nie błąd formatu. */
 export const optionalPostalCode = z
   .union([z.literal(""), postalCodeSchema])
+  .transform((value) => (value === "" ? null : value))
+  .nullable()
+  .optional();
+
+/**
+ * Telefon opcjonalny: cyfry, spacje, +, myślniki i nawiasy. Formatu nie
+ * narzucamy — numer bywa zagraniczny, a do wybrania go i tak potrzebny jest
+ * człowiek, nie parser.
+ *
+ * Puste pole musi być osobnym wariantem unii: regex wymaga min. 6 znaków,
+ * więc „" odpadałoby, zanim transformacja zdążyłaby zamienić je na null.
+ *
+ * Jedna definicja na najemcę, właściciela i administrację budynku — trzy kopie
+ * tej samej reguły rozjechałyby się przy pierwszej poprawce komunikatu.
+ */
+export const optionalPhone = z
+  .union([
+    z.literal(""),
+    z
+      .string()
+      .trim()
+      .regex(/^[+()\d\s-]{6,24}$/, "Numer telefonu wygląda nieprawidłowo"),
+  ])
+  .transform((value) => (value === "" ? null : value))
+  .nullable()
+  .optional();
+
+/** E-mail opcjonalny — puste pole daje NULL, nie błąd formatu. */
+export const optionalEmail = z
+  .union([z.literal(""), emailSchema])
   .transform((value) => (value === "" ? null : value))
   .nullable()
   .optional();

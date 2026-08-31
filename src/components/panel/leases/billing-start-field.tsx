@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
+import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
-import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 
 /**
@@ -18,7 +18,7 @@ import { api } from "@/lib/api/client";
  * spodziewano. Bez tego pola jedynym ratunkiem byłoby ręczne grzebanie w bazie.
  *
  * Zapisuje się od razu po wybraniu daty, tak samo jak przełącznik wysyłki obok.
- * `type="date"` zgłasza zmianę dopiero przy pełnej dacie albo wyczyszczeniu
+ * `DateInput` zgłasza zmianę dopiero przy pełnej dacie albo wyczyszczeniu
  * pola, więc nie ma tu stanu „w połowie wpisany rok”, który trzeba by odsiewać.
  */
 export function BillingStartField({
@@ -65,8 +65,7 @@ export function BillingStartField({
         hint="Miesiące rozliczone w poprzednim programie. Puste = naliczaj od początku umowy."
       >
         <div className="flex items-center gap-2">
-          <Input
-            type="date"
+          <DateInput
             className="max-w-[12rem]"
             value={value}
             disabled={busy}

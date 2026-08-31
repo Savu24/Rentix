@@ -119,3 +119,81 @@ describe("tenantFormSchema — kontakt na wypadek nagłego zdarzenia", () => {
     ).toBe(false);
   });
 });
+
+describe("tenantFormSchema — szczegóły najemcy", () => {
+  it("domyślnie najemca jest osobą fizyczną", () => {
+    // Kartoteki zakładane do tej pory nie miały tego pola — muszą wpaść
+    // w przypadek, który był dla nich prawdziwy.
+    expect(tenantFormSchema.parse(VALID).legalForm).toBe("INDIVIDUAL");
+    expect(tenantFormSchema.parse({ ...VALID, legalForm: "COMPANY" }).legalForm).toBe("COMPANY");
+  });
+
+  it("trzyma adres zameldowania osobno od adresu do faktury", () => {
+    // To dwa różne adresy: jeden idzie na dokument, drugi do umowy najmu
+    // okazjonalnego — pomylenie ich kosztowałoby ważność umowy.
+    const result = tenantFormSchema.parse({
+      ...VALID,
+      street: "Kwiatowa 4",
+      city: "Kraków",
+      registeredStreet: "Leśna 12/3",
+      registeredPostalCode: "03-133",
+      registeredCity: "Warszawa",
+    });
+
+    expect(result.street).toBe("Kwiatowa 4");
+    expect(result.registeredStreet).toBe("Leśna 12/3");
+    expect(result.registeredCity).toBe("Warszawa");
+  });
+
+  it("puste zameldowanie do znaczy bezterminowe", () => {
+    expect(tenantFormSchema.parse({ ...VALID, registeredUntil: "" }).registeredUntil).toBeNull();
+    expect(
+      tenantFormSchema.parse({ ...VALID, registeredUntil: "2027-01-31" }).registeredUntil,
+    ).toEqual(new Date("2027-01-31T00:00:00.000Z"));
+  });
+
+  it("sprawdza kod pocztowy zameldowania tym samym wzorem co pozostałe", () => {
+    expect(
+      tenantFormSchema.safeParse({ ...VALID, registeredPostalCode: "03133" }).success,
+    ).toBe(false);
+  });
+
+  it("czyści rachunek do zwrotu kaucji ze spacji i prefiksu PL", () => {
+    expect(
+      tenantFormSchema.parse({
+        ...VALID,
+        depositRefundAccount: "PL 12 3456 7890 1234 5678 9012 3456",
+      }).depositRefundAccount,
+    ).toBe("12345678901234567890123456");
+
+    expect(
+      tenantFormSchema.safeParse({ ...VALID, depositRefundAccount: "1234" }).success,
+    ).toBe(false);
+  });
+
+  it("kontakt do płatności sprawdza tak samo jak podstawowy", () => {
+    expect(tenantFormSchema.parse({ ...VALID, billingEmail: "" }).billingEmail).toBeNull();
+    expect(tenantFormSchema.safeParse({ ...VALID, billingPhone: "zapytaj mamę" }).success).toBe(
+      false,
+    );
+  });
+
+  it("praca i polisa są opcjonalne, a ich daty puste znaczą brak terminu", () => {
+    const result = tenantFormSchema.parse({
+      ...VALID,
+      employerName: "Uniwersytet Warszawski",
+      employmentUntil: "",
+      insurancePolicyNumber: "POL/2026/1234",
+      insuranceExpiresAt: "2027-06-30",
+    });
+
+    expect(result.employerName).toBe("Uniwersytet Warszawski");
+    expect(result.employmentUntil).toBeNull();
+    expect(result.insurancePolicyNumber).toBe("POL/2026/1234");
+    expect(result.insuranceExpiresAt).toEqual(new Date("2027-06-30T00:00:00.000Z"));
+  });
+
+  it("odrzuca datę urodzenia, której nie ma w kalendarzu", () => {
+    expect(tenantFormSchema.safeParse({ ...VALID, dateOfBirth: "1990-02-31" }).success).toBe(false);
+  });
+});

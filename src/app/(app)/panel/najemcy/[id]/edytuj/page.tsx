@@ -9,6 +9,9 @@ import { getTenant } from "@/lib/tenants/service";
 
 export const metadata: Metadata = { title: "Edycja najemcy" };
 
+/** Pola dat czytają wyłącznie „RRRR-MM-DD"; brak daty = puste pole. */
+const dateValue = (date: Date | null) => date?.toISOString().slice(0, 10) ?? "";
+
 export default async function EditTenantPage({
   params,
 }: {
@@ -46,6 +49,8 @@ export default async function EditTenantPage({
           city: tenant.city ?? "",
           taxId: tenant.taxId ?? "",
           documentKind: tenant.documentKind,
+          legalForm: tenant.legalForm,
+          dateOfBirth: dateValue(tenant.dateOfBirth),
           idCardNumber: tenant.idCardNumber ?? "",
           pesel: tenant.pesel ?? "",
           passportNumber: tenant.passportNumber ?? "",
@@ -54,6 +59,18 @@ export default async function EditTenantPage({
           emergencyContactLastName: tenant.emergencyContactLastName ?? "",
           emergencyContactPhone: tenant.emergencyContactPhone ?? "",
           emergencyContactEmail: tenant.emergencyContactEmail ?? "",
+          registeredStreet: tenant.registeredStreet ?? "",
+          registeredPostalCode: tenant.registeredPostalCode ?? "",
+          registeredCity: tenant.registeredCity ?? "",
+          registeredUntil: dateValue(tenant.registeredUntil),
+          billingEmail: tenant.billingEmail ?? "",
+          billingPhone: tenant.billingPhone ?? "",
+          depositRefundAccount: tenant.depositRefundAccount ?? "",
+          employerName: tenant.employerName ?? "",
+          employmentUntil: dateValue(tenant.employmentUntil),
+          insurerName: tenant.insurerName ?? "",
+          insurancePolicyNumber: tenant.insurancePolicyNumber ?? "",
+          insuranceExpiresAt: dateValue(tenant.insuranceExpiresAt),
           notes: tenant.notes ?? "",
         }}
       />

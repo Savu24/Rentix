@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckboxField } from "@/components/ui/checkbox-field";
+import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -220,9 +221,8 @@ export function ManualInvoiceForm({
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField id="mi-issueDate" label="Data wystawienia" error={errors.issueDate?.message}>
-              <Input
+              <DateInput
                 {...fieldAria("mi-issueDate", { error: errors.issueDate?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("issueDate")}
               />
@@ -234,18 +234,16 @@ export function ManualInvoiceForm({
               error={errors.saleDate?.message}
               hint="Dzień wykonania usługi."
             >
-              <Input
+              <DateInput
                 {...fieldAria("mi-saleDate", { error: errors.saleDate?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("saleDate")}
               />
             </FormField>
 
             <FormField id="mi-dueDate" label="Termin płatności" error={errors.dueDate?.message}>
-              <Input
+              <DateInput
                 {...fieldAria("mi-dueDate", { error: errors.dueDate?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("dueDate")}
               />
@@ -259,18 +257,16 @@ export function ManualInvoiceForm({
               error={errors.periodStart?.message}
               hint="Opcjonalne — gdy dokument dotyczy okresu."
             >
-              <Input
+              <DateInput
                 {...fieldAria("mi-periodStart", { error: errors.periodStart?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("periodStart")}
               />
             </FormField>
 
             <FormField id="mi-periodEnd" label="Okres do" error={errors.periodEnd?.message}>
-              <Input
+              <DateInput
                 {...fieldAria("mi-periodEnd", { error: errors.periodEnd?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("periodEnd")}
               />

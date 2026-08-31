@@ -1,14 +1,18 @@
 import {
   ArrowLeft,
+  Banknote,
+  Briefcase,
   CalendarClock,
   DoorOpen,
   FileText,
+  Home,
   IdCard,
   Mail,
   LifeBuoy,
   MessageSquare,
   Pencil,
   Phone,
+  ShieldCheck,
 } from "lucide-react";
 
 import { ArchiveAction } from "@/components/panel/archive/archive-action";
@@ -74,12 +78,34 @@ export default async function TenantDetailPage({ params }: Params) {
   // Każda sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka
   // z kreskami tylko odsuwałaby rozliczenia w dół.
   const hasIdentity = Boolean(
-    tenant.idCardNumber || tenant.pesel || tenant.passportNumber || tenant.residenceCardNumber,
+    tenant.idCardNumber ||
+      tenant.pesel ||
+      tenant.passportNumber ||
+      tenant.residenceCardNumber ||
+      tenant.dateOfBirth,
   );
   // Kontakt awaryjny ma własną ramkę: to nie jest dokument najemcy, tylko
   // numer do obcej osoby, po który sięga się w zupełnie innej sytuacji.
   const hasEmergency = Boolean(
     emergencyName || tenant.emergencyContactPhone || tenant.emergencyContactEmail,
+  );
+
+  // Adres zameldowania to nie jest adres do faktury — ten drugi siedzi
+  // w `tenant.street` i idzie na dokument, ten wchodzi do umowy najmu
+  // okazjonalnego. Sklejamy go tu, bo nigdzie indziej się nie pojawia.
+  const registeredAddress = [
+    tenant.registeredStreet,
+    [tenant.registeredPostalCode, tenant.registeredCity].filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const hasRegistered = Boolean(registeredAddress || tenant.registeredUntil);
+  const hasBilling = Boolean(
+    tenant.billingEmail || tenant.billingPhone || tenant.depositRefundAccount,
+  );
+  const hasWork = Boolean(tenant.employerName || tenant.employmentUntil);
+  const hasInsurance = Boolean(
+    tenant.insurerName || tenant.insurancePolicyNumber || tenant.insuranceExpiresAt,
   );
 
   return (
@@ -102,6 +128,10 @@ export default async function TenantDetailPage({ params }: Params) {
               <Badge tone={TENANT_STATUS_TONE[tenant.status]}>
                 {TENANT_STATUS_LABEL[tenant.status]}
               </Badge>
+              {/* Osoby fizycznej nie oznaczamy — to domyślny przypadek,
+                  a plakietka „osoba fizyczna" przy każdym najemcy nie niosłaby
+                  żadnej informacji. */}
+              {tenant.legalForm === "COMPANY" ? <Badge tone="accent">Firma</Badge> : null}
               {expiry ? (
                 <Badge tone={expiry.tone}>
                   <CalendarClock className="h-3 w-3" aria-hidden />
@@ -315,6 +345,10 @@ export default async function TenantDetailPage({ params }: Params) {
               <DetailItem label="PESEL" value={tenant.pesel} />
               <DetailItem label="Paszport" value={tenant.passportNumber} />
               <DetailItem label="Karta pobytu" value={tenant.residenceCardNumber} />
+              <DetailItem
+                label="Data urodzenia"
+                value={tenant.dateOfBirth ? dateFormat.format(tenant.dateOfBirth) : null}
+              />
             </CardContent>
           </Card>
         </section>
@@ -331,6 +365,92 @@ export default async function TenantDetailPage({ params }: Params) {
               <DetailItem label="Osoba" value={emergencyName || null} />
               <DetailItem label="Telefon" value={tenant.emergencyContactPhone} />
               <DetailItem label="E-mail" value={tenant.emergencyContactEmail} />
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {hasRegistered ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <Home className="h-4 w-4 text-muted" aria-hidden />
+            Adres zameldowania
+          </h2>
+          <Card>
+            <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
+              <DetailItem label="Adres" value={registeredAddress || null} />
+              <DetailItem
+                label="Zameldowanie do"
+                value={
+                  tenant.registeredUntil ? dateFormat.format(tenant.registeredUntil) : "bezterminowo"
+                }
+              />
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {hasBilling ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <Banknote className="h-4 w-4 text-muted" aria-hidden />
+            Płatności
+          </h2>
+          <Card>
+            <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
+              <DetailItem label="E-mail do płatności" value={tenant.billingEmail} />
+              <DetailItem label="Telefon do płatności" value={tenant.billingPhone} />
+              <DetailItem label="Rachunek do zwrotu kaucji" value={tenant.depositRefundAccount} />
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {hasWork ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <Briefcase className="h-4 w-4 text-muted" aria-hidden />
+            Praca i studia
+          </h2>
+          <Card>
+            <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
+              <DetailItem label="Pracodawca lub uczelnia" value={tenant.employerName} />
+              <DetailItem
+                label="Do kiedy"
+                value={
+                  tenant.employmentUntil ? dateFormat.format(tenant.employmentUntil) : "bezterminowo"
+                }
+              />
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {hasInsurance ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <ShieldCheck className="h-4 w-4 text-muted" aria-hidden />
+            Ubezpieczenie najemcy
+          </h2>
+          <Card>
+            <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
+              <DetailItem label="Ubezpieczyciel" value={tenant.insurerName} />
+              <DetailItem label="Numer polisy" value={tenant.insurancePolicyNumber} />
+              {/* Polisa po terminie jest gorsza niż jej brak — właściciel liczy
+                  na ochronę, której już nie ma. Dlatego data dostaje kolor. */}
+              {tenant.insuranceExpiresAt ? (
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <p className="text-xs text-muted">Ważna do</p>
+                  <p
+                    className={`text-sm ${
+                      tenant.insuranceExpiresAt < now ? "font-medium text-bad" : "text-fg"
+                    }`}
+                  >
+                    {dateFormat.format(tenant.insuranceExpiresAt)}
+                    {tenant.insuranceExpiresAt < now ? " · wygasła" : ""}
+                  </p>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </section>

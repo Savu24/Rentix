@@ -2,6 +2,7 @@
 
 import type { FieldErrors, UseFormRegister } from "react-hook-form";
 
+import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PostalCodeInput } from "@/components/ui/postal-code-input";
@@ -151,9 +152,8 @@ export function OwnerFields({
           hint="Początek umowy o zarządzanie tym lokalem."
           className="sm:col-span-3"
         >
-          <Input
+          <DateInput
             {...fieldAria(id("contractStartDate"), { error: errors.contractStartDate?.message })}
-            type="date"
             disabled={disabled}
             {...register("contractStartDate")}
           />
@@ -166,9 +166,8 @@ export function OwnerFields({
           hint="Puste = czas nieokreślony."
           className="sm:col-span-3"
         >
-          <Input
+          <DateInput
             {...fieldAria(id("contractEndDate"), { error: errors.contractEndDate?.message })}
-            type="date"
             disabled={disabled}
             {...register("contractEndDate")}
           />

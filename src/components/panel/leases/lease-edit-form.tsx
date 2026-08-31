@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckboxField } from "@/components/ui/checkbox-field";
+import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -87,9 +88,8 @@ export function LeaseEditForm({
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField id="startDate" label="Data rozpoczęcia" error={errors.startDate?.message}>
-              <Input
+              <DateInput
                 {...fieldAria("startDate", { error: errors.startDate?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("startDate")}
               />
@@ -101,9 +101,8 @@ export function LeaseEditForm({
               error={errors.endDate?.message}
               hint="Puste = czas nieokreślony."
             >
-              <Input
+              <DateInput
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("endDate")}
               />
@@ -232,9 +231,8 @@ export function LeaseEditForm({
               error={errors.billingStartsAt?.message}
               hint="Miesiące rozliczone w poprzednim programie. Puste = od początku umowy."
             >
-              <Input
+              <DateInput
                 {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("billingStartsAt")}
               />

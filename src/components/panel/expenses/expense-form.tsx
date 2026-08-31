@@ -10,6 +10,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckboxField } from "@/components/ui/checkbox-field";
+import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -165,9 +166,8 @@ export function ExpenseForm({
               label="Data poniesienia"
               error={errors.paidAt?.message}
             >
-              <Input
+              <DateInput
                 {...fieldAria("expense-paidAt", { error: errors.paidAt?.message })}
-                type="date"
                 disabled={isSubmitting}
                 {...register("paidAt")}
               />

@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -89,9 +90,8 @@ export function RecordPayment({
           </FormField>
 
           <FormField id="payment-date" label="Data wpłaty">
-            <Input
+            <DateInput
               id="payment-date"
-              type="date"
               value={paidAt}
               onChange={(event) => setPaidAt(event.target.value)}
               disabled={busy}

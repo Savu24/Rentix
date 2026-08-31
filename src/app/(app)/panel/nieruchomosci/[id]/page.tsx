@@ -1,5 +1,16 @@
-import { ArrowLeft, MapPin, Pencil, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  ClipboardCheck,
+  KeyRound,
+  MapPin,
+  Pencil,
+  TreePine,
+  UserPlus,
+  Wifi,
+} from "lucide-react";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -14,14 +25,18 @@ import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { propertyExpenses } from "@/lib/expenses/service";
 import { formatPLN } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
+import { formatDistance, mapsUrl } from "@/lib/properties/details";
 import { getProperty } from "@/lib/properties/service";
 import {
+  HEATING_TYPE_LABEL,
   PROPERTY_TYPE_LABEL,
   RENTAL_STATUS_LABEL,
   RENTAL_STATUS_TONE,
 } from "@/lib/validations/property";
 
 type Params = { params: Promise<{ id: string }> };
+
+const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const session = await requireOwnerSession();
@@ -64,6 +79,47 @@ export default async function PropertyDetailPage({ params }: Params) {
   const wholeTenant = wholeLease?.tenants[0]?.tenant;
 
   const address = formatPropertyAddress(property);
+  const now = new Date();
+
+  // Każda sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka
+  // z kreskami odsuwałaby tylko pokoje i koszty w dół.
+  const hasAccess = Boolean(
+    property.intercomCode ||
+      property.checkoutTime ||
+      property.storageUnit ||
+      property.bikeStorage ||
+      property.wasteDisposal,
+  );
+  const hasManager = Boolean(
+    property.buildingManagerName ||
+      property.buildingManagerAddress ||
+      property.buildingManagerPhone ||
+      property.buildingManagerEmail,
+  );
+  const hasUtilities = Boolean(
+    property.heatingType ||
+      property.internetProvider ||
+      property.internetProviderPhone ||
+      property.internetSpeedMbps ||
+      property.wifiSsid ||
+      property.wifiPassword ||
+      property.internetContractEndsAt,
+  );
+  const hasPapers = Boolean(
+    property.landRegistryNumber ||
+      property.energyCertificateEp ||
+      property.energyCertificateExpiresAt ||
+      property.boilerModel ||
+      property.boilerInspectionAt ||
+      property.technicalInspectionAt,
+  );
+  const hasNeighbourhood = Boolean(
+    property.gpsCoordinates ||
+      property.transitLines ||
+      property.transitStopDistanceM !== null ||
+      property.universityDistanceM !== null ||
+      property.nearbyPlaces,
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -195,6 +251,122 @@ export default async function PropertyDetailPage({ params }: Params) {
         count={expenses.count}
       />
 
+      {hasAccess ? (
+        <DetailSection
+          title="Dostęp do lokalu"
+          icon={<KeyRound className="h-4 w-4 text-muted" aria-hidden />}
+        >
+          <DetailItem label="Kod do domofonu" value={property.intercomCode} />
+          <DetailItem label="Godzina zdania lokalu" value={property.checkoutTime} />
+          <DetailItem label="Komórka lokatorska" value={property.storageUnit} />
+          <DetailItem label="Miejsce na rowery" value={property.bikeStorage} />
+          <DetailItem label="Śmietnik" value={property.wasteDisposal} />
+        </DetailSection>
+      ) : null}
+
+      {hasManager ? (
+        <DetailSection
+          title="Administracja budynku"
+          icon={<Building2 className="h-4 w-4 text-muted" aria-hidden />}
+        >
+          <DetailItem label="Nazwa" value={property.buildingManagerName} />
+          <DetailItem label="Adres" value={property.buildingManagerAddress} />
+          <DetailItem label="Telefon" value={property.buildingManagerPhone} />
+          <DetailItem label="E-mail" value={property.buildingManagerEmail} />
+        </DetailSection>
+      ) : null}
+
+      {hasUtilities ? (
+        <DetailSection
+          title="Ogrzewanie i internet"
+          icon={<Wifi className="h-4 w-4 text-muted" aria-hidden />}
+        >
+          <DetailItem
+            label="Ogrzewanie"
+            value={property.heatingType ? HEATING_TYPE_LABEL[property.heatingType] : null}
+          />
+          <DetailItem
+            label="Prędkość łącza"
+            value={property.internetSpeedMbps ? `${property.internetSpeedMbps} Mbit/s` : null}
+          />
+          <DetailItem label="Dostawca internetu" value={property.internetProvider} />
+          <DetailItem label="Telefon do dostawcy" value={property.internetProviderPhone} />
+          <DetailItem label="Sieć Wi-Fi" value={property.wifiSsid} />
+          <DetailItem label="Hasło do Wi-Fi" value={property.wifiPassword} />
+          <DateItem
+            label="Koniec umowy na internet"
+            date={property.internetContractEndsAt}
+            now={now}
+          />
+        </DetailSection>
+      ) : null}
+
+      {hasPapers ? (
+        <DetailSection
+          title="Przeglądy i dokumenty"
+          icon={<ClipboardCheck className="h-4 w-4 text-muted" aria-hidden />}
+        >
+          <DetailItem label="Księga wieczysta" value={property.landRegistryNumber} />
+          <DetailItem
+            label="Wskaźnik EP"
+            value={
+              property.energyCertificateEp
+                ? `${property.energyCertificateEp.toFixed(2).replace(".", ",")} kWh/(m²·rok)`
+                : null
+            }
+          />
+          <DateItem
+            label="Ważność świadectwa"
+            date={property.energyCertificateExpiresAt}
+            now={now}
+          />
+          <DetailItem label="Model pieca" value={property.boilerModel} />
+          <DateItem label="Przegląd pieca" date={property.boilerInspectionAt} now={now} />
+          <DateItem label="Przegląd techniczny" date={property.technicalInspectionAt} now={now} />
+        </DetailSection>
+      ) : null}
+
+      {hasNeighbourhood ? (
+        <DetailSection
+          title="Okolica i dojazd"
+          icon={<TreePine className="h-4 w-4 text-muted" aria-hidden />}
+        >
+          {property.gpsCoordinates ? (
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <p className="text-xs text-muted">Współrzędne GPS</p>
+              {/* Link do map, bo same liczby są tu bezużyteczne — z karty
+                  wychodzi się prosto do nawigacji. */}
+              <a
+                href={mapsUrl(property.gpsCoordinates)}
+                target="_blank"
+                rel="noreferrer"
+                className="truncate text-sm font-medium text-accent hover:underline"
+              >
+                {property.gpsCoordinates}
+              </a>
+            </div>
+          ) : null}
+          <DetailItem label="Linie komunikacji" value={property.transitLines} />
+          <DetailItem
+            label="Do przystanku"
+            value={
+              property.transitStopDistanceM !== null
+                ? formatDistance(property.transitStopDistanceM)
+                : null
+            }
+          />
+          <DetailItem
+            label="Do uczelni"
+            value={
+              property.universityDistanceM !== null
+                ? formatDistance(property.universityDistanceM)
+                : null
+            }
+          />
+          <DetailItem label="Ważne punkty" value={property.nearbyPlaces} />
+        </DetailSection>
+      ) : null}
+
       {property.notes ? (
         <Card className="bg-surface-alt">
           <CardContent className="flex flex-col gap-1.5 p-4">
@@ -205,6 +377,63 @@ export default async function PropertyDetailPage({ params }: Params) {
           </CardContent>
         </Card>
       ) : null}
+    </div>
+  );
+}
+
+/** Sekcja szczegółów: nagłówek z ikoną i siatka par „etykieta + wartość". */
+function DetailSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+        {icon}
+        {title}
+      </h2>
+      <Card>
+        <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">{children}</CardContent>
+      </Card>
+    </section>
+  );
+}
+
+/** Wiersz „etykieta + wartość"; brak wartości znaczy, że pole się nie pokazuje. */
+function DetailItem({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <p className="text-xs text-muted">{label}</p>
+      <p className="text-sm break-words text-fg">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * Termin — data plus adnotacja, gdy już minęła.
+ *
+ * Przegląd po terminie to nie jest ta sama informacja co przegląd za miesiąc,
+ * a z samej daty w tabeli nikt tego nie wyłapie. Dlatego minione terminy
+ * dostają kolor i podpis, a nie tylko inny format.
+ */
+function DateItem({ label, date, now }: { label: string; date: Date | null; now: Date }) {
+  if (!date) return null;
+  const overdue = date < now;
+
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <p className="text-xs text-muted">{label}</p>
+      <p className={`text-sm ${overdue ? "font-medium text-bad" : "text-fg"}`}>
+        {dateFormat.format(date)}
+        {overdue ? " · termin minął" : ""}
+      </p>
     </div>
   );
 }

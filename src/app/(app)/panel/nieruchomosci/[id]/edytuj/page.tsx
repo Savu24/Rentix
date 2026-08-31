@@ -10,6 +10,9 @@ import { getProperty } from "@/lib/properties/service";
 
 export const metadata: Metadata = { title: "Edycja nieruchomości" };
 
+/** Pola dat czytają wyłącznie „RRRR-MM-DD"; brak daty = puste pole. */
+const dateValue = (date: Date | null) => date?.toISOString().slice(0, 10) ?? "";
+
 export default async function EditPropertyPage({
   params,
 }: {
@@ -57,6 +60,35 @@ export default async function EditPropertyPage({
           postalCode: property.postalCode,
           city: property.city,
           district: property.district ?? "",
+          intercomCode: property.intercomCode ?? "",
+          checkoutTime: property.checkoutTime ?? "",
+          storageUnit: property.storageUnit ?? "",
+          bikeStorage: property.bikeStorage ?? "",
+          wasteDisposal: property.wasteDisposal ?? "",
+          buildingManagerName: property.buildingManagerName ?? "",
+          buildingManagerAddress: property.buildingManagerAddress ?? "",
+          buildingManagerPhone: property.buildingManagerPhone ?? "",
+          buildingManagerEmail: property.buildingManagerEmail ?? "",
+          heatingType: property.heatingType ?? "",
+          internetProvider: property.internetProvider ?? "",
+          internetProviderPhone: property.internetProviderPhone ?? "",
+          internetSpeedMbps: property.internetSpeedMbps ?? "",
+          wifiSsid: property.wifiSsid ?? "",
+          wifiPassword: property.wifiPassword ?? "",
+          internetContractEndsAt: dateValue(property.internetContractEndsAt),
+          landRegistryNumber: property.landRegistryNumber ?? "",
+          energyCertificateEp: property.energyCertificateEp
+            ? property.energyCertificateEp.toFixed(2)
+            : "",
+          energyCertificateExpiresAt: dateValue(property.energyCertificateExpiresAt),
+          boilerModel: property.boilerModel ?? "",
+          boilerInspectionAt: dateValue(property.boilerInspectionAt),
+          technicalInspectionAt: dateValue(property.technicalInspectionAt),
+          gpsCoordinates: property.gpsCoordinates ?? "",
+          transitLines: property.transitLines ?? "",
+          transitStopDistanceM: property.transitStopDistanceM ?? "",
+          universityDistanceM: property.universityDistanceM ?? "",
+          nearbyPlaces: property.nearbyPlaces ?? "",
           description: property.description ?? "",
           notes: property.notes ?? "",
           publiclyListed: property.publiclyListed,

@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-import { emailSchema } from "./auth";
 import {
   optionalBankAccount,
   optionalDateInput,
+  optionalEmail,
+  optionalPhone,
   optionalPostalCode,
   optionalTaxId,
   optionalText,
@@ -30,22 +31,8 @@ const ownerFields = {
   name: requiredText("Nazwa właściciela", 160),
   taxId: optionalTaxId,
 
-  email: z
-    .union([z.literal(""), emailSchema])
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .optional(),
-  phone: z
-    .union([
-      z.literal(""),
-      z
-        .string()
-        .trim()
-        .regex(/^[+()\d\s-]{6,24}$/, "Numer telefonu wygląda nieprawidłowo"),
-    ])
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .optional(),
+  email: optionalEmail,
+  phone: optionalPhone,
 
   street: optionalText(120),
   postalCode: optionalPostalCode,

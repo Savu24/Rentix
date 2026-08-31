@@ -7,8 +7,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
-import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 import { addMonthsUtc } from "@/lib/leases/expiry";
 
@@ -112,9 +112,8 @@ export function ExtendLease({
 
         <div className="flex flex-wrap items-end gap-2.5 border-t border-border pt-4">
           <FormField id="extend-endDate" label="Albo własna data" className="min-w-[12rem]">
-            <Input
+            <DateInput
               id="extend-endDate"
-              type="date"
               min={endDate}
               value={custom}
               disabled={busy !== null}

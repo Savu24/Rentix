@@ -186,11 +186,11 @@ model User {
   /// Profil najemcy, jeśli to konto należy do najemcy.
   tenantProfile Tenant?
 
-  reportedRequests    MaintenanceRequest[] @relation("MaintenanceReporter")
-  assignedRequests    MaintenanceRequest[] @relation("MaintenanceAssignee")
-  sentMessages        Message[]
-  uploadedDocuments   Document[]
-  notifications       Notification[]
+  reportedRequests  MaintenanceRequest[] @relation("MaintenanceReporter")
+  assignedRequests  MaintenanceRequest[] @relation("MaintenanceAssignee")
+  sentMessages      Message[]
+  uploadedDocuments Document[]
+  notifications     Notification[]
 
   @@index([role])
   @@map("users")
@@ -256,6 +256,17 @@ enum PropertyType {
   PARKING // miejsce postojowe
   STORAGE // komórka lokatorska
   BUILDING // cały budynek (wiele jednostek)
+}
+
+/// Rodzaj ogrzewania lokalu — pierwsze pytanie najemcy oglądającego zimą
+/// i jedyna informacja, po której da się oszacować rachunki.
+enum HeatingType {
+  DISTRICT // miejskie
+  GAS // gazowe
+  ELECTRIC // elektryczne
+  HEAT_PUMP // pompa ciepła
+  SOLID_FUEL // paliwo stałe
+  OTHER // inne
 }
 
 /// Status przedmiotu najmu — nieruchomości albo pojedynczego pokoju.
@@ -328,15 +339,15 @@ model Property {
   type           PropertyType @default(APARTMENT)
   status         RentalStatus @default(AVAILABLE)
 
-  street         String
-  buildingNumber String
+  street          String
+  buildingNumber  String
   /// Numer lokalu w budynku. NULL dla domu i budynku w całości — tam numer
   /// mieszkania po prostu nie istnieje, a pusty string udawałby, że go pominięto.
   apartmentNumber String?
-  postalCode     String
-  city           String
-  countryCode    String  @default("PL")
-  district       String?
+  postalCode      String
+  city            String
+  countryCode     String  @default("PL")
+  district        String?
 
   /// Powierzchnia w m². Decimal, bo 48,50 m² to nie liczba całkowita.
   areaM2 Decimal? @db.Decimal(8, 2)
@@ -346,6 +357,73 @@ model Property {
   /// siedzą na pokojach.
   askingRentGrosze Int?
 
+  // ── Dostęp do lokalu ────────────────────────────────────────────────────
+  //
+  // Drobiazgi, które przekazuje się przy wydaniu kluczy, a potem szuka po
+  // mailach sprzed roku. Wszystkie opcjonalne: przy miejscu postojowym nie ma
+  // czego wypełniać.
+
+  intercomCode  String?
+  /// Godzina w zapisie HH:MM — pora dnia bez daty, więc tekst, a nie DateTime.
+  /// DateTime kazałby doklejać sztuczny dzień i strefę do czegoś, co znaczy
+  /// tylko „do jedenastej".
+  checkoutTime  String?
+  /// Numer i opis komórki lokatorskiej — sam numer nikomu nie mówi, gdzie ona jest.
+  storageUnit   String?
+  bikeStorage   String?
+  wasteDisposal String?
+
+  // ── Administracja budynku ───────────────────────────────────────────────
+  //
+  // Wspólnota albo spółdzielnia. To NIE jest `PropertyOwner`: właściciel jest
+  // stroną naszej umowy, a administracja to numer, pod który dzwoni się przy
+  // zalaniu i awarii pionu.
+
+  buildingManagerName    String?
+  buildingManagerAddress String?
+  buildingManagerPhone   String?
+  buildingManagerEmail   String?
+
+  // ── Media i internet ────────────────────────────────────────────────────
+
+  heatingType            HeatingType?
+  internetProvider       String?
+  internetProviderPhone  String?
+  /// Prędkość łącza w Mbit/s — wchodzi wprost do ogłoszenia.
+  internetSpeedMbps      Int?
+  wifiSsid               String?
+  /// Hasło leży jawnie i tak ma być: przepisuje się je najemcy przy wydaniu
+  /// kluczy, więc pole bez odczytu wprost byłoby bezużyteczne. Widzi je
+  /// wyłącznie właściciel — karta nieruchomości nie jest dostępna najemcy.
+  wifiPassword           String?
+  /// Koniec umowy z dostawcą — pilnuje się go, żeby nie przedłużyła się sama.
+  internetContractEndsAt DateTime?
+
+  // ── Przeglądy i dokumenty ───────────────────────────────────────────────
+
+  /// Numer księgi wieczystej — wchodzi do umowy najmu okazjonalnego.
+  landRegistryNumber         String?
+  /// Wskaźnik EP ze świadectwa charakterystyki energetycznej (kWh/(m²·rok)).
+  /// Sam EP, bez EU, EK, Uoze i ECO2: w ogłoszeniu najmu podaje się ten jeden,
+  /// a cztery kolejne pola „brak" tylko rozdymałyby formularz.
+  energyCertificateEp        Decimal?  @db.Decimal(8, 2)
+  energyCertificateExpiresAt DateTime?
+  boilerModel                String?
+  boilerInspectionAt         DateTime?
+  /// Przegląd techniczny instalacji — ten, o którym przypomina administracja.
+  technicalInspectionAt      DateTime?
+
+  // ── Okolica i dojazd ────────────────────────────────────────────────────
+
+  /// „52.2297, 21.0122" w jednym polu, bo współrzędne kopiuje się z map jednym
+  /// ruchem. Dwie kolumny znaczyłyby dwa pola formularza na jedną czynność.
+  gpsCoordinates       String?
+  transitLines         String?
+  /// Odległości w metrach — do ogłoszenia i do rozmowy z najemcą.
+  transitStopDistanceM Int?
+  universityDistanceM  Int?
+  nearbyPlaces         String? @db.Text
+
   description String? @db.Text
   /// Notatki widoczne wyłącznie dla właściciela — nigdy dla najemcy.
   notes       String? @db.Text
@@ -353,8 +431,8 @@ model Property {
   /// Czy nieruchomość pokazuje się na publicznej stronie ofert /o/<slug>.
   publiclyListed Boolean @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   archivedAt DateTime?
 
   organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -443,6 +521,16 @@ enum TenantStatus {
   FORMER // umowa zakończona
 }
 
+/// Kim jest najemca na dokumencie sprzedaży.
+///
+/// Nie dubluje `documentKind`: tamto mówi, JAKI dokument wystawiamy, a to —
+/// KOGO na nim wpisujemy. Firma bez NIP-u to brak danych, osoba fizyczna
+/// bez NIP-u to norma, i tylko ta kolumna pozwala je odróżnić.
+enum TenantLegalForm {
+  INDIVIDUAL // osoba fizyczna
+  COMPANY // firma
+}
+
 model Tenant {
   id             String       @id @default(cuid())
   organizationId String
@@ -463,6 +551,39 @@ model Tenant {
   city       String?
   /// NIP, gdy najemcą jest firma. Dla osoby fizycznej zostaje NULL.
   taxId      String?
+
+  legalForm TenantLegalForm @default(INDIVIDUAL)
+
+  /// Data urodzenia — bierze się ją z okazanego dokumentu razem z numerem.
+  dateOfBirth DateTime?
+
+  /// Adres zameldowania, inny niż korespondencyjny powyżej. Wchodzi do umowy
+  /// najmu okazjonalnego: to adres, pod który najemca wróci po zakończeniu
+  /// najmu, a nie ten, na który wysyłamy fakturę.
+  registeredStreet     String?
+  registeredPostalCode String?
+  registeredCity       String?
+  /// Koniec zameldowania czasowego. NULL = bezterminowe, czyli zwykły przypadek.
+  registeredUntil      DateTime?
+
+  /// Kontakt do spraw płatności, gdy inny niż podstawowy — czynsz płaci
+  /// czasem rodzic studenta albo księgowość firmy najemcy.
+  billingEmail         String?
+  billingPhone         String?
+  /// Rachunek do zwrotu kaucji. Zbiera się go dopiero na koniec najmu, ale
+  /// wpisany na starcie oszczędza szukania numeru w dniu wyprowadzki.
+  depositRefundAccount String?
+
+  /// Pracodawca albo uczelnia i data, do której to trwa — najkrótsza odpowiedź
+  /// na pytanie, z czego ten najemca zapłaci. NULL w dacie = bezterminowo.
+  employerName    String?
+  employmentUntil DateTime?
+
+  /// Polisa OC najemcy. Numeru nie sprawdzamy wzorem — każdy ubezpieczyciel
+  /// numeruje po swojemu.
+  insurerName           String?
+  insurancePolicyNumber String?
+  insuranceExpiresAt    DateTime?
 
   /// Dokumenty tożsamości — wszystkie opcjonalne i niezależne od siebie.
   /// Właściciel spisuje je z okazanego dokumentu przy podpisaniu umowy, a co
@@ -549,13 +670,13 @@ model Lease {
   rentGrosze    Int
   depositGrosze Int @default(0)
 
-  utilitiesMode           UtilitiesMode @default(FLAT_RATE)
+  utilitiesMode          UtilitiesMode @default(FLAT_RATE)
   /// Zaliczka na media przy FLAT_RATE i MIXED.
-  utilitiesAdvanceGrosze  Int           @default(0)
+  utilitiesAdvanceGrosze Int           @default(0)
 
   /// Dzień miesiąca, w którym wystawiana jest faktura (1–28; nie 29–31,
   /// żeby luty nie wymagał wyjątku).
-  billingDay      Int @default(1)
+  billingDay Int @default(1)
 
   /// Data, przed którą nie naliczamy nic z tej umowy. NULL = naliczaj od początku.
   ///
@@ -583,13 +704,13 @@ model Lease {
   /// osobne, świadome kliknięcie.
   sendInvoicesByEmail Boolean @default(true)
 
-  terminatedAt     DateTime?
-  terminationNote  String?   @db.Text
+  terminatedAt    DateTime?
+  terminationNote String?   @db.Text
 
   notes String? @db.Text
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   /// Umowa schowana z listy roboczej — wypowiedziana albo wygasła, a jej
   /// faktury i historia rozliczeń zostają nietknięte.
   archivedAt DateTime?
@@ -614,9 +735,9 @@ model Lease {
 /// Najemcy na umowie. Tabela łącząca, a nie pole `tenantId` na umowie, bo pary
 /// podpisujące razem to norma — i tak byłby potrzebny drugi mechanizm.
 model LeaseTenant {
-  id       String  @id @default(cuid())
-  leaseId  String
-  tenantId String
+  id        String  @id @default(cuid())
+  leaseId   String
+  tenantId  String
   /// Główny najemca: adresat faktur i powiadomień. Dokładnie jeden na umowę
   /// (pilnowane w kodzie — Postgres nie wyrazi tego indeksem częściowym
   /// przez Prismę bez migracji ręcznej).
@@ -892,14 +1013,14 @@ model Expense {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   /// SetNull, a nie Cascade: po archiwizacji nieruchomości koszt zostaje
   /// w zestawieniu rocznym, bo pieniądze naprawdę wyszły.
-  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  property      Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
   /// Tak samo SetNull: skasowanie wzorca zatrzymuje naliczanie, ale nie kasuje
   /// kosztów, które już poszły z konta.
-  recurringFrom Expense?  @relation("ExpenseRecurrenceSource", fields: [recurringFromId], references: [id], onDelete: SetNull)
-  occurrences   Expense[] @relation("ExpenseRecurrenceSource")
+  recurringFrom Expense?     @relation("ExpenseRecurrenceSource", fields: [recurringFromId], references: [id], onDelete: SetNull)
+  occurrences   Expense[]    @relation("ExpenseRecurrenceSource")
 
   @@index([organizationId])
   // Główny indeks raportu: koszty okresu, posortowane od najnowszych.
@@ -1059,7 +1180,7 @@ model MessageThread {
   /// transakcji co zapis wiadomości.
   lastMessageAt DateTime @default(now())
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   closedAt  DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1084,7 +1205,7 @@ model Message {
 
   createdAt DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   thread       MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   sender       User          @relation(fields: [senderUserId], references: [id], onDelete: Restrict)
 
@@ -1118,13 +1239,13 @@ model Document {
   organizationId String
   type           DocumentType @default(OTHER)
 
-  name        String
-  fileUrl     String
-  mimeType    String?
-  sizeBytes   Int?
+  name      String
+  fileUrl   String
+  mimeType  String?
+  sizeBytes Int?
   /// TRUE dla dokumentów wygenerowanych przez Rentix (umowa z kreatora),
   /// FALSE dla wgranych ręcznie.
-  generated   Boolean @default(false)
+  generated Boolean @default(false)
 
   signatureStatus SignatureStatus @default(NOT_REQUIRED)
   signedAt        DateTime?

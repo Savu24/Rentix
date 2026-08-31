@@ -1,11 +1,20 @@
 import { z } from "zod";
 
-import { InvoiceKind, TenantStatus } from "@/generated/prisma/enums";
+import { InvoiceKind, TenantLegalForm, TenantStatus } from "@/generated/prisma/enums";
 
-import { emailSchema } from "./auth";
-import { optionalPostalCode, optionalTaxId, optionalText, requiredText } from "./common";
+import {
+  optionalBankAccount,
+  optionalDateInput,
+  optionalEmail,
+  optionalPhone,
+  optionalPostalCode,
+  optionalTaxId,
+  optionalText,
+  requiredText,
+} from "./common";
 
 const tenantStatuses = Object.values(TenantStatus) as [TenantStatus, ...TenantStatus[]];
+const legalForms = Object.values(TenantLegalForm) as [TenantLegalForm, ...TenantLegalForm[]];
 const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind[]];
 
 /**
@@ -34,23 +43,10 @@ export const TENANT_STATUS_TONE: Record<TenantStatus, "neutral" | "good" | "warn
   FORMER: "neutral",
 };
 
-/**
- * Telefon: cyfry, spacje, +, myślniki i nawiasy. Formatu nie narzucamy.
- *
- * Puste pole musi być osobnym wariantem unii — regex wymaga min. 6 znaków,
- * więc „" odpadałoby zanim transformacja zdążyłaby zamienić je na null.
- */
-const phoneSchema = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .regex(/^[+()\d\s-]{6,24}$/, "Numer telefonu wygląda nieprawidłowo"),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+export const TENANT_LEGAL_FORM_LABEL: Record<TenantLegalForm, string> = {
+  INDIVIDUAL: "Osoba fizyczna",
+  COMPANY: "Firma",
+};
 
 /**
  * Numer dowodu osobistego: trzy litery i sześć cyfr (ABC123456).
@@ -119,12 +115,12 @@ export const tenantFormSchema = z.object({
 
   // E-mail jest opcjonalny: właściciel może prowadzić najemcę, który nie ma
   // adresu — ale bez niego nie wyślemy przypomnień o płatności.
-  email: z
-    .union([z.literal(""), emailSchema])
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .optional(),
-  phone: phoneSchema,
+  email: optionalEmail,
+  phone: optionalPhone,
+
+  /// Osoba fizyczna czy firma — patrz komentarz przy modelu `Tenant`.
+  legalForm: z.enum(legalForms).default("INDIVIDUAL"),
+  dateOfBirth: optionalDateInput("Data urodzenia"),
 
   // Adres korespondencyjny trafia na fakturę jako dane nabywcy.
   street: optionalText(120),
@@ -149,12 +145,33 @@ export const tenantFormSchema = z.object({
   // E-mail obok telefonu, bo gdy nikt nie odbiera, do wiadomości można wrócić.
   emergencyContactFirstName: optionalText(60),
   emergencyContactLastName: optionalText(80),
-  emergencyContactPhone: phoneSchema,
-  emergencyContactEmail: z
-    .union([z.literal(""), emailSchema])
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .optional(),
+  emergencyContactPhone: optionalPhone,
+  emergencyContactEmail: optionalEmail,
+
+  // Adres zameldowania — inny byt niż korespondencyjny wyżej. Ten wchodzi do
+  // umowy najmu okazjonalnego, tamten na fakturę, i mylenie ich kosztowałoby
+  // ważność umowy. Data pusta = zameldowanie bezterminowe.
+  registeredStreet: optionalText(120),
+  registeredPostalCode: optionalPostalCode,
+  registeredCity: optionalText(80),
+  registeredUntil: optionalDateInput("Koniec zameldowania"),
+
+  // Kontakt do spraw płatności, gdy inny niż podstawowy — czynsz płaci czasem
+  // rodzic studenta albo księgowość firmy najemcy.
+  billingEmail: optionalEmail,
+  billingPhone: optionalPhone,
+  // Rachunek do zwrotu kaucji — ta sama reguła co przy rachunku wystawcy.
+  depositRefundAccount: optionalBankAccount,
+
+  // Praca albo studia: z czego najemca zapłaci i do kiedy to trwa.
+  employerName: optionalText(120),
+  employmentUntil: optionalDateInput("Koniec pracy lub studiów"),
+
+  // Polisa OC najemcy — numeru nie sprawdzamy wzorem, każdy ubezpieczyciel
+  // numeruje po swojemu.
+  insurerName: optionalText(120),
+  insurancePolicyNumber: optionalText(60),
+  insuranceExpiresAt: optionalDateInput("Ważność polisy"),
 
   notes: optionalText(2000),
 });

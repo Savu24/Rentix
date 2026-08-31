@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PostalCodeInput } from "@/components/ui/postal-code-input";
@@ -19,6 +20,7 @@ import { INVOICE_KIND_LABEL } from "@/lib/validations/invoice";
 import {
   TENANT_DOCUMENT_KIND_HINT,
   TENANT_DOCUMENT_KIND_OPTIONS,
+  TENANT_LEGAL_FORM_LABEL,
   TENANT_STATUS_LABEL,
   tenantFormSchema,
   type TenantFormInput,
@@ -36,6 +38,8 @@ const EMPTY: TenantFormInput = {
   city: "",
   taxId: "",
   documentKind: "BILL",
+  legalForm: "INDIVIDUAL",
+  dateOfBirth: "",
   idCardNumber: "",
   pesel: "",
   passportNumber: "",
@@ -44,6 +48,18 @@ const EMPTY: TenantFormInput = {
   emergencyContactLastName: "",
   emergencyContactPhone: "",
   emergencyContactEmail: "",
+  registeredStreet: "",
+  registeredPostalCode: "",
+  registeredCity: "",
+  registeredUntil: "",
+  billingEmail: "",
+  billingPhone: "",
+  depositRefundAccount: "",
+  employerName: "",
+  employmentUntil: "",
+  insurerName: "",
+  insurancePolicyNumber: "",
+  insuranceExpiresAt: "",
   notes: "",
 };
 
@@ -106,7 +122,9 @@ export function TenantForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="firstName" label="Imię" error={errors.firstName?.message}>
               <Input
-                {...fieldAria("firstName", { error: errors.firstName?.message })}
+                {...fieldAria("firstName", {
+                  error: errors.firstName?.message,
+                })}
                 autoComplete="given-name"
                 disabled={isSubmitting}
                 {...register("firstName")}
@@ -160,6 +178,27 @@ export function TenantForm({
                 ))}
               </Select>
             </FormField>
+
+            <FormField
+              id="legalForm"
+              label="Forma prawna"
+              error={errors.legalForm?.message}
+              hint="Przy firmie uzupełnij NIP w danych do faktury."
+            >
+              <Select
+                {...fieldAria("legalForm", {
+                  error: errors.legalForm?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("legalForm")}
+              >
+                {Object.entries(TENANT_LEGAL_FORM_LABEL).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
           </div>
         </CardContent>
       </Card>
@@ -178,7 +217,9 @@ export function TenantForm({
               error={errors.idCardNumber?.message}
             >
               <Input
-                {...fieldAria("idCardNumber", { error: errors.idCardNumber?.message })}
+                {...fieldAria("idCardNumber", {
+                  error: errors.idCardNumber?.message,
+                })}
                 autoCapitalize="characters"
                 disabled={isSubmitting}
                 {...register("idCardNumber")}
@@ -200,7 +241,9 @@ export function TenantForm({
               error={errors.passportNumber?.message}
             >
               <Input
-                {...fieldAria("passportNumber", { error: errors.passportNumber?.message })}
+                {...fieldAria("passportNumber", {
+                  error: errors.passportNumber?.message,
+                })}
                 autoCapitalize="characters"
                 disabled={isSubmitting}
                 {...register("passportNumber")}
@@ -220,13 +263,31 @@ export function TenantForm({
                 {...register("residenceCardNumber")}
               />
             </FormField>
+
+            <FormField
+              id="dateOfBirth"
+              label="Data urodzenia"
+              error={errors.dateOfBirth?.message}
+              hint="Przepisujesz ją z tego samego dokumentu co numer."
+            >
+              <DateInput
+                {...fieldAria("dateOfBirth", {
+                  error: errors.dateOfBirth?.message,
+                })}
+
+                disabled={isSubmitting}
+                {...register("dateOfBirth")}
+              />
+            </FormField>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Kontakt na wypadek nagłego zdarzenia</h2>
+          <h2 className="text-[15px] font-semibold text-fg">
+            Kontakt na wypadek nagłego zdarzenia
+          </h2>
           <p className="-mt-2 text-xs text-muted">
             Osoba, do której zadzwonisz, gdy nie da się dodzwonić do najemcy.
           </p>
@@ -295,6 +356,230 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Adres zameldowania</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Adres z dowodu — ten, pod który najemca wróci po zakończeniu najmu. Wchodzi do umowy
+            najmu okazjonalnego i nie musi być tym samym, co adres do faktury.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-6">
+            <FormField
+              id="registeredStreet"
+              label="Ulica i numer"
+              error={errors.registeredStreet?.message}
+              className="sm:col-span-6"
+            >
+              <Input
+                {...fieldAria("registeredStreet", {
+                  error: errors.registeredStreet?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("registeredStreet")}
+              />
+            </FormField>
+
+            <FormField
+              id="registeredPostalCode"
+              label="Kod pocztowy"
+              error={errors.registeredPostalCode?.message}
+              className="sm:col-span-2"
+            >
+              <PostalCodeInput
+                {...fieldAria("registeredPostalCode", {
+                  error: errors.registeredPostalCode?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("registeredPostalCode")}
+              />
+            </FormField>
+
+            <FormField
+              id="registeredCity"
+              label="Miejscowość"
+              error={errors.registeredCity?.message}
+              className="sm:col-span-2"
+            >
+              <Input
+                {...fieldAria("registeredCity", {
+                  error: errors.registeredCity?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("registeredCity")}
+              />
+            </FormField>
+
+            <FormField
+              id="registeredUntil"
+              label="Zameldowanie do"
+              error={errors.registeredUntil?.message}
+              hint="Puste = bezterminowe."
+              className="sm:col-span-2"
+            >
+              <DateInput
+                {...fieldAria("registeredUntil", {
+                  error: errors.registeredUntil?.message,
+                })}
+
+                disabled={isSubmitting}
+                {...register("registeredUntil")}
+              />
+            </FormField>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Płatności</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Wypełnij tylko wtedy, gdy za czynsz odpowiada ktoś inny niż najemca — rodzic albo
+            księgowość jego firmy.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              id="billingEmail"
+              label="E-mail do płatności"
+              error={errors.billingEmail?.message}
+            >
+              <Input
+                {...fieldAria("billingEmail", {
+                  error: errors.billingEmail?.message,
+                })}
+                type="email"
+                disabled={isSubmitting}
+                {...register("billingEmail")}
+              />
+            </FormField>
+
+            <FormField
+              id="billingPhone"
+              label="Telefon do płatności"
+              error={errors.billingPhone?.message}
+            >
+              <Input
+                {...fieldAria("billingPhone", {
+                  error: errors.billingPhone?.message,
+                })}
+                type="tel"
+                disabled={isSubmitting}
+                {...register("billingPhone")}
+              />
+            </FormField>
+
+            <FormField
+              id="depositRefundAccount"
+              label="Rachunek do zwrotu kaucji"
+              error={errors.depositRefundAccount?.message}
+              hint="Wpisany na starcie oszczędza szukania numeru w dniu wyprowadzki."
+              className="sm:col-span-2"
+            >
+              <Input
+                {...fieldAria("depositRefundAccount", {
+                  error: errors.depositRefundAccount?.message,
+                })}
+                inputMode="numeric"
+                disabled={isSubmitting}
+                {...register("depositRefundAccount")}
+              />
+            </FormField>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Praca i studia</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Najkrótsza odpowiedź na pytanie, z czego ten najemca zapłaci.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              id="employerName"
+              label="Pracodawca lub uczelnia"
+              error={errors.employerName?.message}
+            >
+              <Input
+                {...fieldAria("employerName", {
+                  error: errors.employerName?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("employerName")}
+              />
+            </FormField>
+
+            <FormField
+              id="employmentUntil"
+              label="Do kiedy"
+              error={errors.employmentUntil?.message}
+              hint="Puste = bezterminowo."
+            >
+              <DateInput
+                {...fieldAria("employmentUntil", {
+                  error: errors.employmentUntil?.message,
+                })}
+
+                disabled={isSubmitting}
+                {...register("employmentUntil")}
+              />
+            </FormField>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          <h2 className="text-[15px] font-semibold text-fg">Ubezpieczenie najemcy</h2>
+          <p className="-mt-2 text-xs text-muted">
+            Polisa OC, do której sięgasz przy szkodzie — zalaniu sąsiada albo zniszczeniu sprzętu.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <FormField id="insurerName" label="Ubezpieczyciel" error={errors.insurerName?.message}>
+              <Input
+                {...fieldAria("insurerName", {
+                  error: errors.insurerName?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("insurerName")}
+              />
+            </FormField>
+
+            <FormField
+              id="insurancePolicyNumber"
+              label="Numer polisy"
+              error={errors.insurancePolicyNumber?.message}
+            >
+              <Input
+                {...fieldAria("insurancePolicyNumber", {
+                  error: errors.insurancePolicyNumber?.message,
+                })}
+                disabled={isSubmitting}
+                {...register("insurancePolicyNumber")}
+              />
+            </FormField>
+
+            <FormField
+              id="insuranceExpiresAt"
+              label="Ważna do"
+              error={errors.insuranceExpiresAt?.message}
+            >
+              <DateInput
+                {...fieldAria("insuranceExpiresAt", {
+                  error: errors.insuranceExpiresAt?.message,
+                })}
+
+                disabled={isSubmitting}
+                {...register("insuranceExpiresAt")}
+              />
+            </FormField>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Dane do faktury</h2>
           <p className="-mt-2 text-xs text-muted">
             Trafiają na fakturę jako dane nabywcy. Możesz uzupełnić je później.
@@ -321,7 +606,9 @@ export function TenantForm({
               className="sm:col-span-2"
             >
               <PostalCodeInput
-                {...fieldAria("postalCode", { error: errors.postalCode?.message })}
+                {...fieldAria("postalCode", {
+                  error: errors.postalCode?.message,
+                })}
                 disabled={isSubmitting}
                 {...register("postalCode")}
               />
@@ -366,7 +653,9 @@ export function TenantForm({
               className="sm:col-span-2"
             >
               <Select
-                {...fieldAria("documentKind", { error: errors.documentKind?.message })}
+                {...fieldAria("documentKind", {
+                  error: errors.documentKind?.message,
+                })}
                 disabled={isSubmitting}
                 {...register("documentKind")}
               >
@@ -407,7 +696,12 @@ export function TenantForm({
             "Dodaj najemcę"
           )}
         </Button>
-        <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => router.back()}>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={isSubmitting}
+          onClick={() => router.back()}
+        >
           Anuluj
         </Button>
       </div>

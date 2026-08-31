@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -162,36 +163,32 @@ export function InvoiceFilters({ total }: { total: number }) {
           </FormField>
 
           <FormField id="f-issuedFrom" label="Wystawiono od">
-            <Input
+            <DateInput
               id="f-issuedFrom"
-              type="date"
               value={searchParams.get("issuedFrom") ?? ""}
               onChange={(event) => setParam("issuedFrom", event.target.value)}
             />
           </FormField>
 
           <FormField id="f-issuedTo" label="Wystawiono do">
-            <Input
+            <DateInput
               id="f-issuedTo"
-              type="date"
               value={searchParams.get("issuedTo") ?? ""}
               onChange={(event) => setParam("issuedTo", event.target.value)}
             />
           </FormField>
 
           <FormField id="f-dueFrom" label="Termin od">
-            <Input
+            <DateInput
               id="f-dueFrom"
-              type="date"
               value={searchParams.get("dueFrom") ?? ""}
               onChange={(event) => setParam("dueFrom", event.target.value)}
             />
           </FormField>
 
           <FormField id="f-dueTo" label="Termin do">
-            <Input
+            <DateInput
               id="f-dueTo"
-              type="date"
               value={searchParams.get("dueTo") ?? ""}
               onChange={(event) => setParam("dueTo", event.target.value)}
             />
