@@ -76,10 +76,6 @@ export async function listProperties(organizationId: string, query: PropertyList
       roomCount: rooms.length,
       occupiedRoomCount: occupied,
       availableRoomCount: available,
-      /** Suma stawek za wolne pokoje — ile jeszcze da się dowynająć. */
-      vacantRoomRentGrosze: rooms
-        .filter((room) => room.status === "AVAILABLE")
-        .reduce((total, room) => total + (room.monthlyRentGrosze ?? 0), 0),
     };
   });
 }

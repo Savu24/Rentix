@@ -81,11 +81,7 @@ export function PropertyCard({ property }: { property: PropertyListItem }) {
           {property.areaM2 ? (
             <span className="tabular">{property.areaM2.replace(".", ",")} m²</span>
           ) : null}
-          {property.vacantRoomRentGrosze > 0 ? (
-            <span className="tabular">
-              wolne za {formatPLN(property.vacantRoomRentGrosze)}
-            </span>
-          ) : property.askingRentGrosze ? (
+          {property.askingRentGrosze ? (
             <span className="tabular">{formatPLN(property.askingRentGrosze)}</span>
           ) : null}
           {property.archivedAt ? (
