@@ -47,6 +47,8 @@ const EMPTY: PropertyCreateInput = {
   district: "",
   areaM2: "",
   floor: "",
+  // Bez pola w formularzu, ale wartość jedzie dalej: przy edycji nadpisanie
+  // pustką skasowałoby czynsz wpisany, zanim pole zniknęło.
   askingRentGrosze: "",
   intercomCode: "",
   checkoutTime: "",
@@ -316,9 +318,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Metraż i czynsz</h2>
+          <h2 className="text-[15px] font-semibold text-fg">Metraż</h2>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="areaM2" label="Powierzchnia (m²)" error={errors.areaM2?.message}>
               <Input
                 {...fieldAria("areaM2", { error: errors.areaM2?.message })}
@@ -334,22 +336,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 inputMode="numeric"
                 disabled={isSubmitting}
                 {...register("floor")}
-              />
-            </FormField>
-
-            <FormField
-              id="askingRentGrosze"
-              label="Czynsz za całość"
-              error={errors.askingRentGrosze?.message}
-              hint="Przy najmie pokojowym stawki wpisujesz przy pokojach."
-            >
-              <Input
-                {...fieldAria("askingRentGrosze", {
-                  error: errors.askingRentGrosze?.message,
-                })}
-                inputMode="decimal"
-                disabled={isSubmitting}
-                {...register("askingRentGrosze")}
               />
             </FormField>
           </div>
