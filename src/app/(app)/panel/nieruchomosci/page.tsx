@@ -83,7 +83,10 @@ export default async function PropertiesPage({
           />
         )
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        // Jedna nieruchomość = jeden wiersz na całą szerokość. W trzech
+        // kolumnach nazwa i adres ucinały się po kilku znakach, a przy
+        // kilkunastu obiektach oko i tak szuka ich w pionie, nie w siatce.
+        <div className="flex flex-col gap-3">
           {properties.map((property) => (
             <PropertyCard key={property.id} property={property} />
           ))}
