@@ -112,7 +112,9 @@ export default async function TenantsPage({
 
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                         {tenant.activeLease ? (
-                          <span>
+                          /* Adres ciemniejszy niż e-mail i telefon: po liście
+                             szuka się „kto mieszka gdzie", a nie kontaktu. */
+                          <span className="font-medium text-fg">
                             {tenant.activeLease.propertyName}
                             {tenant.activeLease.roomName
                               ? ` · ${tenant.activeLease.roomName}`
