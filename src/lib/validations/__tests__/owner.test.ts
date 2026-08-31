@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  formatContractPeriod,
-  formatBankAccount,
-  ownerFormSchema,
-  ownerUpdateSchema,
-} from "@/lib/validations/owner";
+import { formatBankAccount } from "@/lib/bank-account";
+import { formatContractPeriod, ownerFormSchema, ownerUpdateSchema } from "@/lib/validations/owner";
 
 const VALID = { name: "Anna Nowak" };
 const ACCOUNT = "12345678901234567890123456";

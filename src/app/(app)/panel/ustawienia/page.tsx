@@ -36,6 +36,7 @@ export default async function SettingsOrganizationPage() {
           street: organization.street ?? "",
           postalCode: organization.postalCode ?? "",
           city: organization.city ?? "",
+          bankAccount: organization.bankAccount ?? "",
         }}
       />
 

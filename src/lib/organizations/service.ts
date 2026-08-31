@@ -27,6 +27,7 @@ export async function getOrganization(organizationId: string) {
       postalCode: true,
       city: true,
       countryCode: true,
+      bankAccount: true,
     },
   });
 }
@@ -51,6 +52,7 @@ export async function updateOrganization(
       street: data.street,
       postalCode: data.postalCode,
       city: data.city,
+      bankAccount: data.bankAccount,
     },
     select: {
       id: true,
@@ -60,6 +62,7 @@ export async function updateOrganization(
       street: true,
       postalCode: true,
       city: true,
+      bankAccount: true,
     },
   });
 }

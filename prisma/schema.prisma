@@ -84,6 +84,15 @@ model Organization {
   city        String?
   countryCode String  @default("PL")
 
+  /// Rachunek, na ktory najemcy maja wplacac czynsz — 26 cyfr bez spacji
+  /// i bez prefiksu „PL". Zapis znormalizowany, bo ten sam numer ludzie
+  /// przepisuja raz z prefiksem, raz w grupach po cztery; formatowaniem
+  /// zajmuje sie warstwa widoku, a nie baza.
+  ///
+  /// NULL = dokument bez informacji o platnosci, czyli tak jak przed
+  /// dolozeniem tego pola.
+  bankAccount String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -65,6 +65,33 @@ export const optionalTaxId = z
   .optional();
 
 /**
+ * Polski numer rachunku: 26 cyfr, z opcjonalnym prefiksem PL.
+ *
+ * Spacje usuwamy przed sprawdzeniem — ludzie przepisują numer z umowy
+ * w grupach po cztery i tak też go wklejają.
+ *
+ * Sumy kontrolnej IBAN nie liczymy: przelew i tak wykonuje człowiek w banku,
+ * który sprawdzi ją porządnie, a fałszywy alarm na poprawnym numerze
+ * zablokowałby zapis.
+ *
+ * Wspólne dla właściciela (rachunek, na który przekazujemy czynsz) i wystawcy
+ * (rachunek, na który wpłaca najemca) — dwie kopie tej samej reguły rozjechałyby
+ * się przy pierwszej poprawce komunikatu.
+ */
+export const optionalBankAccount = z
+  .union([
+    z.literal(""),
+    z
+      .string()
+      .trim()
+      .transform((value) => value.replace(/\s/g, "").replace(/^PL/i, ""))
+      .pipe(z.string().regex(/^\d{26}$/, "Numer rachunku to 26 cyfr")),
+  ])
+  .transform((value) => (value === "" ? null : value))
+  .nullable()
+  .optional();
+
+/**
  * Kwota wpisana przez człowieka → grosze.
  *
  * Formularz wysyła tekst („2 400,50"), bo `<input type="number">` z polskim

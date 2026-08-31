@@ -148,6 +148,21 @@ export function OrganizationForm({
             </FormField>
           </div>
 
+          <FormField
+            id="org-bankAccount"
+            label="Numer rachunku dla najemców"
+            error={errors.bankAccount?.message}
+            hint="26 cyfr. Trafia na rachunki jako konto do przelewu — zostaw puste, jeśli rozliczasz się inaczej."
+          >
+            <Input
+              {...fieldAria("org-bankAccount", { error: errors.bankAccount?.message })}
+              inputMode="numeric"
+              autoComplete="off"
+              disabled={isSubmitting}
+              {...register("bankAccount")}
+            />
+          </FormField>
+
           <div>
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? (

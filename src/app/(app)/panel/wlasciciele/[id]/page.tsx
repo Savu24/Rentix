@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { formatBankAccount } from "@/lib/bank-account";
 import { formatPLN } from "@/lib/money";
 import { getOwner } from "@/lib/owners/service";
 import { formatPropertyAddress } from "@/lib/properties/address";
-import { formatBankAccount, formatContractPeriod } from "@/lib/validations/owner";
+import { formatContractPeriod } from "@/lib/validations/owner";
 import {
   PROPERTY_TYPE_LABEL,
   RENTAL_STATUS_LABEL,

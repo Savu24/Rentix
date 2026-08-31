@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { emailSchema } from "./auth";
 import {
+  optionalBankAccount,
   optionalDateInput,
   optionalPostalCode,
   optionalTaxId,
@@ -17,29 +18,6 @@ import {
  * a formularz, którego nie da się zapisać bez nich, kończy się notatką
  * w telefonie zamiast wpisem w systemie.
  */
-
-/**
- * Polski numer rachunku: 26 cyfr, z opcjonalnym prefiksem PL.
- *
- * Spacje usuwamy przed sprawdzeniem — ludzie przepisują numer z umowy
- * w grupach po cztery i tak też go wklejają.
- *
- * Sumy kontrolnej IBAN nie liczymy: przelew i tak wykonuje człowiek w banku,
- * który sprawdzi ją porządnie, a fałszywy alarm na poprawnym numerze
- * zablokowałby zapis właściciela.
- */
-export const optionalBankAccount = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value) => value.replace(/\s/g, "").replace(/^PL/i, ""))
-      .pipe(z.string().regex(/^\d{26}$/, "Numer rachunku to 26 cyfr")),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
 
 /**
  * Pola właściciela jako sam kształt, nie gotowy schemat.
@@ -143,11 +121,4 @@ export function formatContractPeriod(
   if (start) return `od ${contractDateFormat.format(start)}, czas nieokreślony`;
   if (end) return `do ${contractDateFormat.format(end)}`;
   return null;
-}
-
-/** 26 cyfr → „12 3456 7890 1234 5678 9012 3456", jak na przelewie. */
-export function formatBankAccount(account: string): string {
-  const digits = account.replace(/\s/g, "");
-  if (digits.length !== 26) return account;
-  return `${digits.slice(0, 2)} ${digits.slice(2).replace(/(\d{4})(?=\d)/g, "$1 ")}`.trim();
 }

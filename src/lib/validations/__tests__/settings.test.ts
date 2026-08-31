@@ -37,6 +37,20 @@ describe("organizationSettingsSchema", () => {
     expect(organizationSettingsSchema.parse({ ...VALID, taxId: "" }).taxId).toBeNull();
   });
 
+  it("normalizuje numer rachunku dla najemców", () => {
+    // Ten sam numer ludzie wklejają w grupach i z prefiksem — w bazie ma leżeć
+    // w jednym zapisie, bo trafia wprost na dokument.
+    const account = "12345678901234567890123456";
+    expect(
+      organizationSettingsSchema.parse({ ...VALID, bankAccount: "PL12 3456 7890 1234 5678 9012 3456" })
+        .bankAccount,
+    ).toBe(account);
+    expect(organizationSettingsSchema.parse({ ...VALID, bankAccount: "" }).bankAccount).toBeNull();
+    expect(
+      organizationSettingsSchema.safeParse({ ...VALID, bankAccount: "1234" }).success,
+    ).toBe(false);
+  });
+
   it("pilnuje formatu kodu pocztowego", () => {
     expect(organizationSettingsSchema.safeParse({ ...VALID, postalCode: "30001" }).success).toBe(
       false,

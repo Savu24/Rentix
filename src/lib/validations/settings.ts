@@ -4,7 +4,13 @@ import { unknownVariables } from "@/lib/email/render";
 import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
 import { emailSchema, passwordSchema } from "./auth";
-import { optionalPostalCode, optionalTaxId, optionalText, requiredText } from "./common";
+import {
+  optionalBankAccount,
+  optionalPostalCode,
+  optionalTaxId,
+  optionalText,
+  requiredText,
+} from "./common";
 
 /**
  * Ustawienia konta: dane wystawcy dokumentów i profil użytkownika.
@@ -37,6 +43,14 @@ export const organizationSettingsSchema = z.object({
   street: optionalText(120),
   postalCode: optionalPostalCode,
   city: optionalText(80),
+  /**
+   * Rachunek, na który najemca ma wpłacić.
+   *
+   * Opcjonalny jak reszta danych wystawcy — przy gotówce albo przy rozliczeniu
+   * przez pośrednika nie ma czego wpisywać, a dokument bez tej linii wygląda
+   * dokładnie tak, jak przed dołożeniem pola.
+   */
+  bankAccount: optionalBankAccount,
 });
 
 export type OrganizationSettingsInput = z.input<typeof organizationSettingsSchema>;

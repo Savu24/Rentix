@@ -3,6 +3,7 @@ import path from "node:path";
 import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import type { InvoiceKind, VatRate } from "@/generated/prisma/enums";
+import { formatBankAccount } from "@/lib/bank-account";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { INVOICE_KIND_LABEL, isAccountingDocument } from "@/lib/validations/invoice";
@@ -119,6 +120,17 @@ const styles = StyleSheet.create({
   words: { marginTop: 10, fontSize: 8.5 },
   wordsLabel: { color: COLORS.muted },
 
+  payment: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 14,
+    paddingTop: 8,
+    borderTopWidth: 0.7,
+    borderTopColor: COLORS.rule,
+  },
+  paymentLabel: { color: COLORS.muted },
+  paymentAccount: { fontWeight: 600, letterSpacing: 0.3 },
+
   settlement: {
     marginTop: 18,
     padding: 10,
@@ -219,6 +231,13 @@ export type InvoicePdfData = {
   /** Czego dotyczy rozliczenie — adres lokalu na dokumencie. */
   subject: string | null;
 
+  /**
+   * Rachunek wystawcy, na który ma trafić przelew — same cyfry, jak w bazie.
+   * NULL = wynajmujący nie podał go w ustawieniach, więc dokument nic
+   * o sposobie zapłaty nie mówi.
+   */
+  bankAccount: string | null;
+
   lines: InvoicePdfLine[];
   vatBreakdown: Array<{ rate: VatRate; netGrosze: number; vatGrosze: number }>;
 
@@ -266,6 +285,12 @@ function Party({
  */
 function InvoicePage({ data }: { data: InvoicePdfData }) {
   const remaining = Math.max(0, data.totalGrossGrosze - data.paidGrosze);
+
+  // Rozliczenie wpłat pokazujemy tylko wtedy, gdy zostało coś do zapłaty.
+  // Na dokumencie spłaconym w całości para „Wpłacono / Pozostaje 0,00 zł" nic
+  // nie wnosi, a zmienia treść rachunku po jego wystawieniu — najemca dostaje
+  // wtedy dwie różne wersje tego samego numeru.
+  const showSettlement = data.paidGrosze > 0 && remaining > 0;
   // Rozbicie po stawkach pokazujemy tylko wtedy, gdy na dokumencie jest więcej
   // niż jedna — przy samym „zw." powielałoby wiersz sumy.
   const showBreakdown = data.vatBreakdown.length > 1;
@@ -376,7 +401,17 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
           {groszeToPolishWords(data.totalGrossGrosze)}
         </Text>
 
-        {data.paidGrosze > 0 ? (
+        {/* Rachunek do przelewu zostaje na dokumencie niezależnie od wpłat:
+            to dana wystawcy, nie stan rozliczenia. Znika tylko z anulowanego,
+            bo na anulowany nikt nie ma już przelewać. */}
+        {data.bankAccount && !data.cancelled ? (
+          <View style={styles.payment}>
+            <Text style={styles.paymentLabel}>Płatność przelewem na rachunek</Text>
+            <Text style={styles.paymentAccount}>{formatBankAccount(data.bankAccount)}</Text>
+          </View>
+        ) : null}
+
+        {showSettlement ? (
           <View style={styles.settlement}>
             <View style={styles.settlementRow}>
               <Text style={styles.summaryLabel}>Wpłacono</Text>

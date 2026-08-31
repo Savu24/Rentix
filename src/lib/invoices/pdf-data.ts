@@ -65,6 +65,8 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
 
     subject,
 
+    bankAccount: invoice.organization.bankAccount,
+
     lines: invoice.lines.map((line) => ({
       description: line.description,
       // Decimal(12,3) → tysięczne, w których liczy reszta aplikacji.

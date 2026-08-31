@@ -33,6 +33,7 @@ const DOCUMENT: InvoicePdfData = {
   buyer: { name: "Jan Nowak", taxId: null, street: null, postalCode: null, city: null },
 
   subject: null,
+  bankAccount: null,
   lines: [
     {
       description: "Czynsz",
