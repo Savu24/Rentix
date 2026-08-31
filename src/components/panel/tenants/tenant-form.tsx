@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -79,6 +79,7 @@ export function TenantForm({
     handleSubmit,
     getValues,
     setError,
+    setValue,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<TenantFormInput, unknown, TenantFormOutput>({
@@ -87,6 +88,30 @@ export function TenantForm({
   });
 
   const documentKind = watch("documentKind");
+
+  const registered = watch(["registeredStreet", "registeredPostalCode", "registeredCity"]);
+  const hasRegisteredAddress = registered.some((value) => (value ?? "").trim() !== "");
+
+  /**
+   * Przepisanie adresu zameldowania do danych nabywcy.
+   *
+   * U większości najemców to ten sam adres, a wpisywany drugi raz z pamięci
+   * potrafi się różnić literówką — i wtedy faktura idzie na adres, którego
+   * nie ma. Przycisk zamiast automatu, bo bywa inaczej: firma z siedzibą pod
+   * innym adresem albo najemca, który chce faktury na adres rodziców.
+   */
+  function copyRegisteredAddress() {
+    const values = getValues();
+    const fields = [
+      ["street", values.registeredStreet],
+      ["postalCode", values.registeredPostalCode],
+      ["city", values.registeredCity],
+    ] as const;
+
+    for (const [target, value] of fields) {
+      setValue(target, value ?? "", { shouldValidate: true, shouldDirty: true });
+    }
+  }
 
   /** Surowe wartości pól — patrz komentarz w `property-form.tsx`. */
   async function onSubmit() {
@@ -580,10 +605,25 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Dane do faktury</h2>
-          <p className="-mt-2 text-xs text-muted">
-            Trafiają na fakturę jako dane nabywcy. Możesz uzupełnić je później.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-[15px] font-semibold text-fg">Dane do faktury</h2>
+              <p className="mt-1 text-xs text-muted">
+                Trafiają na fakturę jako dane nabywcy. Możesz uzupełnić je później.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={copyRegisteredAddress}
+              disabled={isSubmitting || !hasRegisteredAddress}
+            >
+              <Copy className="h-4 w-4" aria-hidden />
+              Skopiuj adres zameldowania
+            </Button>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-6">
             <FormField
