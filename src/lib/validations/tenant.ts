@@ -112,33 +112,6 @@ const passportSchema = z
   .nullable()
   .optional();
 
-/**
- * Numer karty pobytu: trzy litery i siedem cyfr (ABC1234567).
- *
- * Format jak na dokumencie wydawanym przez wojewodę. Spacje i myślniki
- * wycinamy z tego samego powodu co przy dowodzie — z karty przepisuje się
- * „ABC 1234567", a w bazie ma leżeć jeden zapis.
- */
-const residenceCardSchema = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value) => value.replace(/[\s-]/g, "").toUpperCase())
-      .pipe(
-        z
-          .string()
-          .regex(
-            /^[A-Z]{3}\d{7}$/,
-            "Numer karty pobytu to trzy litery i siedem cyfr, np. ABC1234567",
-          ),
-      ),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
-
 export const tenantFormSchema = z.object({
   firstName: requiredText("Imię", 60),
   lastName: requiredText("Nazwisko", 80),
@@ -168,7 +141,9 @@ export const tenantFormSchema = z.object({
   idCardNumber: idCardSchema,
   pesel: peselSchema,
   passportNumber: passportSchema,
-  residenceCardNumber: residenceCardSchema,
+  // Karta pobytu: zwykły tekst. Numery bywają różne — z wojewody, z decyzji,
+  // przepisane z dokumentu obcego państwa — więc nie narzucamy formatu.
+  residenceCardNumber: optionalText(60),
 
   // Osoba do kontaktu w nagłym wypadku — imię, nazwisko, telefon i e-mail.
   // E-mail obok telefonu, bo gdy nikt nie odbiera, do wiadomości można wrócić.

@@ -216,7 +216,6 @@ export function TenantForm({
                 {...fieldAria("residenceCardNumber", {
                   error: errors.residenceCardNumber?.message,
                 })}
-                autoCapitalize="characters"
                 disabled={isSubmitting}
                 {...register("residenceCardNumber")}
               />

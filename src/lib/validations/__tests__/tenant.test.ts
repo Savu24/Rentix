@@ -51,19 +51,16 @@ describe("tenantFormSchema — dokumenty tożsamości", () => {
     expect(tenantFormSchema.safeParse({ ...VALID, pesel: "9001011234A" }).success).toBe(false);
   });
 
-  it("normalizuje numer karty pobytu", () => {
+  it("przyjmuje kartę pobytu w dowolnym formacie", () => {
+    // Numery kart bywają różne, a najemca przepisuje je z dokumentu — pole
+    // jest zwykłym tekstem, bez narzuconego wzoru.
     expect(
       tenantFormSchema.parse({ ...VALID, residenceCardNumber: "abc 1234567" })
         .residenceCardNumber,
-    ).toBe("ABC1234567");
-  });
-
-  it("odrzuca kartę pobytu o długości paszportu", () => {
-    // Karta ma siedem cyfr, dowód sześć — bez tego rozróżnienia numer dowodu
-    // wpisany w złe pole przechodziłby jako karta pobytu.
+    ).toBe("abc 1234567");
     expect(
       tenantFormSchema.safeParse({ ...VALID, residenceCardNumber: "ABC123456" }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("przyjmuje zagraniczny numer paszportu", () => {
