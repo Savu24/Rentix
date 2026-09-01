@@ -1,14 +1,16 @@
 "use client";
 
-import { CheckSquare, Download, Square, X } from "lucide-react";
+import { Check, CheckSquare, Download, Loader2, Square, X } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { api } from "@/lib/api/client";
 import { INVOICE_STATUS_META, type DisplayInvoiceStatus } from "@/lib/invoices/status";
-import { formatPLN } from "@/lib/money";
+import { formatAmount, formatPLN } from "@/lib/money";
 import { plural } from "@/lib/utils";
 
 export type InvoiceRow = {
@@ -135,8 +137,9 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
                   <Badge tone={meta.tone}>{meta.label}</Badge>
                 </div>
 
-                <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                  <span>{invoice.buyerName}</span>
+                <p className="mt-0.5 text-sm font-medium text-fg">{invoice.buyerName}</p>
+
+                <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted">
                   {invoice.propertyName ? (
                     <span>
                       {invoice.propertyName}
@@ -162,7 +165,7 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
           return (
             <Card
               key={invoice.id}
-              className={`transition-colors ${
+              className={`flex items-stretch transition-colors ${
                 isSelected ? "border-accent bg-accent-soft/30" : "hover:border-muted"
               }`}
             >
@@ -171,19 +174,97 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
                   type="button"
                   onClick={() => toggle(invoice.id)}
                   aria-pressed={isSelected}
-                  className="block w-full rounded-card text-left"
+                  className="block w-full min-w-0 flex-1 rounded-card text-left"
                 >
                   {body}
                 </button>
               ) : (
-                <Link href={`/panel/finanse/${invoice.id}`} className="block rounded-card">
+                <Link
+                  href={`/panel/finanse/${invoice.id}`}
+                  className="block min-w-0 flex-1 rounded-card"
+                >
                   {body}
                 </Link>
               )}
+
+              {/* Poza odnośnikiem — przycisk w środku `<a>` byłby nieprawidłowym
+                  zagnieżdżeniem, a klik w niego wchodziłby na kartę dokumentu. */}
+              {!selecting && isPayable(invoice) ? (
+                <div className="flex items-center pr-4">
+                  <MarkPaid invoiceId={invoice.id} remainingGrosze={invoice.remainingGrosze} />
+                </div>
+              ) : null}
             </Card>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/** Czy dokument czeka jeszcze na pieniądze — tylko wtedy odhaczanie ma sens. */
+function isPayable(invoice: InvoiceRow): boolean {
+  return (
+    invoice.remainingGrosze > 0 &&
+    invoice.displayStatus !== "DRAFT" &&
+    invoice.displayStatus !== "CANCELLED"
+  );
+}
+
+/**
+ * Odhaczenie wpłaty prosto z listy.
+ *
+ * Zapisuje całą brakującą kwotę przelewem z dzisiejszą datą — to przypadek,
+ * który przy przeglądaniu listy zdarza się najczęściej. Nietypowa wpłata
+ * (część kwoty, gotówka, inna data) zostaje na karcie dokumentu.
+ *
+ * Bez potwierdzenia: pomyłkę usuwa się jednym kliknięciem przy wpłacie
+ * na karcie dokumentu, a dodatkowy krok kosztowałby przy każdym wierszu.
+ */
+function MarkPaid({ invoiceId, remainingGrosze }: { invoiceId: string; remainingGrosze: number }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function pay() {
+    setBusy(true);
+    setError(null);
+
+    const result = await api.post(`/api/invoices/${invoiceId}/payments`, {
+      amountGrosze: formatAmount(remainingGrosze),
+      paidAt: new Date().toISOString().slice(0, 10),
+      method: "TRANSFER",
+      reference: "",
+    });
+
+    setBusy(false);
+
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={pay}
+      disabled={busy}
+      title={error ?? `Oznacz jako opłaconą — ${formatPLN(remainingGrosze)}`}
+      aria-label={`Oznacz jako opłaconą — ${formatPLN(remainingGrosze)}`}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors disabled:opacity-60 ${
+        error
+          ? "border-bad text-bad"
+          : "border-border text-muted hover:border-good hover:bg-good-soft hover:text-good"
+      }`}
+    >
+      {busy ? (
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+      ) : (
+        <Check className="h-4 w-4" aria-hidden />
+      )}
+    </button>
   );
 }
