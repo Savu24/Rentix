@@ -9,6 +9,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  type TooltipContentProps,
 } from "recharts";
 
 import { formatPLN } from "@/lib/money";
@@ -32,6 +33,53 @@ export type CashflowPoint = {
 };
 
 const zloty = (grosze: number) => grosze / 100;
+
+/**
+ * Podpowiedź z przychodem, kosztami i wynikiem miesiąca.
+ *
+ * Zysk liczymy tutaj, a nie rysujemy jako trzeci słupek: to różnica dwóch
+ * pozostałych, więc na wykresie tylko dublowałby informację, a w podpowiedzi
+ * odpowiada na pytanie, po które i tak najeżdża się myszą.
+ */
+function CashflowTooltip({ active, payload, label }: TooltipContentProps) {
+  if (!active || !payload?.length) return null;
+
+  const point = payload[0].payload as { Przychód: number; Koszty: number };
+  const profitGrosze = Math.round((point.Przychód - point.Koszty) * 100);
+
+  return (
+    <div className="rounded-control border border-border bg-surface px-3 py-2 text-[13px] shadow-sm">
+      <p className="text-muted">{label}</p>
+
+      <ul className="mt-1.5 flex flex-col gap-1">
+        {payload.map((entry) => (
+          <li key={entry.name} className="flex items-center justify-between gap-6">
+            <span className="flex items-center gap-1.5 text-muted">
+              <span
+                aria-hidden
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: entry.color }}
+              />
+              {entry.name}
+            </span>
+            <span className="tabular font-mono text-fg">
+              {typeof entry.value === "number" ? formatPLN(Math.round(entry.value * 100)) : "—"}
+            </span>
+          </li>
+        ))}
+
+        <li className="mt-0.5 flex items-center justify-between gap-6 border-t border-border pt-1.5">
+          <span className="font-medium text-fg">Zysk</span>
+          <span
+            className={`tabular font-mono font-medium ${profitGrosze < 0 ? "text-bad" : "text-good"}`}
+          >
+            {formatPLN(profitGrosze)}
+          </span>
+        </li>
+      </ul>
+    </div>
+  );
+}
 
 export function CashflowChart({ data }: { data: CashflowPoint[] }) {
   const points = data.map((row) => ({
@@ -60,22 +108,7 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
               new Intl.NumberFormat("pl-PL", { notation: "compact" }).format(value)
             }
           />
-          <Tooltip
-            // Recharts typuje wartość jako `ValueType | undefined`, bo tooltip
-            // potrafi trafić na pustą serię — stąd zawężenie zamiast `number`.
-            formatter={(value) =>
-              typeof value === "number" ? formatPLN(Math.round(value * 100)) : "—"
-            }
-            contentStyle={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 8,
-              fontSize: 13,
-              color: "var(--text)",
-            }}
-            labelStyle={{ color: "var(--text-secondary)" }}
-            cursor={{ fill: "var(--surface-alt)" }}
-          />
+          <Tooltip content={CashflowTooltip} cursor={{ fill: "var(--surface-alt)" }} />
           <Legend
             wrapperStyle={{ fontSize: 13, color: "var(--text-secondary)" }}
             iconType="circle"
