@@ -9,7 +9,7 @@ import { RegisterForm } from "./register-form";
 
 export const metadata: Metadata = {
   title: "Załóż konto",
-  description: "Załóż darmowe konto Rentix — pierwsze 20 najemców za darmo.",
+  description: "Załóż darmowe konto Rentix. Pierwsze 20 najemców za darmo.",
 };
 
 export default function RegisterPage() {
@@ -42,7 +42,7 @@ export default function RegisterPage() {
 
       <p className="text-xs leading-relaxed text-muted">
         Zakładając konto akceptujesz regulamin i politykę prywatności Rentix.
-        Bez karty kredytowej — pierwsze 20 najemców za darmo, na zawsze.
+        Bez karty kredytowej. Pierwsze 20 najemców za darmo, na zawsze.
       </p>
     </div>
   );

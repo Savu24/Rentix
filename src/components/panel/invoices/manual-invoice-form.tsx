@@ -175,7 +175,7 @@ export function ManualInvoiceForm({
         <div>
           <p className="text-sm font-semibold text-fg">Nowy dokument dla: {tenantName}</p>
           <p className="mt-0.5 text-xs text-muted">
-            Do kaucji, rozliczenia mediów, refaktury albo korekty — wszystkiego, czego nie
+            Do kaucji, rozliczenia mediów, refaktury albo korekty, czyli wszystkiego, czego nie
             obejmuje naliczanie czynszu z umowy.
           </p>
         </div>
@@ -202,14 +202,14 @@ export function ManualInvoiceForm({
               id="mi-leaseId"
               label="Umowa"
               error={errors.leaseId?.message}
-              hint="Puste = dokument jednorazowy, poza umową. Wysyłka mailem działa tak czy inaczej — adresatem jest najemca, dla którego wystawiasz dokument."
+              hint="Puste = dokument jednorazowy, poza umową. Wysyłka mailem działa tak czy inaczej. Adresatem jest najemca, dla którego wystawiasz dokument."
             >
               <Select
                 {...fieldAria("mi-leaseId", { error: errors.leaseId?.message })}
                 disabled={isSubmitting}
                 {...register("leaseId")}
               >
-                <option value="">— bez umowy —</option>
+                <option value="">Bez umowy</option>
                 {leases.map((lease) => (
                   <option key={lease.id} value={lease.id}>
                     {lease.label}
@@ -255,7 +255,7 @@ export function ManualInvoiceForm({
               id="mi-periodStart"
               label="Okres od"
               error={errors.periodStart?.message}
-              hint="Opcjonalne — gdy dokument dotyczy okresu."
+              hint="Opcjonalne, gdy dokument dotyczy okresu."
             >
               <DateInput
                 {...fieldAria("mi-periodStart", { error: errors.periodStart?.message })}

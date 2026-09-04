@@ -125,9 +125,9 @@ describe("buildRentInvoiceLines", () => {
     const lines = buildRentInvoiceLines(lease(), period, 2026, 7);
 
     expect(lines).toHaveLength(2);
-    expect(lines[0].description).toBe("Czynsz najmu — sierpień 2026");
+    expect(lines[0].description).toBe("Czynsz najmu za sierpień 2026");
     expect(lines[0].unitPriceNetGrosze).toBe(240000);
-    expect(lines[1].description).toBe("Zaliczka na media — sierpień 2026");
+    expect(lines[1].description).toBe("Zaliczka na media za sierpień 2026");
     expect(lines[1].unitPriceNetGrosze).toBe(45000);
   });
 
@@ -154,7 +154,7 @@ describe("buildRentInvoiceLines", () => {
     const period = buildBillingPeriod(l, 2026, 7)!;
     const lines = buildRentInvoiceLines(l, period, 2026, 7);
 
-    expect(lines[0].description).toBe("Czynsz najmu — sierpień 2026 (17/31 dni)");
+    expect(lines[0].description).toBe("Czynsz najmu za sierpień 2026 (17/31 dni)");
     expect(lines[0].unitPriceNetGrosze).toBe(131613);
     expect(lines[1].unitPriceNetGrosze).toBe(24677); // 450 × 17/31
   });

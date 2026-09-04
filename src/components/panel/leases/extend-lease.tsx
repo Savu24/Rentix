@@ -83,7 +83,7 @@ export function ExtendLease({
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-semibold text-fg">Przedłużenie umowy</p>
           <p className="text-xs text-muted">
-            Obecnie do {dateFormat.format(current)}. Zmienia się wyłącznie data zakończenia —
+            Obecnie do {dateFormat.format(current)}. Zmienia się wyłącznie data zakończenia.
             czynsz i pozostałe warunki zostają.
           </p>
         </div>

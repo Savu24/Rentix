@@ -30,7 +30,7 @@ const robotoMono = Roboto_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Rentix — zarządzanie najmem bez Excela",
+    default: "Rentix · zarządzanie najmem bez Excela",
     template: "%s · Rentix",
   },
   description:

@@ -175,8 +175,8 @@ export function buildRentInvoiceLines(
   const lines: InvoiceLineInput[] = [
     {
       description: prorated
-        ? `Czynsz najmu — ${label} (${period.coveredDays}/${period.totalDays} dni)`
-        : `Czynsz najmu — ${label}`,
+        ? `Czynsz najmu za ${label} (${period.coveredDays}/${period.totalDays} dni)`
+        : `Czynsz najmu za ${label}`,
       quantityMilli: 1000,
       unit: "mies.",
       unitPriceNetGrosze: prorateRent(lease.rentGrosze, period),
@@ -190,8 +190,8 @@ export function buildRentInvoiceLines(
   if (chargesUtilities && lease.utilitiesAdvanceGrosze > 0) {
     lines.push({
       description: prorated
-        ? `Zaliczka na media — ${label} (${period.coveredDays}/${period.totalDays} dni)`
-        : `Zaliczka na media — ${label}`,
+        ? `Zaliczka na media za ${label} (${period.coveredDays}/${period.totalDays} dni)`
+        : `Zaliczka na media za ${label}`,
       quantityMilli: 1000,
       unit: "mies.",
       unitPriceNetGrosze: prorateRent(lease.utilitiesAdvanceGrosze, period),

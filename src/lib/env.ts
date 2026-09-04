@@ -17,7 +17,7 @@ const serverEnvSchema = z.object({
   DIRECT_URL: z.string().optional(),
   AUTH_SECRET: z
     .string()
-    .min(32, "AUTH_SECRET musi mieć co najmniej 32 znaki — wygeneruj: npx auth secret"),
+    .min(32, "AUTH_SECRET musi mieć co najmniej 32 znaki. Wygeneruj: npx auth secret"),
   AUTH_URL: z.url().optional(),
   AUTH_TRUST_HOST: z.string().optional(),
   /**
@@ -104,19 +104,19 @@ function loadEnv(): ServerEnv {
   const smtpFields = [env.SMTP_HOST, env.SMTP_USER, env.SMTP_PASSWORD];
   if (smtpFields.some(Boolean) && !smtpFields.every(Boolean)) {
     throw new Error(
-      "Ustaw SMTP_HOST, SMTP_USER i SMTP_PASSWORD razem — niepełny komplet po cichu wyłącza wysyłkę poczty.",
+      "Ustaw SMTP_HOST, SMTP_USER i SMTP_PASSWORD razem. Niepełny komplet po cichu wyłącza wysyłkę poczty.",
     );
   }
 
   if (Boolean(env.AUTH_GOOGLE_ID) !== Boolean(env.AUTH_GOOGLE_SECRET)) {
     throw new Error(
-      "Ustaw AUTH_GOOGLE_ID i AUTH_GOOGLE_SECRET razem — samo ID bez sekretu kończy się błędem dopiero po kliknięciu „Zaloguj przez Google”.",
+      "Ustaw AUTH_GOOGLE_ID i AUTH_GOOGLE_SECRET razem. Samo ID bez sekretu kończy się błędem dopiero po kliknięciu „Zaloguj przez Google”.",
     );
   }
 
   if (Boolean(env.UPSTASH_REDIS_REST_URL) !== Boolean(env.UPSTASH_REDIS_REST_TOKEN)) {
     throw new Error(
-      "Ustaw UPSTASH_REDIS_REST_URL i UPSTASH_REDIS_REST_TOKEN razem — sam adres bez tokenu (albo odwrotnie) po cichu wyłącza limiter.",
+      "Ustaw UPSTASH_REDIS_REST_URL i UPSTASH_REDIS_REST_TOKEN razem. Sam adres bez tokenu (albo odwrotnie) po cichu wyłącza limiter.",
     );
   }
 

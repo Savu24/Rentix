@@ -34,10 +34,10 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     case "NO_RECIPIENT":
       return apiError(
         "CONFLICT",
-        "Najemca nie ma adresu e-mail — uzupełnij go w kartotece, bo nie ma dokąd wysłać dokumentu.",
+        "Najemca nie ma adresu e-mail. Uzupełnij go w kartotece, bo nie ma dokąd wysłać dokumentu.",
       );
     case "CANCELLED":
-      return apiError("CONFLICT", "Dokument jest anulowany — nie wysyłamy go najemcy.");
+      return apiError("CONFLICT", "Dokument jest anulowany. Nie wysyłamy go najemcy.");
     case "SEND_FAILED":
       return apiError("INTERNAL_ERROR", result.error);
   }

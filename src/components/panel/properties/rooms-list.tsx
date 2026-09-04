@@ -88,7 +88,7 @@ export function RoomsList({
 
       {wholePropertyTenant ? (
         <Alert tone="info">
-          Cała nieruchomość jest wynajęta —{" "}
+          Cała nieruchomość jest wynajęta:{" "}
           <Link
             href={`/panel/najemcy/${wholePropertyTenant.id}`}
             className="font-medium underline"

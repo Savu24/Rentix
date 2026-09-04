@@ -48,7 +48,7 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
       {/* Mówimy wprost, czego tu nie ma, zamiast zostawiać użytkownika
           z szukaniem pola, którego nie znajdzie. */}
       <Alert tone="info">
-        Lokalu i najemców nie zmienia się tutaj — to byłaby inna umowa, a nie poprawka.
+        Lokalu i najemców nie zmienia się tutaj. To byłaby inna umowa, a nie poprawka.
         Wypowiedzenie najmu i archiwizacja są na karcie umowy.
       </Alert>
 

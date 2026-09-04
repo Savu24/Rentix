@@ -84,7 +84,7 @@ export default async function TenantPortalPage() {
                 w rozliczeniach poniżej.
               </Alert>
             ) : (
-              <Alert tone="success">Nie masz zaległości — wszystko rozliczone.</Alert>
+              <Alert tone="success">Nie masz zaległości. Wszystko rozliczone.</Alert>
             )}
 
             {portal.leases.length === 0 ? (

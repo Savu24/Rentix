@@ -283,7 +283,7 @@ export function LeaseEditForm({
           to wiedzieć zanim zapisze, a nie dowiedzieć się z niezgodnej faktury. */}
       <Alert tone="info">
         Nowe warunki wejdą do rozliczeń naliczanych od teraz. Dokumenty już wystawione zostają
-        takie, jakie są — popraw je pojedynczo, jeśli mają się zmienić.
+        takie, jakie są. Popraw je pojedynczo, jeśli mają się zmienić.
       </Alert>
 
       <div className="flex flex-wrap gap-2.5">

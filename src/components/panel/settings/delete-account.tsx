@@ -110,7 +110,7 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
                 </>
               ) : (
                 <>
-                  Organizacja <strong>{summary.organizationName}</strong> zostanie — ma innych
+                  Organizacja <strong>{summary.organizationName}</strong> zostanie, bo ma innych
                   członków. Usuwamy wyłącznie Twoje konto i dostęp do niej.
                 </>
               )}

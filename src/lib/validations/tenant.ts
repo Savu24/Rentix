@@ -26,9 +26,9 @@ const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind
 export const TENANT_DOCUMENT_KIND_OPTIONS = ["BILL", "VAT_INVOICE", "CHARGE"] as const;
 
 export const TENANT_DOCUMENT_KIND_HINT: Partial<Record<InvoiceKind, string>> = {
-  BILL: "Rachunek, a gdy pojawi się pozycja z VAT-em — faktura. Domyślne i pasuje większości najmu mieszkaniowego.",
+  BILL: "Rachunek, a przy pozycji z VAT-em faktura. Domyślne i pasuje większości najmu mieszkaniowego.",
   VAT_INVOICE: "Zawsze faktura VAT, także przy stawce zwolnionej. Dla najemcy-firmy, który tego wymaga.",
-  CHARGE: "Samo naliczenie — informacja o kwocie do zapłaty. NIE jest dowodem księgowym i ma osobną numerację.",
+  CHARGE: "Samo naliczenie, czyli informacja o kwocie do zapłaty. NIE jest dowodem księgowym i ma osobną numerację.",
 };
 
 export const TENANT_STATUS_LABEL: Record<TenantStatus, string> = {

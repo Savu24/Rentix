@@ -65,7 +65,7 @@ export function SendInvoice({
   if (!hasLease) {
     return (
       <Alert tone="warning">
-        Dokument nie jest powiązany z umową, więc nie wiadomo, komu go wysłać — odbiorcę bierzemy
+        Dokument nie jest powiązany z umową, więc nie wiadomo, komu go wysłać. Odbiorcę bierzemy
         z umowy. Żeby wysyłać go najemcy, wystaw dokument na jego umowie.
       </Alert>
     );
@@ -74,7 +74,7 @@ export function SendInvoice({
   if (!tenantEmail) {
     return (
       <Alert tone="warning">
-        Najemca nie ma adresu e-mail, więc dokument nie ma dokąd pójść — ani teraz, ani nocnym
+        Najemca nie ma adresu e-mail, więc dokument nie ma dokąd pójść, ani teraz, ani nocnym
         przebiegiem. Uzupełnij adres w kartotece najemcy.
       </Alert>
     );

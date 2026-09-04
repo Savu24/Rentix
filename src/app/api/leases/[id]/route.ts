@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     return apiError(
       "CONFLICT",
-      "Ten lokal ma już aktywną umowę. Zakończ ją najpierw — dwie aktywne umowy na jednej jednostce rozjechałyby stan zajętości.",
+      "Ten lokal ma już aktywną umowę. Zakończ ją najpierw. Dwie aktywne umowy na jednej jednostce rozjechałyby stan zajętości.",
     );
   }
 
@@ -71,7 +71,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     return apiError(
       "CONFLICT",
-      "Umowa jest aktywna. Zakończ ją najpierw — inaczej jednostka zostałaby zajęta przez umowę, której nie widać na liście.",
+      "Umowa jest aktywna. Zakończ ją najpierw, inaczej jednostka zostałaby zajęta przez umowę, której nie widać na liście.",
     );
   }
 
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć — do umowy wystawiono ${result.invoiceCount} ${
+    `Nie można usunąć. Do umowy wystawiono ${result.invoiceCount} ${
       result.invoiceCount === 1 ? "dokument" : "dokumentów"
     }. Zostaw ją w archiwum, żeby historia rozliczeń została spójna.`,
   );

@@ -175,7 +175,7 @@ const dateFormatter = new Intl.DateTimeFormat("pl-PL", {
   year: "numeric",
 });
 
-const formatDate = (date: Date | null | undefined) => (date ? dateFormatter.format(date) : "—");
+const formatDate = (date: Date | null | undefined) => (date ? dateFormatter.format(date) : "brak");
 
 /** 4235 tysięcznych → „4,235"; całkowite ilości bez zbędnych zer. */
 function formatQuantity(quantityMilli: number): string {
@@ -428,7 +428,7 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
 
         {!accounting ? (
           <Text style={styles.disclaimer}>
-            Naliczenie ma charakter informacyjny — wskazuje kwotę i termin płatności.
+            Naliczenie ma charakter informacyjny. Wskazuje kwotę i termin płatności.
             Nie jest fakturą ani rachunkiem w rozumieniu przepisów o rachunkowości i nie
             stanowi podstawy do księgowania ani odliczenia podatku. Dokument księgowy
             wystawiamy na życzenie.

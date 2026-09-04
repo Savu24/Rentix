@@ -80,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć — do właściciela przypisano ${result.propertyCount} ${
+    `Nie można usunąć. Do właściciela przypisano ${result.propertyCount} ${
       result.propertyCount === 1 ? "nieruchomość" : "nieruchomości"
     }. Odepnij je najpierw albo zostaw właściciela w archiwum.`,
   );

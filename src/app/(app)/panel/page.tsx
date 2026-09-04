@@ -61,7 +61,7 @@ export default async function OwnerDashboardPage() {
 
       {sellerIncomplete ? (
         <Alert tone="warning">
-          Uzupełnij dane wystawcy — bez adresu rachunki i umowy wychodzą z samą nazwą.{" "}
+          Uzupełnij dane wystawcy. Bez adresu rachunki i umowy wychodzą z samą nazwą.{" "}
           <Link href="/panel/ustawienia" className="font-medium underline">
             Przejdź do ustawień
           </Link>
@@ -73,7 +73,7 @@ export default async function OwnerDashboardPage() {
         <EmptyState
           icon={Building2}
           title="Zacznij od pierwszej nieruchomości"
-          description="Dodaj mieszkanie lub dom, a potem jednostki najmu. Reszta — najemcy, umowy, faktury — podepnie się pod nie."
+          description="Dodaj mieszkanie lub dom, a potem jednostki najmu. Reszta, czyli najemcy, umowy i faktury, podepnie się pod nie."
           action={
             <Button asChild>
               <Link href="/panel/nieruchomosci/nowa">

@@ -32,7 +32,7 @@ export default async function ArchivedTenantsPage() {
         <div>
           <h1 className="r-display text-[26px] leading-tight text-fg">Archiwum najemców</h1>
           <p className="mt-1 text-sm text-muted">
-            Najemca z historią umów nie da się usunąć trwale — jego dane widnieją na
+            Najemca z historią umów nie da się usunąć trwale. Jego dane widnieją na
             wystawionych dokumentach.
           </p>
         </div>

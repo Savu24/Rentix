@@ -178,7 +178,7 @@ export function OwnerFields({
         id={id("notes")}
         label="Notatki"
         error={errors.notes?.message}
-        hint="Widoczne tylko dla Ciebie — np. warunki rozliczenia."
+        hint="Widoczne tylko dla Ciebie, np. warunki rozliczenia."
       >
         <Textarea
           {...fieldAria(id("notes"), { error: errors.notes?.message })}

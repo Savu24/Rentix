@@ -71,7 +71,7 @@ export function OwnerForm({
             <h2 className="text-[15px] font-semibold text-fg">Dane właściciela</h2>
             <p className="mt-0.5 text-sm text-muted">
               Właściciel lokalu, który obsługujesz w podnajmie. Nie jest stroną umowy
-              z najemcą — tą pozostajesz Ty.
+              z najemcą, tą pozostajesz Ty.
             </p>
           </div>
 

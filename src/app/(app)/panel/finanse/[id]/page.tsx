@@ -90,7 +90,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
           w którym za chwilę pobierzesz PDF i wyślesz go najemcy. */}
       {!isSellerComplete(invoice.organization) ? (
         <Alert tone="warning">
-          Dane wystawcy są niepełne — dokument wyjdzie bez adresu sprzedawcy.{" "}
+          Dane wystawcy są niepełne. Dokument wyjdzie bez adresu sprzedawcy.{" "}
           <Link href="/panel/ustawienia" className="font-medium underline">
             Uzupełnij w ustawieniach
           </Link>
@@ -115,7 +115,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
               <p className="text-xs text-muted">NIP: {invoice.buyerTaxId}</p>
             ) : null}
             <p className="mt-1 text-xs text-muted">
-              Dane skopiowane w chwili wystawienia — dokument pokazuje stan z tamtego dnia.
+              Dane skopiowane w chwili wystawienia. Dokument pokazuje stan z tamtego dnia.
             </p>
           </CardContent>
         </Card>
@@ -255,7 +255,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
               </p>
               <p className="text-muted">
                 {lastNotification.toEmail}
-                {lastNotification.error ? ` — ${lastNotification.error}` : ""}
+                {lastNotification.error ? `: ${lastNotification.error}` : ""}
               </p>
             </div>
           </CardContent>

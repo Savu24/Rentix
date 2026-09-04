@@ -214,7 +214,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 id="roomCount"
                 label="Liczba pokoi"
                 error={errors.roomCount?.message}
-                hint="Pokoje utworzą się od razu — w następnym kroku wpiszesz ceny."
+                hint="Pokoje utworzą się od razu. W następnym kroku wpiszesz ceny."
               >
                 <Input
                   {...fieldAria("roomCount", {
@@ -374,7 +374,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Dostęp do lokalu</h2>
           <p className="-mt-2 text-xs text-muted">
-            To, co przekazujesz najemcy przy wydaniu kluczy — i czego potem szukasz w mailach sprzed
+            To, co przekazujesz najemcy przy wydaniu kluczy i czego potem szukasz w mailach sprzed
             roku.
           </p>
 
@@ -457,7 +457,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Administracja budynku</h2>
           <p className="-mt-2 text-xs text-muted">
-            Wspólnota albo spółdzielnia — numer, pod który dzwonisz przy zalaniu i awarii pionu. To
+            Wspólnota albo spółdzielnia. Numer, pod który dzwonisz przy zalaniu i awarii pionu. To
             nie jest właściciel lokalu.
           </p>
 
@@ -605,7 +605,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               id="wifiPassword"
               label="Hasło do Wi-Fi"
               error={errors.wifiPassword?.message}
-              hint="Widzisz je tylko Ty — przepiszesz najemcy przy wydaniu kluczy."
+              hint="Widzisz je tylko Ty. Przepiszesz najemcy przy wydaniu kluczy."
             >
               <Input
                 {...fieldAria("wifiPassword", {
@@ -639,7 +639,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Przeglądy i dokumenty</h2>
           <p className="-mt-2 text-xs text-muted">
-            Terminy, po których przekroczeniu robi się problem — karta wyróżni te, które minęły.
+            Terminy, po których przekroczeniu robi się problem. Karta wyróżni te, które minęły.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -844,7 +844,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             id="notes"
             label="Notatki wewnętrzne"
             error={errors.notes?.message}
-            hint="Widoczne tylko dla Ciebie — najemca ich nie zobaczy."
+            hint="Widoczne tylko dla Ciebie. Najemca ich nie zobaczy."
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}

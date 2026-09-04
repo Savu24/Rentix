@@ -63,7 +63,7 @@ function CashflowTooltip({ active, payload, label }: TooltipContentProps) {
               {entry.name}
             </span>
             <span className="tabular font-mono text-fg">
-              {typeof entry.value === "number" ? formatPLN(Math.round(entry.value * 100)) : "—"}
+              {typeof entry.value === "number" ? formatPLN(Math.round(entry.value * 100)) : "brak"}
             </span>
           </li>
         ))}

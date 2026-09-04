@@ -62,7 +62,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć — najemca figuruje na ${result.leaseCount} ${
+    `Nie można usunąć. Najemca figuruje na ${result.leaseCount} ${
       result.leaseCount === 1 ? "umowie" : "umowach"
     }. Zarchiwizuj go zamiast usuwać.`,
   );

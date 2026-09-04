@@ -22,7 +22,7 @@ export default async function NewTenantPage() {
         </Link>
         <h1 className="r-display text-[26px] leading-tight text-fg">Nowy najemca</h1>
         <p className="text-sm text-muted">
-          Wystarczy imię i nazwisko — resztę uzupełnisz przy podpisywaniu umowy.
+          Wystarczy imię i nazwisko. Resztę uzupełnisz przy podpisywaniu umowy.
         </p>
       </div>
 

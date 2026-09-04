@@ -152,7 +152,7 @@ export function OrganizationForm({
             id="org-bankAccount"
             label="Numer rachunku dla najemców"
             error={errors.bankAccount?.message}
-            hint="26 cyfr. Trafia na rachunki jako konto do przelewu — zostaw puste, jeśli rozliczasz się inaczej."
+            hint="26 cyfr. Trafia na rachunki jako konto do przelewu. Zostaw puste, jeśli rozliczasz się inaczej."
           >
             <Input
               {...fieldAria("org-bankAccount", { error: errors.bankAccount?.message })}

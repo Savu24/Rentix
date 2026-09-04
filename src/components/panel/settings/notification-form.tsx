@@ -142,7 +142,7 @@ export function NotificationForm({
           */}
           {!contactEmail ? (
             <Alert tone="warning">
-              Nie masz adresu kontaktowego — odpowiedzi najemców nie mają dokąd trafić. Uzupełnij
+              Nie masz adresu kontaktowego. Odpowiedzi najemców nie mają dokąd trafić. Uzupełnij
               go w zakładce Organizacja.
             </Alert>
           ) : null}

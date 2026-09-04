@@ -53,7 +53,7 @@ export default async function ExpensesPage({
         <div className="flex flex-col gap-1">
           <h1 className="r-display text-[26px] leading-tight text-fg">Finanse</h1>
           <p className="text-sm text-muted">
-            Wydatki właściciela — bez nich raport pokaże przychód, ale nie zysk.
+            Wydatki właściciela. Bez nich raport pokaże przychód, ale nie zysk.
           </p>
         </div>
 

@@ -79,7 +79,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć — z nieruchomością powiązano ${result.leaseCount} ${
+    `Nie można usunąć. Z nieruchomością powiązano ${result.leaseCount} ${
       result.leaseCount === 1 ? "umowę" : "umów"
     }. Zarchiwizuj ją zamiast usuwać.`,
   );

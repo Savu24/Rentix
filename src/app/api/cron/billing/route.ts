@@ -27,7 +27,7 @@ async function run(request: NextRequest) {
   if (!env.CRON_SECRET) {
     return apiError(
       "FORBIDDEN",
-      "CRON_SECRET nie jest ustawiony — endpoint rozliczeniowy jest wyłączony.",
+      "CRON_SECRET nie jest ustawiony. Endpoint rozliczeniowy jest wyłączony.",
     );
   }
 

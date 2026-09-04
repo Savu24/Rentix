@@ -132,7 +132,7 @@ export async function DELETE(request: NextRequest) {
     case "NO_PASSWORD_SET":
       return apiError(
         "CONFLICT",
-        "To konto loguje się przez zewnętrznego dostawcę — usunięcie wymaga kontaktu z pomocą.",
+        "To konto loguje się przez zewnętrznego dostawcę. Usunięcie wymaga kontaktu z pomocą.",
       );
     case "WRONG_PASSWORD":
       return apiError("VALIDATION_ERROR", "Popraw zaznaczone pola.", {

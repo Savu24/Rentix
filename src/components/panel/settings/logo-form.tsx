@@ -86,7 +86,7 @@ export function LogoForm({ logo }: { logo: string | null }) {
         <div>
           <h2 className="text-[15px] font-semibold text-fg">Logo na dokumentach</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Pojawia się w nagłówku rachunków i faktur. Nieobowiązkowe — bez niego dokument
+            Pojawia się w nagłówku rachunków i faktur. Nieobowiązkowe. Bez niego dokument
             wygląda tak jak teraz.
           </p>
         </div>

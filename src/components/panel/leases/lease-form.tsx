@@ -210,7 +210,7 @@ export function LeaseForm({
                   onChange={(event) => onPropertyChange(event.target.value)}
                   disabled={isSubmitting}
                 >
-                  <option value="">— wybierz nieruchomość —</option>
+                  <option value="">Wybierz nieruchomość</option>
                   {properties.map((property) => (
                     <option key={property.id} value={property.id}>
                       {property.label}
@@ -240,7 +240,7 @@ export function LeaseForm({
                     onChange={(event) => onRoomChange(event.target.value)}
                     disabled={isSubmitting}
                   >
-                    <option value="">— cała nieruchomość —</option>
+                    <option value="">Cała nieruchomość</option>
                     {availableRooms.map((room) => (
                       <option key={room.id} value={room.id}>
                         {room.name}
@@ -260,7 +260,7 @@ export function LeaseForm({
             id="tenantIds"
             label="Najemcy"
             error={errors.tenantIds?.message}
-            hint="Pierwszy z listy jest głównym najemcą — to on dostaje faktury."
+            hint="Pierwszy z listy jest głównym najemcą. To on dostaje faktury."
           >
             <Controller
               control={control}
@@ -301,8 +301,8 @@ export function LeaseForm({
                   >
                     <option value="">
                       {availableTenants.length === 0
-                        ? "— wszyscy najemcy dodani —"
-                        : "— dodaj najemcę —"}
+                        ? "Wszyscy najemcy dodani"
+                        : "Dodaj najemcę"}
                     </option>
                     {availableTenants.map((tenant) => (
                       <option key={tenant.id} value={tenant.id}>
@@ -327,7 +327,7 @@ export function LeaseForm({
                   .join(", ");
                 return (
                   <p key={tenant.id} className="text-muted">
-                    {tenant.firstName} {tenant.lastName} —{" "}
+                    {tenant.firstName} {tenant.lastName}:{" "}
                     {address || (
                       <span className="text-warn">
                         brak adresu, uzupełnij w karcie najemcy
@@ -489,7 +489,7 @@ export function LeaseForm({
               id="billingStartsAt"
               label="Nie naliczaj przed"
               error={errors.billingStartsAt?.message}
-              hint="Dla umów przeniesionych z innego programu — wpisz pierwszy dzień miesiąca, od którego rozliczasz najemcę w Rentiksie. Puste = od początku umowy."
+              hint="Dla umów przeniesionych z innego programu. Wpisz pierwszy dzień miesiąca, od którego rozliczasz najemcę w Rentiksie. Puste = od początku umowy."
             >
               <DateInput
                 {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}

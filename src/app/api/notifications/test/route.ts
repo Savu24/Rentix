@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   if (!mailTransport()) {
     return apiError(
       "VALIDATION_ERROR",
-      "Poczta nie jest jeszcze skonfigurowana — brakuje klucza Resend albo danych SMTP.",
+      "Poczta nie jest jeszcze skonfigurowana. Brakuje klucza Resend albo danych SMTP.",
     );
   }
 

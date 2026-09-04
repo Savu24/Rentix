@@ -6,7 +6,7 @@ import { NotificationToggles } from "@/components/panel/settings/notification-to
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getNotificationPanelData } from "@/lib/notifications/service";
 
-export const metadata: Metadata = { title: "Powiadomienia — ustawienia" };
+export const metadata: Metadata = { title: "Ustawienia powiadomień" };
 
 export default async function SettingsNotificationsPage() {
   const session = await requireOwnerSession("/panel/ustawienia/powiadomienia");

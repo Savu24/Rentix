@@ -10,7 +10,7 @@ import { ROUTES } from "@/lib/auth/routes";
 import { formatPLN } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Rentix — zarządzanie najmem bez Excela",
+  title: "Rentix · zarządzanie najmem bez Excela",
   description:
     "Umowy, rachunki, płatności i raporty finansowe w jednym miejscu. Bez korporacyjnego interfejsu i bez cen rosnących z każdym mieszkaniem.",
 };
@@ -32,7 +32,7 @@ const FEATURES = [
     icon: FileText,
     title: "Umowy najmu",
     description:
-      "Kreator umowy z danymi z kartoteki i gotowym PDF-em do podpisu — z polskimi znakami i kwotą słownie.",
+      "Kreator umowy z danymi z kartoteki i gotowym PDF-em do podpisu, z polskimi znakami i kwotą słownie.",
     background: "bg-mint",
   },
   {
@@ -46,7 +46,7 @@ const FEATURES = [
     icon: Wrench,
     title: "Koszty najmu",
     description:
-      "Rata kredytu, wspólnota, remonty i ubezpieczenie w jednym rejestrze — z podziałem na nieruchomości.",
+      "Rata kredytu, wspólnota, remonty i ubezpieczenie w jednym rejestrze, z podziałem na nieruchomości.",
     background: "bg-clay",
   },
   {
@@ -96,7 +96,7 @@ export default function HomePage() {
           </h1>
 
           <p className="mx-auto mt-5 max-w-[520px] text-[17.5px] leading-[1.55] text-muted">
-            Umowy, rachunki, płatności i raporty finansowe w jednym, prostym miejscu — bez
+            Umowy, rachunki, płatności i raporty finansowe w jednym, prostym miejscu. Bez
             korporacyjnego interfejsu i bez cen rosnących z każdym mieszkaniem.
           </p>
 
@@ -163,7 +163,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl">
             <h2 className="r-display text-center text-[32px] text-fg">Wszystko w jednym miejscu</h2>
             <p className="mx-auto mt-2 max-w-[560px] text-center text-[15.5px] text-muted">
-              Cztery filary codziennej pracy właściciela — bez przełączania się między
+              Cztery filary codziennej pracy właściciela. Bez przełączania się między
               narzędziami.
             </p>
 

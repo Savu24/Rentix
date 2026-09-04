@@ -232,7 +232,7 @@ export function TenantForm({
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Dokumenty tożsamości</h2>
           <p className="-mt-2 text-xs text-muted">
-            Wszystkie pola opcjonalne — wpisz to, co najemca okazał.
+            Wszystkie pola opcjonalne. Wpisz to, co najemca okazał.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -383,7 +383,7 @@ export function TenantForm({
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Adres zameldowania</h2>
           <p className="-mt-2 text-xs text-muted">
-            Adres z dowodu — ten, pod który najemca wróci po zakończeniu najmu. Wchodzi do umowy
+            Adres z dowodu: ten, pod który najemca wróci po zakończeniu najmu. Wchodzi do umowy
             najmu okazjonalnego i nie musi być tym samym, co adres do faktury.
           </p>
 
@@ -457,7 +457,7 @@ export function TenantForm({
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Płatności</h2>
           <p className="-mt-2 text-xs text-muted">
-            Wypełnij tylko wtedy, gdy za czynsz odpowiada ktoś inny niż najemca — rodzic albo
+            Wypełnij tylko wtedy, gdy za czynsz odpowiada ktoś inny niż najemca, np. rodzic albo
             księgowość jego firmy.
           </p>
 
@@ -557,7 +557,7 @@ export function TenantForm({
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Ubezpieczenie najemcy</h2>
           <p className="-mt-2 text-xs text-muted">
-            Polisa OC, do której sięgasz przy szkodzie — zalaniu sąsiada albo zniszczeniu sprzętu.
+            Polisa OC, do której sięgasz przy szkodzie, np. zalaniu sąsiada albo zniszczeniu sprzętu.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-3">

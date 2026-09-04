@@ -43,7 +43,7 @@ export default async function ReportsPage({
         <div className="flex flex-col gap-1">
           <h1 className="r-display text-[26px] leading-tight text-fg">Raporty</h1>
           <p className="text-sm text-muted">
-            Rozliczenie kasowe — liczy się dzień, w którym pieniądze wpłynęły albo wyszły.
+            Rozliczenie kasowe. Liczy się dzień, w którym pieniądze wpłynęły albo wyszły.
           </p>
         </div>
 
@@ -207,7 +207,7 @@ export default async function ReportsPage({
 
       <p className="text-xs text-muted">
         Zestawienie liczy przychód otrzymany, więc nadaje się jako podstawa do rozliczenia najmu
-        ryczałtem — ale nie jest poradą podatkową. Przed zeznaniem potwierdź kwoty z księgowym.
+        ryczałtem, ale nie jest poradą podatkową. Przed zeznaniem potwierdź kwoty z księgowym.
       </p>
     </div>
   );

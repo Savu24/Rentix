@@ -27,7 +27,7 @@ export default async function ArchivedOwnersPage() {
         <div>
           <h1 className="r-display text-[26px] leading-tight text-fg">Archiwum właścicieli</h1>
           <p className="mt-1 text-sm text-muted">
-            Właściciel z przypisanymi nieruchomościami nie da się usunąć trwale — odepnij je
+            Właściciel z przypisanymi nieruchomościami nie da się usunąć trwale. Odepnij je
             najpierw.
           </p>
         </div>

@@ -100,7 +100,7 @@ export function OwnerPicker({
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled || adding}
         >
-          <option value="">— nieruchomość własna —</option>
+          <option value="">Nieruchomość własna</option>
           {options.map((owner) => (
             <option key={owner.id} value={owner.id}>
               {owner.name}

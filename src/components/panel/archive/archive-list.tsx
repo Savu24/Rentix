@@ -81,7 +81,7 @@ export function ArchiveList({
           : await api.delete(`${endpoint}/${item.id}?force=true`);
 
       if (result.ok) done += 1;
-      else failures.push(`${item.title} — ${result.message}`);
+      else failures.push(`${item.title}: ${result.message}`);
     }
 
     setBusy(null);
@@ -104,7 +104,7 @@ export function ArchiveList({
     return (
       <Card>
         <CardContent className="p-4 text-sm text-muted">
-          Archiwum jest puste. Trafiają tu pozycje, które zarchiwizujesz — nic nie znika
+          Archiwum jest puste. Trafiają tu pozycje, które zarchiwizujesz. Nic nie znika
           bezpowrotnie, dopóki sam tego nie zdecydujesz.
         </CardContent>
       </Card>
@@ -179,7 +179,7 @@ export function ArchiveList({
 
       {confirmingDelete ? (
         <Alert tone="warning">
-          Tego się nie cofnie — nie ma kosza ani kopii. Pozycje powiązane z umowami albo
+          Tego się nie cofnie. Nie ma kosza ani kopii. Pozycje powiązane z umowami albo
           fakturami zostaną pominięte, bo ich usunięcie zerwałoby historię rozliczeń.
         </Alert>
       ) : null}

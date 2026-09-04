@@ -125,7 +125,7 @@ export function GenerateInvoices({
             {result.skipped.length > 0 ? (
               <span className="mt-1 block text-muted">
                 Pominięto {result.skipped.length}{" "}
-                {plural(result.skipped.length, ["umowę", "umowy", "umów"])} —{" "}
+                {plural(result.skipped.length, ["umowę", "umowy", "umów"])}:{" "}
                 {[...new Set(result.skipped.map((entry) => SKIP_REASON_LABEL[entry.reason] ?? entry.reason))].join(
                   "; ",
                 )}

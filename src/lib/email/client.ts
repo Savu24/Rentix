@@ -151,6 +151,6 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
   // nieudane i pójdzie przy następnym przebiegu, gdy poczta zostanie podpięta.
   return {
     ok: false,
-    error: "Poczta nie jest skonfigurowana — ustaw RESEND_API_KEY albo dane SMTP.",
+    error: "Poczta nie jest skonfigurowana. Ustaw RESEND_API_KEY albo dane SMTP.",
   };
 }

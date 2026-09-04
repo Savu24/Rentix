@@ -211,7 +211,7 @@ export function ExpenseForm({
             id={fieldId("description")}
             label="Opis"
             error={errors.description?.message}
-            hint="Co to był za wydatek — trafi na zestawienie."
+            hint="Co to był za wydatek. Trafi na zestawienie."
           >
             <Input
               {...fieldAria(fieldId("description"), { error: errors.description?.message })}
@@ -237,7 +237,7 @@ export function ExpenseForm({
                   disabled={isSubmitting}
                   {...register("propertyId")}
                 >
-                  <option value="">— koszt ogólny —</option>
+                  <option value="">Koszt ogólny</option>
                   {properties.map((property) => (
                     <option key={property.id} value={property.id}>
                       {property.name}

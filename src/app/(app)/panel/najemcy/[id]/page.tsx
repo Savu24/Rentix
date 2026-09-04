@@ -169,7 +169,7 @@ export default async function TenantDetailPage({ params }: Params) {
               id={tenant.id}
               archived={tenant.archivedAt !== null}
               label="najemcę"
-              hint="Zniknie z listy najemców. Jego umowy i wystawione dokumenty zostaną nietknięte — widnieje na nich jako nabywca."
+              hint="Zniknie z listy najemców. Jego umowy i wystawione dokumenty zostaną nietknięte. Widnieje na nich jako nabywca."
             />
 
             {/* Przypisanie idzie przez kreator umowy z wypełnionym najemcą —

@@ -222,7 +222,7 @@ export function TemplateEditor({
             <div className="rounded-card border border-border bg-surface-alt p-3">
               <p className="text-xs font-medium text-fg">Zmienne do wstawienia</p>
               <p className="mt-0.5 text-xs text-muted">
-                Wpisz nazwę w podwójnych klamrach — podstawi się dana z dokumentu.
+                Wpisz nazwę w podwójnych klamrach. Podstawi się dana z dokumentu.
               </p>
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {TEMPLATE_VARIABLES.map((variable) => (
@@ -271,7 +271,7 @@ export function TemplateEditor({
             */}
             {isDirty ? (
               <p className="text-xs text-muted">
-                Test wyśle ostatnio zapisaną wersję — zapisz najpierw, żeby sprawdzić zmiany.
+                Test wyśle ostatnio zapisaną wersję. Zapisz najpierw, żeby sprawdzić zmiany.
               </p>
             ) : null}
 

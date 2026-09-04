@@ -197,7 +197,7 @@ export const notificationSettingsSchema = z.object({
   overdueRepeatDays: z.coerce
     .number()
     .int("Podaj pełne dni")
-    .min(2, "Codzienne wezwania trafiają do spamu — ustaw co najmniej 2 dni")
+    .min(2, "Codzienne wezwania trafiają do spamu, ustaw co najmniej 2 dni")
     .max(60, "Rzadziej niż co 60 dni wezwanie przestaje być wezwaniem"),
 });
 

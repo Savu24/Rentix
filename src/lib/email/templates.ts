@@ -196,7 +196,7 @@ export type Defaults = {
  */
 export const DEFAULT_FIELDS = {
   INVOICE_ISSUED: (data: InvoiceEmailData): Defaults => ({
-    subject: `${data.invoiceNumber} — ${formatPLN(data.amountGrosze)} do ${dateFormat.format(data.dueDate)}`,
+    subject: `${data.invoiceNumber}: ${formatPLN(data.amountGrosze)} do ${dateFormat.format(data.dueDate)}`,
     heading: "Nowy dokument",
     intro: `Dzień dobry, ${data.tenantFirstName}. Wystawiliśmy dokument rozliczeniowy${
       data.periodLabel ? ` za ${data.periodLabel}` : ""
@@ -205,20 +205,20 @@ export const DEFAULT_FIELDS = {
   }),
 
   PAYMENT_REMINDER: (data: InvoiceEmailData): Defaults => ({
-    subject: `Przypomnienie: ${data.invoiceNumber} — termin ${dateFormat.format(data.dueDate)}`,
+    subject: `Przypomnienie: ${data.invoiceNumber}, termin ${dateFormat.format(data.dueDate)}`,
     heading: "Zbliża się termin",
     intro: `Dzień dobry, ${data.tenantFirstName}. Przypominamy o zbliżającym się terminie płatności.`,
     outro: "Jeśli przelew jest już w drodze, prosimy zignorować tę wiadomość.",
   }),
 
   PAYMENT_OVERDUE: (data: InvoiceEmailData & { daysOverdue: number }): Defaults => ({
-    subject: `Zaległość: ${data.invoiceNumber} — ${formatPLN(data.remainingGrosze)}`,
+    subject: `Zaległość: ${data.invoiceNumber}, ${formatPLN(data.remainingGrosze)}`,
     heading: "Płatność po terminie",
     intro: `Dzień dobry, ${data.tenantFirstName}. Termin płatności minął ${data.daysOverdue} ${
       data.daysOverdue === 1 ? "dzień" : "dni"
     } temu, a wpłata nie została jeszcze odnotowana.`,
     outro:
-      "Jeśli płatność została wykonana w ciągu ostatnich dni, prosimy o kontakt — sprawdzimy, czy wpłata do nas dotarła.",
+      "Jeśli płatność została wykonana w ciągu ostatnich dni, prosimy o kontakt. Sprawdzimy, czy wpłata do nas dotarła.",
   }),
 };
 

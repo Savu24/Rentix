@@ -43,7 +43,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć — pokój ma ${result.leaseCount} ${
+    `Nie można usunąć. Pokój ma ${result.leaseCount} ${
       result.leaseCount === 1 ? "umowę" : "umów"
     }. Zakończ ją najpierw.`,
   );

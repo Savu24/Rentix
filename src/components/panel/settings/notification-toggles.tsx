@@ -60,7 +60,7 @@ export function NotificationToggles({
           <h2 className="text-[15px] font-semibold text-fg">Co wychodzi automatycznie</h2>
           <p className="mt-0.5 text-sm text-muted">
             Wyłączone powiadomienie nie pójdzie nocnym przebiegiem. Ręcznej wysyłki dokumentu
-            z listy rachunków nie blokuje — to osobne, świadome kliknięcie.
+            z listy rachunków nie blokuje. To osobne, świadome kliknięcie.
           </p>
         </div>
 

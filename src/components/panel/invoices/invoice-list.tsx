@@ -252,8 +252,8 @@ function MarkPaid({ invoiceId, remainingGrosze }: { invoiceId: string; remaining
       type="button"
       onClick={pay}
       disabled={busy}
-      title={error ?? `Oznacz jako opłaconą — ${formatPLN(remainingGrosze)}`}
-      aria-label={`Oznacz jako opłaconą — ${formatPLN(remainingGrosze)}`}
+      title={error ?? `Oznacz jako opłaconą: ${formatPLN(remainingGrosze)}`}
+      aria-label={`Oznacz jako opłaconą: ${formatPLN(remainingGrosze)}`}
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors disabled:opacity-60 ${
         error
           ? "border-bad text-bad"

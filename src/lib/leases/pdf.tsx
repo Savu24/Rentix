@@ -120,7 +120,7 @@ const dateFormatter = new Intl.DateTimeFormat("pl-PL", {
 });
 
 const formatDate = (date: Date | null | undefined) =>
-  date ? dateFormatter.format(date) : "—";
+  date ? dateFormatter.format(date) : "brak";
 
 export type LeasePdfData = {
   number: string | null;
@@ -393,7 +393,7 @@ export function LeaseAgreementDocument({ data }: { data: LeasePdfData }) {
 
         <Text style={styles.disclaimer}>
           Dokument wygenerowany automatycznie w systemie Rentix na podstawie danych umowy.
-          Stanowi wzór do uzupełnienia i podpisania przez strony — nie jest poradą prawną.
+          Stanowi wzór do uzupełnienia i podpisania przez strony. Nie jest poradą prawną.
           Przed podpisaniem zweryfikuj treść pod kątem swojej sytuacji, w razie potrzeby
           z prawnikiem.
         </Text>

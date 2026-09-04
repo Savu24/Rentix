@@ -117,7 +117,7 @@ export function RecordPayment({
         <FormField
           id="payment-reference"
           label="Tytuł przelewu"
-          hint="Opcjonalny — ułatwia uzgodnienie z wyciągiem bankowym."
+          hint="Opcjonalny. Ułatwia uzgodnienie z wyciągiem bankowym."
         >
           <Input
             id="payment-reference"

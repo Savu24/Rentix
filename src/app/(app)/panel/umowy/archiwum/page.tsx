@@ -30,7 +30,7 @@ export default async function ArchivedLeasesPage() {
         <div>
           <h1 className="r-display text-[26px] leading-tight text-fg">Archiwum umów</h1>
           <p className="mt-1 text-sm text-muted">
-            Umowy z wystawionymi dokumentami nie da się usunąć trwale — faktury i wpłaty
+            Umowy z wystawionymi dokumentami nie da się usunąć trwale. Faktury i wpłaty
             zostają, bo to historia rozliczeń.
           </p>
         </div>
@@ -42,7 +42,7 @@ export default async function ArchivedLeasesPage() {
         items={archived.map((lease) => ({
           id: lease.id,
           title: `${lease.property.name}${lease.room ? ` · ${lease.room.name}` : ""}${
-            lease.number ? ` — nr ${lease.number}` : ""
+            lease.number ? `, nr ${lease.number}` : ""
           }`,
           subtitle: `${LEASE_STATUS_LABEL[lease.status]} · od ${dateFormat.format(
             lease.startDate,
