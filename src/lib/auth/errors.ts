@@ -30,6 +30,18 @@ export function loginErrorMessage(code: string | undefined | null): string {
       return "Zbyt wiele prób logowania. Odczekaj 15 minut i spróbuj ponownie.";
     case AUTH_ERROR_CODES.invalidCredentials:
       return "Nieprawidłowy e-mail lub hasło.";
+    /*
+      Kody z przepływu OAuth. NextAuth przekierowuje na stronę wskazaną
+      w `pages.error` (czyli tutaj) z parametrem `?error=`, więc trafiają
+      do tej samej funkcji co błędy formularza.
+    */
+    case "OAuthAccountNotLinked":
+      return "Ten adres jest już przypisany do konta z hasłem. Zaloguj się hasłem, a Google podepniesz później.";
+    case "OAuthCallbackError":
+    case "OAuthSignInError":
+      return "Logowanie przez Google nie doszło do skutku. Spróbuj ponownie albo użyj hasła.";
+    case "AccessDenied":
+      return "Nie udzieliłeś Google zgody na przekazanie danych, więc logowanie zostało przerwane.";
     default:
       return "Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.";
   }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AuthDivider, GoogleButton } from "@/components/auth/google-button";
+import { googleEnabled } from "@/lib/auth/google";
 import { ROUTES } from "@/lib/auth/routes";
 
 import { LoginForm } from "./login-form";
@@ -41,6 +43,13 @@ export default async function LoginPage({
           .
         </p>
       </div>
+
+      {googleEnabled ? (
+        <>
+          <GoogleButton returnTo={returnTo} />
+          <AuthDivider />
+        </>
+      ) : null}
 
       <LoginForm returnTo={returnTo} initialErrorCode={params.error} />
     </div>

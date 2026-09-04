@@ -27,21 +27,22 @@ a kod piszemy w tym czasie.
 
 ### 1.1 Kup domenę
 
-`.env.example` zakłada `rentix.com.pl`. Rejestratory z obsługą `.com.pl`: OVH,
-nazwa.pl, home.pl — rząd wielkości 50–150 zł za pierwszy rok. Jedyne, co
-naprawdę jest potrzebne, to **dostęp do edycji rekordów DNS**; jeśli rejestrator
-go utrudnia, przełącz domenę na Cloudflare DNS (darmowe) i edytuj tam.
+`.env.example` zakłada `rentixon.com`. Rejestratory `.com`: Cloudflare
+Registrar (po kosztach, ~40 zł/rok), Porkbun, OVH — rząd wielkości 40–120 zł
+za pierwszy rok. Jedyne, co naprawdę jest potrzebne, to **dostęp do edycji
+rekordów DNS**; jeśli rejestrator go utrudnia, przełącz domenę na Cloudflare
+DNS (darmowe) i edytuj tam.
 
 ### 1.2 Zdecyduj: domena główna czy subdomena wysyłkowa
 
-Zalecenie: wysyłaj z **subdomeny**, np. `powiadomienia.rentix.com.pl`, a nie
-z `rentix.com.pl`. Powód: reputacja nadawcy liczy się per domena. Gdy kiedyś
+Zalecenie: wysyłaj z **subdomeny**, np. `powiadomienia.rentixon.com`, a nie
+z `rentixon.com`. Powód: reputacja nadawcy liczy się per domena. Gdy kiedyś
 z głównej domeny pójdzie newsletter albo poczta firmowa i coś oberwie za spam,
 przypomnienia o czynszu nie idą na dno razem z nią. Odwrotnie też — kłopot
 z wysyłką transakcyjną nie zabija firmowej skrzynki.
 
-Wtedy `EMAIL_FROM="Rentix <powiadomienia@rentix.com.pl>"` zostaje bez zmian,
-a w Resendzie dodajesz domenę `powiadomienia.rentix.com.pl`.
+Wtedy `EMAIL_FROM="Rentix <powiadomienia@rentixon.com>"` zostaje bez zmian,
+a w Resendzie dodajesz domenę `powiadomienia.rentixon.com`.
 
 ### 1.3 Załóż konto w Resend i dodaj domenę
 
@@ -56,17 +57,17 @@ a w Resendzie dodajesz domenę `powiadomienia.rentix.com.pl`.
    - `TXT` `resend._domainkey` — klucz publiczny DKIM, którym podpisywana jest każda wiadomość.
 4. Wklej u rejestratora. Uwaga na pułapkę: część paneli sama dokleja nazwę
    domeny do pola „host". Jeśli Resend każe utworzyć `resend._domainkey`,
-   a panel pokazuje potem `resend._domainkey.powiadomienia.rentix.com.pl`, jest
+   a panel pokazuje potem `resend._domainkey.powiadomienia.rentixon.com`, jest
    dobrze; jeśli wpiszesz pełną nazwę ręcznie, wyjdzie ona podwójnie
    i weryfikacja padnie.
 5. Kliknij Verify. Zwykle minuty, czasem do 48 h.
 
 ### 1.4 Dodaj DMARC
 
-Osobny rekord `TXT` na `_dmarc.rentix.com.pl`. Zacznij łagodnie:
+Osobny rekord `TXT` na `_dmarc.rentixon.com`. Zacznij łagodnie:
 
 ```
-v=DMARC1; p=none; rua=mailto:dmarc@rentix.com.pl
+v=DMARC1; p=none; rua=mailto:dmarc@rentixon.com
 ```
 
 `p=none` niczego nie odrzuca, tylko zbiera raporty. Gmail i Outlook przy
@@ -83,7 +84,7 @@ Na Render/Vercel ustaw:
 
 ```
 RESEND_API_KEY=re_...
-EMAIL_FROM=Rentix <powiadomienia@rentix.com.pl>
+EMAIL_FROM=Rentix <powiadomienia@rentixon.com>
 CRON_SECRET=<długi losowy ciąg>
 APP_URL=https://<adres aplikacji>
 ```

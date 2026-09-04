@@ -41,6 +41,60 @@ async function uniqueOrganizationSlug(name: string): Promise<string> {
 }
 
 /**
+ * Nazwa organizacji dla konta założonego poza formularzem rejestracji.
+ *
+ * Formularz pyta o nazwę firmy wprost, Google nie ma czego przekazać — bierzemy
+ * imię z profilu, a właściciel zmienia je w ustawieniach. Pusta nazwa nie
+ * wchodzi w grę: trafia na faktury i do podpisu powiadomień.
+ */
+function fallbackOrganizationName(user: {
+  name: string | null;
+  email: string | null;
+}): string {
+  return user.name?.trim() || user.email?.split("@")[0] || "Moje konto";
+}
+
+/**
+ * Dokłada organizację kontu, które powstało przez OAuth.
+ *
+ * Adapter Prismy zapisuje przy logowaniu Google sam wiersz `users` — bez
+ * członkostwa panel właściciela pada na `requireOwnerSession`. Wołane z eventu
+ * `createUser`, czyli raz na konto, ale i tak idempotentne: konto z członkostwem
+ * zostaje bez zmian, bo event potrafi się powtórzyć przy ponowionym żądaniu.
+ *
+ * Najemca organizacji nie dostaje — jego konto zakłada wynajmujący i to ono
+ * wiąże go z kartoteką, a nie z własną firmą.
+ */
+export async function ensureOwnerOrganization(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      memberships: { select: { id: true }, take: 1 },
+    },
+  });
+
+  if (!user || user.role === "TENANT" || user.memberships.length > 0) return;
+
+  const name = fallbackOrganizationName(user);
+  const slug = await uniqueOrganizationSlug(name);
+
+  await prisma.$transaction(async (tx) => {
+    const organization = await tx.organization.create({
+      data: { name, slug },
+      select: { id: true },
+    });
+
+    await tx.membership.create({
+      data: { userId: user.id, organizationId: organization.id, role: "OWNER" },
+    });
+  });
+}
+
+/**
  * Zakłada konto właściciela: organizacja + użytkownik + członkostwo.
  *
  * Wszystko w jednej transakcji — konto bez organizacji byłoby nie do użycia

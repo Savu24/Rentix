@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AuthDivider, GoogleButton } from "@/components/auth/google-button";
+import { googleEnabled } from "@/lib/auth/google";
 import { ROUTES } from "@/lib/auth/routes";
 
 import { RegisterForm } from "./register-form";
@@ -28,6 +30,13 @@ export default function RegisterPage() {
           .
         </p>
       </div>
+
+      {googleEnabled ? (
+        <>
+          <GoogleButton label="Załóż konto przez Google" />
+          <AuthDivider />
+        </>
+      ) : null}
 
       <RegisterForm />
 

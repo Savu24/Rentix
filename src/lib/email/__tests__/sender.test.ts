@@ -2,21 +2,21 @@ import { describe, expect, it } from "vitest";
 
 import { formatFrom, senderAddress } from "../sender";
 
-const PLATFORM = "Rentix <powiadomienia@rentix.com.pl>";
+const PLATFORM = "Rentix <powiadomienia@rentixon.com>";
 
 describe("senderAddress", () => {
   it("wyłuskuje adres z nagłówka z nazwą", () => {
-    expect(senderAddress(PLATFORM)).toBe("powiadomienia@rentix.com.pl");
+    expect(senderAddress(PLATFORM)).toBe("powiadomienia@rentixon.com");
   });
 
   it("zwraca adres bez nazwy bez zmian", () => {
-    expect(senderAddress("powiadomienia@rentix.com.pl")).toBe("powiadomienia@rentix.com.pl");
+    expect(senderAddress("powiadomienia@rentixon.com")).toBe("powiadomienia@rentixon.com");
   });
 });
 
 describe("formatFrom", () => {
   it("podstawia nazwę wynajmującego przed adres platformy", () => {
-    expect(formatFrom(PLATFORM, "Miret")).toBe('"Miret" <powiadomienia@rentix.com.pl>');
+    expect(formatFrom(PLATFORM, "Miret")).toBe('"Miret" <powiadomienia@rentixon.com>');
   });
 
   it("zostawia adres platformy nietknięty przy każdej organizacji", () => {
@@ -24,7 +24,7 @@ describe("formatFrom", () => {
     const second = formatFrom(PLATFORM, "Kowalski Nieruchomości");
 
     expect(senderAddress(first)).toBe(senderAddress(second));
-    expect(second).toBe('"Kowalski Nieruchomości" <powiadomienia@rentix.com.pl>');
+    expect(second).toBe('"Kowalski Nieruchomości" <powiadomienia@rentixon.com>');
   });
 
   /*
@@ -33,13 +33,13 @@ describe("formatFrom", () => {
   */
   it("cytuje nazwę z przecinkiem, żeby nie rozpadła się na dwa adresy", () => {
     expect(formatFrom(PLATFORM, "Miret, sp. z o.o.")).toBe(
-      '"Miret, sp. z o.o." <powiadomienia@rentix.com.pl>',
+      '"Miret, sp. z o.o." <powiadomienia@rentixon.com>',
     );
   });
 
   it("poprzedza ukośnikiem cudzysłów wewnątrz nazwy", () => {
     expect(formatFrom(PLATFORM, 'Firma "Dom"')).toBe(
-      '"Firma \\"Dom\\"" <powiadomienia@rentix.com.pl>',
+      '"Firma \\"Dom\\"" <powiadomienia@rentixon.com>',
     );
   });
 

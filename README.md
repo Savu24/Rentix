@@ -20,7 +20,7 @@ kosztują nic, a odwrócenie tej decyzji nie wymagałoby wtedy migracji.
 | ------------ | ---------------------------------------------------- |
 | Framework    | Next.js 15 (App Router) + React 19 + TypeScript       |
 | Baza         | PostgreSQL + Prisma 7 (driver adapter `@prisma/adapter-pg`) |
-| Auth         | Auth.js (NextAuth v5) — Credentials + JWT, bcrypt     |
+| Auth         | Auth.js (NextAuth v5) — Credentials + Google OAuth, JWT, bcrypt |
 | UI           | Tailwind CSS v4 + komponenty w stylu shadcn/ui        |
 | Walidacja    | Zod 4 (ten sam schemat na kliencie i w API)           |
 | Formularze   | React Hook Form                                       |
@@ -115,6 +115,11 @@ skonsumuje aplikacja mobilna w React Native, bez przepisywania backendu.
   (`src/lib/auth/session.ts`), nie w UI. Middleware odpowiada wyłącznie za
   nawigację, nie za dostęp do danych.
 - Ochrona przed open redirect: `?powrot=` przyjmuje tylko ścieżki względne.
+- Logowanie Google jest opcjonalne (`AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET`);
+  bez kompletu przycisk się nie pokazuje. Konto Google łączy się z istniejącym
+  kontem o tym samym adresie (`allowDangerousEmailAccountLinking`) — Google
+  weryfikuje adres, ale dopóki rejestracja hasłem nie potwierdza go mailem,
+  zostaje wąska furtka dla konta założonego na cudzy Gmail.
 
 ### Separacja danych
 
@@ -357,6 +362,11 @@ i limiter w pamięci — usługa to jeden długo żyjący proces. Uwaga: darmowy
 usypia serwis po 15 minutach i **nie obejmuje cron jobs**.
 
 Wymagane zmienne: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_TRUST_HOST=true`.
+
+Logowanie Google (opcjonalne): `AUTH_GOOGLE_ID` i `AUTH_GOOGLE_SECRET`
+z Google Cloud → Credentials → OAuth client ID. W kliencie OAuth trzeba wpisać
+adres powrotny `https://<domena>/api/auth/callback/google` — osobno dla każdego
+środowiska, bo Google porównuje go znak w znak.
 
 Dla finansów dochodzą: `CRON_SECRET` (bez niego `/api/cron/billing` jest
 wyłączony), `RESEND_API_KEY` i `APP_URL` (linki w e-mailach do najemców).

@@ -23,13 +23,19 @@ services:
         sync: false # publiczny adres serwisu, np. https://rentix.onrender.com
       - key: AUTH_TRUST_HOST
         value: "true" # Render stoi za proxy — NextAuth ma ufać X-Forwarded-*
+      # Logowanie Google. Bez kompletu obu wartości przycisk się nie pokazuje,
+      # a logowanie hasłem działa dalej — dlatego nie są wymagane do startu.
+      - key: AUTH_GOOGLE_ID
+        sync: false
+      - key: AUTH_GOOGLE_SECRET
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       # Adres musi stać na domenie zweryfikowanej w Resendzie — tylko ona ma
       # rekordy SPF i DKIM. Adres z innej domeny nie odbije się błędem, tylko
       # po cichu wyląduje w spamie, co jest znacznie trudniejsze do zauważenia.
       - key: EMAIL_FROM
-        value: "Rentix <powiadomienia@rentix.com.pl>"
+        value: "Rentix <powiadomienia@rentixon.com>"
       - key: APP_URL
         sync: false # ten sam adres co AUTH_URL — linki w e-mailach do najemców
       - key: CRON_SECRET

@@ -20,6 +20,16 @@ const serverEnvSchema = z.object({
     .min(32, "AUTH_SECRET musi mieć co najmniej 32 znaki — wygeneruj: npx auth secret"),
   AUTH_URL: z.url().optional(),
   AUTH_TRUST_HOST: z.string().optional(),
+  /**
+   * Logowanie przez Google (OAuth 2.0), dane z Google Cloud → Credentials.
+   *
+   * Nazwy z prefiksem `AUTH_` są konwencją Auth.js, ale provider dostaje je
+   * wprost — dzięki temu brak kompletu wyłącza przycisk „Zaloguj przez Google"
+   * zamiast wywalać logowanie błędem konfiguracji na produkcji.
+   */
+  AUTH_GOOGLE_ID: z.string().optional(),
+  AUTH_GOOGLE_SECRET: z.string().optional(),
+
   RESEND_API_KEY: z.string().optional(),
 
   /**
@@ -34,7 +44,7 @@ const serverEnvSchema = z.object({
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
-  EMAIL_FROM: z.string().default("Rentix <no-reply@rentix.pl>"),
+  EMAIL_FROM: z.string().default("Rentix <no-reply@rentixon.com>"),
   /** Publiczny adres aplikacji — baza `metadataBase` dla odnośników w metadanych. */
   APP_URL: z.url().optional(),
   /**
@@ -95,6 +105,12 @@ function loadEnv(): ServerEnv {
   if (smtpFields.some(Boolean) && !smtpFields.every(Boolean)) {
     throw new Error(
       "Ustaw SMTP_HOST, SMTP_USER i SMTP_PASSWORD razem — niepełny komplet po cichu wyłącza wysyłkę poczty.",
+    );
+  }
+
+  if (Boolean(env.AUTH_GOOGLE_ID) !== Boolean(env.AUTH_GOOGLE_SECRET)) {
+    throw new Error(
+      "Ustaw AUTH_GOOGLE_ID i AUTH_GOOGLE_SECRET razem — samo ID bez sekretu kończy się błędem dopiero po kliknięciu „Zaloguj przez Google”.",
     );
   }
 
