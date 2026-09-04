@@ -58,39 +58,6 @@ const FEATURES = [
   },
 ];
 
-const COMPARISON = [
-  {
-    label: "Naliczanie czynszu",
-    excel: "Ręcznie, co miesiąc",
-    son: "Automatyczne",
-    rentix: "Automatyczne",
-  },
-  {
-    label: "Przypomnienia o płatności",
-    excel: "Brak",
-    son: "Tak",
-    rentix: "Tak",
-  },
-  {
-    label: "Rozliczenie roczne",
-    excel: "Ręczne sumowanie",
-    son: "W wyższym planie",
-    rentix: "Kasowo, w cenie",
-  },
-  {
-    label: "Cennik",
-    excel: "Darmowy, ale kosztuje czas",
-    son: "Rośnie z liczbą lokali",
-    rentix: "Stały, bez limitu lokali",
-  },
-  {
-    label: "Próg wejścia",
-    excel: "Niski, ale wszystko ręcznie",
-    son: "Wysoki",
-    rentix: "Niski",
-  },
-];
-
 export default function HomePage() {
   return (
     <div className="min-h-dvh bg-bg">
@@ -102,9 +69,6 @@ export default function HomePage() {
             <a href="#funkcje" className="r-navlink">
               Funkcje
             </a>
-            <a href="#porownanie" className="r-navlink">
-              Porównanie
-            </a>
             <a href="#cennik" className="r-navlink">
               Cennik
             </a>
@@ -112,11 +76,8 @@ export default function HomePage() {
 
           <div className="flex items-center gap-2 sm:gap-2.5">
             <ThemeToggle />
-            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
-              <Link href={ROUTES.login}>Zaloguj się</Link>
-            </Button>
             <Button asChild size="sm">
-              <Link href={ROUTES.register}>Załóż konto</Link>
+              <Link href={ROUTES.login}>Zaloguj się</Link>
             </Button>
           </div>
         </nav>
@@ -161,16 +122,21 @@ export default function HomePage() {
                 <p className="font-mono text-xs text-muted">SIE 2026</p>
               </div>
 
-              <div className="mb-4 grid grid-cols-2 gap-2.5">
+              {/* Kwota z groszami nie mieści się w połowie szerokości karty na
+                  telefonie — poniżej sm kafelki idą jeden pod drugim, zamiast
+                  wypychać liczbę poza kartę. */}
+              <div className="mb-4 grid gap-2.5 sm:grid-cols-2">
                 <div className="rounded-[10px] bg-mint p-3.5">
                   <p className="mb-1.5 text-xs text-fg/65">Przychód</p>
-                  <p className="font-mono text-[22px] font-medium tabular text-fg">
+                  <p className="font-mono text-[20px] font-medium tabular text-fg sm:text-[22px]">
                     {formatPLN(1_840_000)}
                   </p>
                 </div>
                 <div className="rounded-[10px] bg-sand p-3.5">
                   <p className="mb-1.5 text-xs text-fg/65">Obłożenie</p>
-                  <p className="font-mono text-[22px] font-medium tabular text-fg">92%</p>
+                  <p className="font-mono text-[20px] font-medium tabular text-fg sm:text-[22px]">
+                    92%
+                  </p>
                 </div>
               </div>
 
@@ -218,52 +184,6 @@ export default function HomePage() {
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </section>
-
-        <section id="porownanie" className="px-5 py-10 sm:px-12 sm:py-14">
-          <div className="mx-auto max-w-6xl">
-            <h2 className="r-display text-[32px] text-fg">Rentix kontra arkusz i SON</h2>
-            <p className="mt-2 text-[15.5px] text-muted">
-              To samo zarządzanie najmem, bez rozrastających się kolumn Excela i bez cen
-              rosnących z każdym mieszkaniem.
-            </p>
-
-            {/* Tabela przewija się w poziomie na telefonie zamiast zawijać
-                komórki — cztery kolumny porównania zwinięte w słupek przestają
-                być porównaniem. */}
-            <div className="mt-7 overflow-x-auto rounded-card border border-border">
-              <table className="w-full min-w-[560px] border-collapse text-left">
-                <thead>
-                  <tr className="bg-surface-alt text-[13.5px] font-semibold text-fg">
-                    <th scope="col" className="px-4 py-3.5 font-semibold">
-                      <span className="sr-only">Funkcja</span>
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 font-semibold">
-                      Excel
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 font-semibold">
-                      SON
-                    </th>
-                    <th scope="col" className="px-4 py-3.5 font-semibold text-accent">
-                      Rentix
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COMPARISON.map((row) => (
-                    <tr key={row.label} className="border-t border-border text-sm">
-                      <th scope="row" className="px-4 py-3.5 text-left font-semibold text-fg">
-                        {row.label}
-                      </th>
-                      <td className="px-4 py-3.5 text-muted">{row.excel}</td>
-                      <td className="px-4 py-3.5 text-muted">{row.son}</td>
-                      <td className="px-4 py-3.5 font-bold text-accent">{row.rentix}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         </section>
