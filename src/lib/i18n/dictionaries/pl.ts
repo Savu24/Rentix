@@ -490,6 +490,44 @@ export const pl = {
       nothingSelected: "Nic nie zaznaczono",
     },
 
+    reportsPage: {
+      title: "Raporty",
+      lead: "Rozliczenie kasowe. Liczy się dzień, w którym pieniądze wpłynęły albo wyszły.",
+      downloadCsv: "Pobierz CSV",
+      noData:
+        "Za {year} rok nie ma jeszcze żadnych wpłat ani kosztów. Raport wypełni się sam, gdy zaczniesz księgować wpłaty i wpisywać wydatki.",
+      income: "Przychód",
+      incomeHint: "wpłaty od najemców",
+      expenses: "Koszty",
+      expensesHint: "wydatki właściciela",
+      profit: "Wynik",
+      profitPositive: "na plusie",
+      profitNegative: "na minusie",
+      monthlyChart: "Przychód i koszty w miesiącach",
+      byProperty: "Wynik wg nieruchomości",
+      currencyNote: "({currency})",
+      noYearData: "Brak danych za ten rok.",
+      byCategory: "Koszty wg kategorii",
+      noCategoryData: "Nie wpisano jeszcze żadnych kosztów za ten rok.",
+      property: "Nieruchomość",
+      collection: "Ściągalność",
+      collectionLead:
+        "Liczona po terminie płatności: ile z rachunków z terminem w {year} roku zostało rozliczonych.",
+      settled: "Rozliczone",
+      settledHint: "{paid} z {invoiced}",
+      paidLate: "Zapłacone po terminie",
+      averageDelay: "Średnie opóźnienie",
+      averageDelayHint: "tylko z zapłaconych po terminie",
+      days: ["dzień", "dni", "dni"],
+      /**
+       * Zastrzeżenie podatkowe. Polska wersja mówi o ryczałcie, bo to
+       * najczęstsza forma rozliczenia najmu prywatnego.
+       */
+      disclaimer:
+        "Zestawienie liczy przychód otrzymany, więc nadaje się jako podstawa do rozliczenia najmu ryczałtem, ale nie jest poradą podatkową. Przed zeznaniem potwierdź kwoty z księgowym.",
+      chartNoValue: "brak",
+    },
+
     dateInput: {
       placeholder: "dd.mm.rrrr",
       openCalendar: "Wybierz z kalendarza",

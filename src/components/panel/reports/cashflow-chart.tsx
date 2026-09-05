@@ -12,8 +12,9 @@ import {
   type TooltipContentProps,
 } from "recharts";
 
-import { formatPLN } from "@/lib/money";
-import { MONTH_SHORT } from "@/lib/reports/aggregate";
+import { useI18n } from "@/lib/i18n/client";
+import { LOCALE_META, type Locale } from "@/lib/i18n/config";
+import { formatMoney } from "@/lib/money";
 
 /**
  * Przychód i koszty miesiąc po miesiącu.
@@ -32,7 +33,18 @@ export type CashflowPoint = {
   expenseGrosze: number;
 };
 
-const zloty = (grosze: number) => grosze / 100;
+/** Grosze/pensy na jednostki główne — Recharts rysuje liczby, nie kwoty. */
+const minorToMajor = (minor: number) => minor / 100;
+
+/**
+ * Skrót miesiąca w języku konta. Lista w kodzie była polska, a oś wykresu
+ * czyta się razem z resztą panelu.
+ */
+function monthLabel(month: number, locale: Locale): string {
+  return new Intl.DateTimeFormat(LOCALE_META[locale].intl, { month: "short" }).format(
+    new Date(Date.UTC(2026, month, 1)),
+  );
+}
 
 /**
  * Podpowiedź z przychodem, kosztami i wynikiem miesiąca.
@@ -42,10 +54,13 @@ const zloty = (grosze: number) => grosze / 100;
  * odpowiada na pytanie, po które i tak najeżdża się myszą.
  */
 function CashflowTooltip({ active, payload, label }: TooltipContentProps) {
+  const { d, locale } = useI18n();
+  const t = d.panel.reportsPage;
+
   if (!active || !payload?.length) return null;
 
-  const point = payload[0].payload as { Przychód: number; Koszty: number };
-  const profitGrosze = Math.round((point.Przychód - point.Koszty) * 100);
+  const point = payload[0].payload as { income: number; expense: number };
+  const profitGrosze = Math.round((point.income - point.expense) * 100);
 
   return (
     <div className="rounded-control border border-border bg-surface px-3 py-2 text-[13px] shadow-sm">
@@ -63,17 +78,19 @@ function CashflowTooltip({ active, payload, label }: TooltipContentProps) {
               {entry.name}
             </span>
             <span className="tabular font-mono text-fg">
-              {typeof entry.value === "number" ? formatPLN(Math.round(entry.value * 100)) : "brak"}
+              {typeof entry.value === "number"
+                ? formatMoney(Math.round(entry.value * 100), locale)
+                : d.panel.reportsPage.chartNoValue}
             </span>
           </li>
         ))}
 
         <li className="mt-0.5 flex items-center justify-between gap-6 border-t border-border pt-1.5">
-          <span className="font-medium text-fg">Zysk</span>
+          <span className="font-medium text-fg">{t.profit}</span>
           <span
             className={`tabular font-mono font-medium ${profitGrosze < 0 ? "text-bad" : "text-good"}`}
           >
-            {formatPLN(profitGrosze)}
+            {formatMoney(profitGrosze, locale)}
           </span>
         </li>
       </ul>
@@ -82,10 +99,18 @@ function CashflowTooltip({ active, payload, label }: TooltipContentProps) {
 }
 
 export function CashflowChart({ data }: { data: CashflowPoint[] }) {
+  const { d, locale } = useI18n();
+  const t = d.panel.reportsPage;
+
+  /*
+    Klucze serii są stałymi identyfikatorami, a nie napisami — widoczna nazwa
+    idzie przez `name` na `<Bar>`. Wcześniej kluczem było polskie „Przychód",
+    więc przetłumaczenie legendy rozsypywałoby wykres.
+  */
   const points = data.map((row) => ({
-    name: MONTH_SHORT[row.month],
-    Przychód: zloty(row.incomeGrosze),
-    Koszty: zloty(row.expenseGrosze),
+    name: monthLabel(row.month, locale),
+    income: minorToMajor(row.incomeGrosze),
+    expense: minorToMajor(row.expenseGrosze),
   }));
 
   return (
@@ -105,7 +130,9 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
             axisLine={false}
             width={64}
             tickFormatter={(value: number) =>
-              new Intl.NumberFormat("pl-PL", { notation: "compact" }).format(value)
+              new Intl.NumberFormat(LOCALE_META[locale].intl, { notation: "compact" }).format(
+                value,
+              )
             }
           />
           <Tooltip content={CashflowTooltip} cursor={{ fill: "var(--surface-alt)" }} />
@@ -113,8 +140,18 @@ export function CashflowChart({ data }: { data: CashflowPoint[] }) {
             wrapperStyle={{ fontSize: 13, color: "var(--text-secondary)" }}
             iconType="circle"
           />
-          <Bar dataKey="Przychód" fill="var(--chart-1)" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="Koszty" fill="var(--chart-2)" radius={[3, 3, 0, 0]} />
+          <Bar
+            dataKey="income"
+            name={t.income}
+            fill="var(--chart-1)"
+            radius={[3, 3, 0, 0]}
+          />
+          <Bar
+            dataKey="expense"
+            name={t.expenses}
+            fill="var(--chart-2)"
+            radius={[3, 3, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

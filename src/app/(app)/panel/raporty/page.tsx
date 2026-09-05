@@ -9,19 +9,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 // Kwoty w tabeli idą bez sufiksu waluty — trzy razy „zł" w jednym wierszu
 // nie mieści się na telefonie, więc jednostka stoi raz, w nagłówku sekcji.
-import { formatAmount, formatPLN } from "@/lib/money";
+import { LOCALE_META } from "@/lib/i18n/config";
+import { fill, pluralize } from "@/lib/i18n/format";
+import { formatAmount, formatMoney } from "@/lib/money";
 import { annualReport, reportYears } from "@/lib/reports/service";
-import { plural } from "@/lib/utils";
 import { expenseCategoryLabels } from "@/lib/validations/expense";
-import { panelDictionary } from "@/lib/panel/dictionary";
-export const metadata: Metadata = { title: "Raporty" };
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.reportsPage.title };
+}
 
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.reportsPage;
   const session = await requireOwnerSession("/panel/raporty");
   const organizationId = session.user.organizationId;
   const params = await searchParams;
@@ -42,10 +46,8 @@ export default async function ReportsPage({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">Raporty</h1>
-          <p className="text-sm text-muted">
-            Rozliczenie kasowe. Liczy się dzień, w którym pieniądze wpłynęły albo wyszły.
-          </p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
+          <p className="text-sm text-muted">{t.lead}</p>
         </div>
 
         <div className="flex items-center gap-2.5">
@@ -53,7 +55,7 @@ export default async function ReportsPage({
           <Button asChild size="sm" variant="secondary">
             <a href={`/api/reports/annual.csv?rok=${year}`}>
               <Download className="h-4 w-4" aria-hidden />
-              Pobierz CSV
+              {t.downloadCsv}
             </a>
           </Button>
         </div>
@@ -61,25 +63,32 @@ export default async function ReportsPage({
 
       {!hasData ? (
         <Alert tone="info">
-          Za {year} rok nie ma jeszcze żadnych wpłat ani kosztów. Raport wypełni się sam, gdy
-          zaczniesz księgować wpłaty i wpisywać wydatki.
+          {fill(t.noData, { year })}
         </Alert>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Tile label="Przychód" value={formatPLN(totals.incomeGrosze)} hint="wpłaty od najemców" />
-        <Tile label="Koszty" value={formatPLN(totals.expenseGrosze)} hint="wydatki właściciela" />
         <Tile
-          label="Wynik"
-          value={formatPLN(totals.profitGrosze)}
-          hint={profitable ? "na plusie" : "na minusie"}
+          label={t.income}
+          value={formatMoney(totals.incomeGrosze, locale)}
+          hint={t.incomeHint}
+        />
+        <Tile
+          label={t.expenses}
+          value={formatMoney(totals.expenseGrosze, locale)}
+          hint={t.expensesHint}
+        />
+        <Tile
+          label={t.profit}
+          value={formatMoney(totals.profitGrosze, locale)}
+          hint={profitable ? t.profitPositive : t.profitNegative}
           tone={profitable ? "good" : "critical"}
         />
       </div>
 
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <h2 className="text-[15px] font-semibold text-fg">Przychód i koszty w miesiącach</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.monthlyChart}</h2>
           <CashflowChart data={report.months} />
         </CardContent>
       </Card>
@@ -88,20 +97,23 @@ export default async function ReportsPage({
         <Card>
           <CardContent className="flex flex-col gap-3">
             <h2 className="text-[15px] font-semibold text-fg">
-              Wynik wg nieruchomości <span className="font-normal text-muted">(zł)</span>
+              {t.byProperty}{" "}
+              <span className="font-normal text-muted">
+                {fill(t.currencyNote, { currency: LOCALE_META[locale].currency })}
+              </span>
             </h2>
 
             {report.properties.length === 0 ? (
-              <p className="text-sm text-muted">Brak danych za ten rok.</p>
+              <p className="text-sm text-muted">{t.noYearData}</p>
             ) : (
               <div className="flex flex-col">
                 {/* Nagłówek kolumn: przy zawinięciu na telefonie same trzy
                     kwoty pod nazwą byłyby nie do rozróżnienia. */}
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-1.5 text-[11px] uppercase tracking-wide text-muted">
-                  <span className="hidden flex-1 sm:block">Nieruchomość</span>
-                  <span className="ml-auto w-20 text-right sm:w-24">Przychód</span>
-                  <span className="w-20 text-right sm:w-24">Koszty</span>
-                  <span className="w-20 text-right sm:w-24">Wynik</span>
+                  <span className="hidden flex-1 sm:block">{t.property}</span>
+                  <span className="ml-auto w-20 text-right sm:w-24">{t.income}</span>
+                  <span className="w-20 text-right sm:w-24">{t.expenses}</span>
+                  <span className="w-20 text-right sm:w-24">{t.profit}</span>
                 </div>
 
                 {report.properties.map((row) => (
@@ -116,17 +128,17 @@ export default async function ReportsPage({
                       {row.name}
                     </span>
                     <span className="tabular ml-auto w-20 text-right font-mono text-xs text-muted sm:w-24">
-                      {formatAmount(row.incomeGrosze)}
+                      {formatAmount(row.incomeGrosze, locale)}
                     </span>
                     <span className="tabular w-20 text-right font-mono text-xs text-muted sm:w-24">
-                      −{formatAmount(row.expenseGrosze)}
+                      −{formatAmount(row.expenseGrosze, locale)}
                     </span>
                     <span
                       className={`tabular w-20 text-right font-mono text-sm sm:w-24 ${
                         row.profitGrosze >= 0 ? "text-fg" : "text-bad"
                       }`}
                     >
-                      {formatAmount(row.profitGrosze)}
+                      {formatAmount(row.profitGrosze, locale)}
                     </span>
                   </div>
                 ))}
@@ -137,7 +149,7 @@ export default async function ReportsPage({
 
         <Card>
           <CardContent className="flex flex-col gap-3">
-            <h2 className="text-[15px] font-semibold text-fg">Koszty wg kategorii</h2>
+            <h2 className="text-[15px] font-semibold text-fg">{t.byCategory}</h2>
 
             {report.expensesByCategory.length === 0 ? (
               <p className="text-sm text-muted">
@@ -160,7 +172,7 @@ export default async function ReportsPage({
                           {expenseCategoryLabels(d)[bucket.category]}
                         </span>
                         <span className="tabular font-mono text-xs text-muted">
-                          {formatPLN(bucket.totalGrosze)} · {share}%
+                          {formatMoney(bucket.totalGrosze, locale)} · {share}%
                         </span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-alt">
@@ -180,35 +192,40 @@ export default async function ReportsPage({
 
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <h2 className="text-[15px] font-semibold text-fg">Ściągalność</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.collection}</h2>
           <p className="text-sm text-muted">
-            Liczona po terminie płatności: ile z rachunków z terminem w {year} roku zostało
-            rozliczonych.
+            {fill(t.collectionLead, { year })}
           </p>
 
           <dl className="grid gap-x-8 gap-y-2.5 text-sm sm:grid-cols-3">
             <Stat
-              label="Rozliczone"
+              label={t.settled}
               value={`${collection.collectionRate}%`}
-              hint={`${collection.paidCount} z ${collection.invoicedCount}`}
+              hint={fill(t.settledHint, {
+                paid: collection.paidCount,
+                invoiced: collection.invoicedCount,
+              })}
             />
             <Stat
-              label="Zapłacone po terminie"
+              label={t.paidLate}
               value={String(collection.lateCount)}
-              hint={plural(collection.lateCount, ["dokument", "dokumenty", "dokumentów"])}
+              hint={pluralize(locale, collection.lateCount, d.panel.financePage.documentNoun)}
             />
             <Stat
-              label="Średnie opóźnienie"
-              value={`${collection.averageDelayDays} ${plural(collection.averageDelayDays, ["dzień", "dni", "dni"])}`}
-              hint="tylko z zapłaconych po terminie"
+              label={t.averageDelay}
+              value={`${collection.averageDelayDays} ${pluralize(
+                locale,
+                collection.averageDelayDays,
+                t.days,
+              )}`}
+              hint={t.averageDelayHint}
             />
           </dl>
         </CardContent>
       </Card>
 
       <p className="text-xs text-muted">
-        Zestawienie liczy przychód otrzymany, więc nadaje się jako podstawa do rozliczenia najmu
-        ryczałtem, ale nie jest poradą podatkową. Przed zeznaniem potwierdź kwoty z księgowym.
+        {t.disclaimer}
       </p>
     </div>
   );

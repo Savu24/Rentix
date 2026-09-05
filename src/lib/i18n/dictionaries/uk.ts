@@ -505,6 +505,46 @@ export const uk: Dictionary = {
       nothingSelected: "Nothing selected",
     },
 
+    reportsPage: {
+      title: "Reports",
+      lead: "Cash basis. What counts is the day the money came in or went out.",
+      downloadCsv: "Download CSV",
+      noData:
+        "There are no payments or costs recorded for {year} yet. The report fills itself in as you record payments and add costs.",
+      income: "Income",
+      incomeHint: "payments from tenants",
+      expenses: "Costs",
+      expensesHint: "what the letting costs you",
+      profit: "Profit",
+      profitPositive: "in the black",
+      profitNegative: "in the red",
+      monthlyChart: "Income and costs by month",
+      byProperty: "Result by property",
+      currencyNote: "({currency})",
+      noYearData: "No data for this year.",
+      byCategory: "Costs by category",
+      noCategoryData: "No costs recorded for this year yet.",
+      property: "Property",
+      collection: "Collection",
+      collectionLead:
+        "Measured against the due date: how much of what fell due in {year} has been settled.",
+      settled: "Settled",
+      settledHint: "{paid} of {invoiced}",
+      paidLate: "Paid late",
+      averageDelay: "Average delay",
+      averageDelayHint: "counting only those paid late",
+      days: ["day", "days"],
+      /*
+        Zastrzeżenie podatkowe pisane pod właściwy kraj. Brytyjski rok
+        podatkowy biegnie od 6 kwietnia do 5 kwietnia, a ten raport liczy rok
+        kalendarzowy — przepisanie tych liczb wprost do Self Assessment byłoby
+        błędem, więc mówimy o tym wprost zamiast obiecywać zgodność.
+      */
+      disclaimer:
+        "This summary is on a cash basis and runs to the calendar year. The UK tax year runs from 6 April to 5 April, so these figures do not map straight onto a Self Assessment return. It is not tax advice — check the numbers with your accountant.",
+      chartNoValue: "none",
+    },
+
     dateInput: {
       /*
         Ten sam porządek co po polsku — dzień, miesiąc, rok — więc pomyłka
