@@ -29,6 +29,14 @@ export const LOCALE_COOKIE = "rentix_kraj";
  */
 export const LOCALE_HEADER = "x-rentix-kraj";
 
+/**
+ * Kraj odwiedzającego z sieci brzegowej Vercela („PL", „GB", „DE"…).
+ *
+ * Nagłówek dokłada infrastruktura, więc lokalnie i w testach go nie ma —
+ * wtedy o wersji decyduje język przeglądarki, tak jak wcześniej.
+ */
+export const COUNTRY_HEADER = "x-vercel-ip-country";
+
 /** Rok, bo to preferencja, a nie stan sesji. */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -68,6 +76,21 @@ export const LOCALE_META: Record<Locale, LocaleMeta> = {
     acceptLanguage: ["en"],
   },
 };
+
+/**
+ * Wybiera wersję po kraju, z którego przyszło żądanie.
+ *
+ * Kraj wyprzedza język przeglądarki: Polak z brytyjskim numerem telefonu
+ * i brytyjskim najmem ma zobaczyć funty i tamtejsze prawo, choć jego telefon
+ * mówi po polsku. Zwraca `null` dla krajów, których nie obsługujemy — wtedy
+ * pytanie wraca do `Accept-Language`.
+ */
+export function localeFromCountry(country: string | null | undefined): Locale | null {
+  if (!country) return null;
+
+  const code = country.trim().toUpperCase();
+  return LOCALES.find((locale) => LOCALE_META[locale].countryCode === code) ?? null;
+}
 
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);

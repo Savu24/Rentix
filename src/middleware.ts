@@ -12,11 +12,13 @@ import {
   ROUTES,
 } from "@/lib/auth/routes";
 import {
+  COUNTRY_HEADER,
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_HEADER,
   localeFromAcceptLanguage,
+  localeFromCountry,
   localeFromPathname,
   isLocale,
   type Locale,
@@ -31,7 +33,7 @@ import {
  * `src/lib/auth/session.ts`.
  *
  * Druga rola: wybór wersji krajowej. Kolejność jest stała i celowa —
- * ciasteczko, potem `Accept-Language`, na końcu polski. Przekierowujemy
+ * ciasteczko, kraj z IP, `Accept-Language`, na końcu polski. Przekierowujemy
  * wyłącznie z gołego `rentixon.com` i z aliasów bez prefiksu; adres, który już
  * niesie kraj, zostaje nietknięty, żeby link wysłany komuś otwierał tę wersję,
  * którą nadawca widział.
@@ -39,8 +41,19 @@ import {
 const { auth } = NextAuth(authConfig);
 
 function preferredLocale(request: NextRequest): Locale {
+  // Własny wybór przed wszystkim: kto raz wszedł na `/uk`, wraca na `/uk`.
   const stored = request.cookies.get(LOCALE_COOKIE)?.value;
   if (isLocale(stored)) return stored;
+
+  /*
+    Kraj przed językiem przeglądarki. Rozstrzyga przypadek, w którym oba
+    źródła mówią co innego: polski telefon w Wielkiej Brytanii dostaje wersję
+    brytyjską, bo najem, waluta i prawo idą za miejscem, a nie za językiem
+    systemu. Preferencję i tak da się zmienić jednym kliknięciem w
+    przełączniku — a ten zapisuje ciasteczko, czyli warstwę wyżej.
+  */
+  const fromCountry = localeFromCountry(request.headers.get(COUNTRY_HEADER));
+  if (fromCountry) return fromCountry;
 
   return localeFromAcceptLanguage(request.headers.get("accept-language")) ?? DEFAULT_LOCALE;
 }

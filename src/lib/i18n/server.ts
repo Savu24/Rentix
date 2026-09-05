@@ -4,11 +4,13 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 import {
+  COUNTRY_HEADER,
   DEFAULT_LOCALE,
   isLocale,
   LOCALE_COOKIE,
   LOCALE_HEADER,
   localeFromAcceptLanguage,
+  localeFromCountry,
   type Locale,
 } from "./config";
 
@@ -34,6 +36,10 @@ export async function requestLocale(): Promise<Locale> {
   // Zapasowo, gdy middleware nie objął trasy (np. wywołanie z testu).
   const stored = (await cookies()).get(LOCALE_COOKIE)?.value;
   if (isLocale(stored)) return stored;
+
+  // Ta sama kolejność co w middlewarze: kraj przed językiem przeglądarki.
+  const fromCountry = localeFromCountry((await headers()).get(COUNTRY_HEADER));
+  if (fromCountry) return fromCountry;
 
   const acceptLanguage = (await headers()).get("accept-language");
   return localeFromAcceptLanguage(acceptLanguage) ?? DEFAULT_LOCALE;

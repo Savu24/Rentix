@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isLocale,
   localeFromAcceptLanguage,
+  localeFromCountry,
   localeFromPathname,
   localePath,
 } from "@/lib/i18n/config";
@@ -55,6 +56,25 @@ describe("localeFromAcceptLanguage", () => {
     expect(localeFromAcceptLanguage(null)).toBeNull();
     expect(localeFromAcceptLanguage("")).toBeNull();
     expect(localeFromAcceptLanguage("de-DE,fr;q=0.8")).toBeNull();
+  });
+});
+
+describe("localeFromCountry", () => {
+  it("mapuje kod kraju na jego wersję", () => {
+    expect(localeFromCountry("GB")).toBe("uk");
+    expect(localeFromCountry("PL")).toBe("pl");
+  });
+
+  it("nie przejmuje się wielkością liter ani spacjami", () => {
+    expect(localeFromCountry("gb")).toBe("uk");
+    expect(localeFromCountry(" PL ")).toBe("pl");
+  });
+
+  it("zwraca null dla kraju bez własnej wersji — pytanie wraca do języka", () => {
+    expect(localeFromCountry("DE")).toBeNull();
+    expect(localeFromCountry("UK")).toBeNull();
+    expect(localeFromCountry(null)).toBeNull();
+    expect(localeFromCountry("")).toBeNull();
   });
 });
 
