@@ -7,6 +7,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Textarea } from "@/components/ui/textarea";
+import { useI18n } from "@/lib/i18n/client";
 import type { OwnerFormInput } from "@/lib/validations/owner";
 
 /**
@@ -30,6 +31,8 @@ export function OwnerFields({
   disabled?: boolean;
   idPrefix?: string;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.ownersPage.form;
   const id = (field: string) => `${idPrefix}-${field}`;
 
   return (
@@ -37,9 +40,9 @@ export function OwnerFields({
       <div className="grid gap-4 sm:grid-cols-6">
         <FormField
           id={id("name")}
-          label="Właściciel"
+          label={t.owner}
           error={errors.name?.message}
-          hint="Imię i nazwisko albo nazwa firmy."
+          hint={t.ownerHint}
           className="sm:col-span-4"
         >
           <Input
@@ -51,9 +54,9 @@ export function OwnerFields({
 
         <FormField
           id={id("taxId")}
-          label="NIP"
+          label={t.taxId}
           error={errors.taxId?.message}
-          hint="Tylko dla firm."
+          hint={t.taxIdHint}
           className="sm:col-span-2"
         >
           <Input
@@ -66,7 +69,7 @@ export function OwnerFields({
 
         <FormField
           id={id("email")}
-          label="E-mail"
+          label={t.email}
           error={errors.email?.message}
           className="sm:col-span-3"
         >
@@ -80,7 +83,7 @@ export function OwnerFields({
 
         <FormField
           id={id("phone")}
-          label="Telefon"
+          label={t.phone}
           error={errors.phone?.message}
           className="sm:col-span-3"
         >
@@ -94,7 +97,7 @@ export function OwnerFields({
 
         <FormField
           id={id("street")}
-          label="Ulica i numer"
+          label={t.street}
           error={errors.street?.message}
           className="sm:col-span-6"
         >
@@ -107,7 +110,7 @@ export function OwnerFields({
 
         <FormField
           id={id("postalCode")}
-          label="Kod pocztowy"
+          label={t.postalCode}
           error={errors.postalCode?.message}
           className="sm:col-span-2"
         >
@@ -120,7 +123,7 @@ export function OwnerFields({
 
         <FormField
           id={id("city")}
-          label="Miejscowość"
+          label={t.city}
           error={errors.city?.message}
           className="sm:col-span-4"
         >
@@ -133,9 +136,9 @@ export function OwnerFields({
 
         <FormField
           id={id("bankAccount")}
-          label="Numer rachunku"
+          label={t.bankAccount}
           error={errors.bankAccount?.message}
-          hint="Na ten rachunek przekazujesz czynsz po potrąceniu prowizji."
+          hint={t.bankAccountHint}
           className="sm:col-span-6"
         >
           <Input
@@ -147,9 +150,9 @@ export function OwnerFields({
         </FormField>
         <FormField
           id={id("contractStartDate")}
-          label="Umowa od"
+          label={t.contractFrom}
           error={errors.contractStartDate?.message}
-          hint="Początek umowy o zarządzanie tym lokalem."
+          hint={t.contractFromHint}
           className="sm:col-span-3"
         >
           <DateInput
@@ -161,9 +164,9 @@ export function OwnerFields({
 
         <FormField
           id={id("contractEndDate")}
-          label="Umowa do"
+          label={t.contractTo}
           error={errors.contractEndDate?.message}
-          hint="Puste = czas nieokreślony."
+          hint={t.contractToHint}
           className="sm:col-span-3"
         >
           <DateInput
@@ -176,9 +179,9 @@ export function OwnerFields({
 
       <FormField
         id={id("notes")}
-        label="Notatki"
+        label={t.notes}
         error={errors.notes?.message}
-        hint="Widoczne tylko dla Ciebie, np. warunki rozliczenia."
+        hint={t.notesHint}
       >
         <Textarea
           {...fieldAria(id("notes"), { error: errors.notes?.message })}

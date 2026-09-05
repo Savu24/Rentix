@@ -7,16 +7,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 import { overdueWhere } from "@/lib/invoices/status";
-import { formatPLN } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { getOrganization, isSellerComplete } from "@/lib/organizations/service";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { prisma } from "@/lib/prisma";
 
-export const metadata: Metadata = { title: "Pulpit" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.dashboard.title };
+}
 
 export default async function OwnerDashboardPage() {
   const session = await requireOwnerSession("/panel");
   const organizationId = session.user.organizationId;
+
+  const [locale, dictionary] = await Promise.all([panelLocale(), panelDictionary()]);
+  const t = dictionary.panel.dashboard;
 
   const [propertyCount, roomCount, occupiedCount, overdue, organization] = await Promise.all([
     prisma.property.count({ where: { organizationId, archivedAt: null } }),
@@ -34,7 +41,7 @@ export default async function OwnerDashboardPage() {
     (overdue._sum.totalGrossGrosze ?? 0) - (overdue._sum.paidGrosze ?? 0);
   const occupancy = roomCount > 0 ? Math.round((occupiedCount / roomCount) * 100) : 0;
 
-  const firstName = session.user.name?.split(" ")[0] ?? "właścicielu";
+  const firstName = session.user.name?.split(" ")[0] ?? t.greetingFallback;
 
   // Przypomnienie znika samo, gdy adres wystawcy zostanie uzupełniony — to nie
   // jest komunikat do odklikania, tylko brak, który widać dopiero na wysłanym
@@ -45,25 +52,25 @@ export default async function OwnerDashboardPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">Cześć, {firstName}</h1>
-          <p className="text-sm text-muted">
-            {new Intl.DateTimeFormat("pl-PL", { dateStyle: "full" }).format(new Date())}
-          </p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">
+            {fill(t.greeting, { name: firstName })}
+          </h1>
+          <p className="text-sm text-muted">{formatDateIn(new Date(), locale, "long")}</p>
         </div>
 
         <Button asChild size="sm">
           <Link href="/panel/nieruchomosci/nowa">
             <Plus className="h-4 w-4" aria-hidden />
-            Dodaj nieruchomość
+            {t.addProperty}
           </Link>
         </Button>
       </div>
 
       {sellerIncomplete ? (
         <Alert tone="warning">
-          Uzupełnij dane wystawcy. Bez adresu rachunki i umowy wychodzą z samą nazwą.{" "}
+          {t.sellerIncomplete}{" "}
           <Link href="/panel/ustawienia" className="font-medium underline">
-            Przejdź do ustawień
+            {t.goToSettings}
           </Link>
           .
         </Alert>
@@ -72,13 +79,13 @@ export default async function OwnerDashboardPage() {
       {propertyCount === 0 ? (
         <EmptyState
           icon={Building2}
-          title="Zacznij od pierwszej nieruchomości"
-          description="Dodaj mieszkanie lub dom, a potem jednostki najmu. Reszta, czyli najemcy, umowy i faktury, podepnie się pod nie."
+          title={t.emptyTitle}
+          description={t.emptyLead}
           action={
             <Button asChild>
               <Link href="/panel/nieruchomosci/nowa">
                 <Plus className="h-4 w-4" aria-hidden />
-                Dodaj nieruchomość
+                {t.addProperty}
               </Link>
             </Button>
           }
@@ -86,20 +93,22 @@ export default async function OwnerDashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatTile label="Nieruchomości" value={String(propertyCount)} />
-            <StatTile label="Pokoje" value={String(roomCount)} />
+            <StatTile label={t.statProperties} value={String(propertyCount)} />
+            <StatTile label={t.statRooms} value={String(roomCount)} />
             <StatTile
-              label="Obłożenie"
+              label={t.statOccupancy}
               value={`${occupancy}%`}
-              hint={`${occupiedCount} z ${roomCount} zajętych`}
+              hint={fill(t.statOccupancyHint, { occupied: occupiedCount, total: roomCount })}
             />
             <StatTile
-              label="Zaległości"
-              value={formatPLN(Math.max(0, overdueGrosze))}
+              label={t.statArrears}
+              value={formatMoney(Math.max(0, overdueGrosze), locale)}
               hint={
                 overdue._count > 0
-                  ? `${overdue._count} ${overdue._count === 1 ? "faktura" : "faktur"} po terminie`
-                  : "Wszystko rozliczone"
+                  ? fill(pluralize(locale, overdue._count, t.overdueInvoices), {
+                      count: overdue._count,
+                    })
+                  : t.allSettled
               }
               tone={overdueGrosze > 0 ? "critical" : "good"}
             />
@@ -108,14 +117,12 @@ export default async function OwnerDashboardPage() {
           <Card>
             <CardContent className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-col gap-1">
-                <p className="text-[15px] font-semibold text-fg">Nieruchomości</p>
-                <p className="text-sm text-muted">
-                  Zarządzaj obiektami i jednostkami najmu.
-                </p>
+                <p className="text-[15px] font-semibold text-fg">{t.statProperties}</p>
+                <p className="text-sm text-muted">{t.propertiesCardLead}</p>
               </div>
               <Button asChild variant="secondary" size="sm">
                 <Link href="/panel/nieruchomosci">
-                  Przejdź do listy
+                  {t.goToList}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </Button>

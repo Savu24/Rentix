@@ -9,7 +9,11 @@ import { getOwner } from "@/lib/owners/service";
 
 type Params = { params: Promise<{ id: string }> };
 
-export const metadata: Metadata = { title: "Edycja właściciela" };
+import { panelDictionary } from "@/lib/panel/dictionary";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.ownersPage.editTitle };
+}
 
 export default async function EditOwnerPage({ params }: Params) {
   const session = await requireOwnerSession();
@@ -28,7 +32,9 @@ export default async function EditOwnerPage({ params }: Params) {
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {owner.name}
         </Link>
-        <h1 className="r-display text-[26px] leading-tight text-fg">Edycja właściciela</h1>
+        <h1 className="r-display text-[26px] leading-tight text-fg">
+          {(await panelDictionary()).panel.ownersPage.editTitle}
+        </h1>
       </div>
 
       <OwnerForm

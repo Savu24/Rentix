@@ -12,7 +12,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
 import { ownerFormSchema, type OwnerFormInput } from "@/lib/validations/owner";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export type OwnerOption = { id: string; name: string; city: string | null };
 
 /**
@@ -37,6 +37,8 @@ export function OwnerPicker({
   onChange: (ownerId: string) => void;
   disabled?: boolean;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.ownersPage.picker;
   const v = useValidationContext();
   const [options, setOptions] = useState(owners);
   const [adding, setAdding] = useState(false);
@@ -92,8 +94,8 @@ export function OwnerPicker({
     <div className="flex flex-col gap-3">
       <FormField
         id="ownerId"
-        label="Właściciel lokalu"
-        hint="Zostaw puste, jeśli nieruchomość jest Twoja. Wypełnij przy podnajmie i zarządzaniu."
+        label={t.label}
+        hint={t.hint}
       >
         <Select
           id="ownerId"
@@ -101,7 +103,7 @@ export function OwnerPicker({
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled || adding}
         >
-          <option value="">Nieruchomość własna</option>
+          <option value="">{t.own}</option>
           {options.map((owner) => (
             <option key={owner.id} value={owner.id}>
               {owner.name}
@@ -127,7 +129,7 @@ export function OwnerPicker({
       ) : (
         <div className="flex flex-col gap-4 rounded-control border border-accent/40 bg-surface-alt p-4">
           <div>
-            <p className="text-sm font-semibold text-fg">Nowy właściciel</p>
+            <p className="text-sm font-semibold text-fg">{t.addNew}</p>
             <p className="mt-0.5 text-xs text-muted">
               Zapisze się od razu i zostanie wybrany przy tej nieruchomości.
             </p>

@@ -7,7 +7,11 @@ import { TenantForm } from "@/components/panel/tenants/tenant-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getTenant } from "@/lib/tenants/service";
 
-export const metadata: Metadata = { title: "Edycja najemcy" };
+import { panelDictionary } from "@/lib/panel/dictionary";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.tenantsPage.editTitle };
+}
 
 /** Pola dat czytają wyłącznie „RRRR-MM-DD"; brak daty = puste pole. */
 const dateValue = (date: Date | null) => date?.toISOString().slice(0, 10) ?? "";
@@ -33,7 +37,9 @@ export default async function EditTenantPage({
           <ArrowLeft className="h-4 w-4" aria-hidden />
           {tenant.firstName} {tenant.lastName}
         </Link>
-        <h1 className="r-display text-[26px] leading-tight text-fg">Edycja najemcy</h1>
+        <h1 className="r-display text-[26px] leading-tight text-fg">
+          {(await panelDictionary()).panel.tenantsPage.editTitle}
+        </h1>
       </div>
 
       <TenantForm

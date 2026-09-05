@@ -7,6 +7,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 
 /**
  * Przycisk archiwizacji na karcie pojedynczego rekordu.
@@ -37,6 +39,8 @@ export function ArchiveAction({
   hint: string;
 }) {
   const router = useRouter();
+  const { d } = useI18n();
+  const t = d.panel.archiveAction;
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +75,7 @@ export function ArchiveAction({
           ) : (
             <RotateCcw className="h-4 w-4" aria-hidden />
           )}
-          Przywróć z archiwum
+          {t.restore}
         </Button>
       </div>
     );
@@ -87,7 +91,7 @@ export function ArchiveAction({
           <div className="flex flex-wrap gap-2.5">
             <Button size="sm" variant="danger" onClick={() => run("archive")} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Zarchiwizuj {label}
+              {fill(t.archiveWithLabel, { label })}
             </Button>
             <Button
               size="sm"
@@ -95,14 +99,14 @@ export function ArchiveAction({
               onClick={() => setConfirming(false)}
               disabled={busy}
             >
-              Anuluj
+              {d.panel.common.cancel}
             </Button>
           </div>
         </>
       ) : (
         <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
           <Archive className="h-4 w-4" aria-hidden />
-          Archiwizuj
+          {t.archive}
         </Button>
       )}
     </div>

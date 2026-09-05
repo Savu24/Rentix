@@ -6,9 +6,12 @@ import { notFound } from "next/navigation";
 import { PropertyForm } from "@/components/panel/properties/property-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listOwnersForPicker } from "@/lib/owners/service";
+import { panelDictionary } from "@/lib/panel/dictionary";
 import { getProperty } from "@/lib/properties/service";
 
-export const metadata: Metadata = { title: "Edycja nieruchomości" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.propertiesPage.editTitle };
+}
 
 /** Pola dat czytają wyłącznie „RRRR-MM-DD"; brak daty = puste pole. */
 const dateValue = (date: Date | null) => date?.toISOString().slice(0, 10) ?? "";
@@ -21,9 +24,10 @@ export default async function EditPropertyPage({
   const session = await requireOwnerSession();
   const { id } = await params;
 
-  const [property, owners] = await Promise.all([
+  const [property, owners, dictionary] = await Promise.all([
     getProperty(session.user.organizationId, id),
     listOwnersForPicker(session.user.organizationId),
+    panelDictionary(),
   ]);
   if (!property) notFound();
 
@@ -38,7 +42,9 @@ export default async function EditPropertyPage({
           {property.name}
         </Link>
 
-        <h1 className="r-display text-[26px] leading-tight text-fg">Edycja nieruchomości</h1>
+        <h1 className="r-display text-[26px] leading-tight text-fg">
+          {dictionary.panel.propertiesPage.editTitle}
+        </h1>
       </div>
 
       <PropertyForm

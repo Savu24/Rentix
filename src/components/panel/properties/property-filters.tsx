@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { propertyTypeLabels } from "@/lib/validations/property";
 import { useI18n } from "@/lib/i18n/client";
+import { fill, pluralize } from "@/lib/i18n/format";
 /**
  * Filtry listy nieruchomości.
  *
@@ -17,7 +18,8 @@ import { useI18n } from "@/lib/i18n/client";
  * przefiltrowana.
  */
 export function PropertyFilters({ total }: { total: number }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
+  const t = d.panel.propertiesPage.filters;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -78,20 +80,20 @@ export function PropertyFilters({ total }: { total: number }) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Szukaj po nazwie, ulicy lub mieście…"
-            aria-label="Szukaj nieruchomości"
+            placeholder={t.searchPlaceholder}
+            aria-label={t.searchLabel}
             className="pl-10"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:flex sm:w-auto">
           <Select
-            aria-label="Typ nieruchomości"
+            aria-label={t.typeLabel}
             value={searchParams.get("type") ?? "all"}
             onChange={(event) => setParam("type", event.target.value)}
             className="sm:w-44"
           >
-            <option value="all">Wszystkie typy</option>
+            <option value="all">{t.allTypes}</option>
             {Object.entries(propertyTypeLabels(d)).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -100,15 +102,15 @@ export function PropertyFilters({ total }: { total: number }) {
           </Select>
 
           <Select
-            aria-label="Dostępność"
+            aria-label={t.availabilityLabel}
             value={searchParams.get("occupancy") ?? "all"}
             onChange={(event) => setParam("occupancy", event.target.value)}
             className="sm:w-40"
           >
-            <option value="all">Wszystkie</option>
-            <option value="vacant">Z wolnymi</option>
-            <option value="occupied">Wynajęte</option>
-            <option value="unavailable">W remoncie</option>
+            <option value="all">{t.all}</option>
+            <option value="vacant">{t.vacant}</option>
+            <option value="occupied">{t.occupied}</option>
+            <option value="unavailable">{t.underRefurbishment}</option>
           </Select>
         </div>
       </div>
@@ -116,8 +118,8 @@ export function PropertyFilters({ total }: { total: number }) {
       <div className="flex min-h-5 items-center gap-3 text-xs text-muted">
         <span aria-live="polite">
           {isPending
-            ? "Filtrowanie…"
-            : `${total} ${total === 1 ? "nieruchomość" : "nieruchomości"}`}
+            ? t.filtering
+            : fill(pluralize(locale, total, t.counted), { count: total })}
         </span>
 
         {hasFilters ? (

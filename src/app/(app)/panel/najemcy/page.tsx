@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { resolveLeaseExpiry } from "@/lib/leases/expiry";
-import { formatPLN } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { listTenants } from "@/lib/tenants/service";
 import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
 import {
@@ -17,15 +17,20 @@ import {
   TENANT_STATUS_TONE,
   tenantListQuerySchema,
 } from "@/lib/validations/tenant";
-import { panelDictionary } from "@/lib/panel/dictionary";
-export const metadata: Metadata = { title: "Najemcy" };
+import { fill, pluralize } from "@/lib/i18n/format";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.tenantsPage.title };
+}
 
 export default async function TenantsPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.tenantsPage;
   const session = await requireOwnerSession("/panel/najemcy");
   const params = await searchParams;
 
@@ -43,10 +48,10 @@ export default async function TenantsPage({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">Najemcy</h1>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
           <p className="text-sm text-muted">
-            {tenants.length} {tenants.length === 1 ? "najemca" : "najemców"}
-            {withDebt > 0 ? ` · ${withDebt} z nierozliczonymi płatnościami` : ""}
+            {fill(pluralize(locale, tenants.length, t.count), { count: tenants.length })}
+            {withDebt > 0 ? fill(t.withDebt, { count: withDebt }) : ""}
           </p>
         </div>
 
@@ -58,14 +63,14 @@ export default async function TenantsPage({
           <Button asChild size="sm" variant="secondary">
             <Link href="/panel/najemcy/archiwum">
               <Archive className="h-4 w-4" aria-hidden />
-              Zarchiwizowane
+              {t.archived}
             </Link>
           </Button>
 
           <Button asChild size="sm">
             <Link href="/panel/najemcy/nowy">
               <Plus className="h-4 w-4" aria-hidden />
-              Dodaj najemcę
+              {t.add}
             </Link>
           </Button>
         </div>
@@ -74,13 +79,13 @@ export default async function TenantsPage({
       {tenants.length === 0 ? (
         <EmptyState
           icon={UserPlus}
-          title="Nie masz jeszcze żadnego najemcy"
-          description="Dodaj profil najemcy, żeby móc podpiąć go pod umowę najmu i wystawiać faktury."
+          title={t.emptyTitle}
+          description={t.emptyLead}
           action={
             <Button asChild>
               <Link href="/panel/najemcy/nowy">
                 <Plus className="h-4 w-4" aria-hidden />
-                Dodaj najemcę
+                {t.add}
               </Link>
             </Button>
           }
@@ -110,7 +115,7 @@ export default async function TenantsPage({
                         <Badge tone={TENANT_STATUS_TONE[tenant.status]}>
                           {tenantStatusLabels(d)[tenant.status]}
                         </Badge>
-                        {tenant.archivedAt ? <Badge tone="neutral">Zarchiwizowany</Badge> : null}
+                        {tenant.archivedAt ? <Badge tone="neutral">{t.archivedBadge}</Badge> : null}
                         {/* Odliczanie stoi przy nazwisku, a nie przy kwocie:
                             to termin do zaplanowania, nie stan rozliczeń. */}
                         {expiry ? (
@@ -135,7 +140,7 @@ export default async function TenantsPage({
                             </Badge>
                           </>
                         ) : (
-                          <span>Bez umowy</span>
+                          <span>{t.noLease}</span>
                         )}
                         {tenant.email ? <span className="truncate">{tenant.email}</span> : null}
                         {tenant.phone ? <span>{tenant.phone}</span> : null}
@@ -150,16 +155,16 @@ export default async function TenantsPage({
                               tenant.overdueCount > 0 ? "text-bad" : "text-warn"
                             }`}
                           >
-                            {formatPLN(tenant.outstandingGrosze)}
+                            {formatMoney(tenant.outstandingGrosze, locale)}
                           </p>
                           <p className="text-xs text-muted">
                             {tenant.overdueCount > 0
-                              ? `${tenant.overdueCount} po terminie`
-                              : "do zapłaty"}
+                              ? fill(t.overdueCount, { count: tenant.overdueCount })
+                              : t.toPay}
                           </p>
                         </>
                       ) : (
-                        <Badge tone="good">Rozliczony</Badge>
+                        <Badge tone="good">{t.settled}</Badge>
                       )}
                     </div>
                   </CardContent>

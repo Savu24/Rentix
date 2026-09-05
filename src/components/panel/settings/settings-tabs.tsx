@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useI18n } from "@/lib/i18n/client";
+
 /**
  * Pasek zakładek ustawień.
  *
@@ -15,19 +17,20 @@ import { usePathname } from "next/navigation";
  * Klient tylko z powodu `usePathname` — sam pasek nie trzyma żadnego stanu.
  */
 
-const TABS = [
-  { href: "/panel/ustawienia", label: "Organizacja" },
-  { href: "/panel/ustawienia/powiadomienia", label: "Powiadomienia" },
-  { href: "/panel/ustawienia/wiadomosci", label: "Wiadomości" },
-  { href: "/panel/ustawienia/konto", label: "Konto" },
-];
-
 export function SettingsTabs() {
+  const { d } = useI18n();
   const pathname = usePathname();
+
+  const tabs = [
+    { href: "/panel/ustawienia", label: d.panel.tabs.settingsOrganization },
+    { href: "/panel/ustawienia/powiadomienia", label: d.panel.tabs.settingsNotifications },
+    { href: "/panel/ustawienia/wiadomosci", label: d.panel.tabs.settingsMessages },
+    { href: "/panel/ustawienia/konto", label: d.panel.tabs.settingsAccount },
+  ];
 
   return (
     <nav
-      aria-label="Sekcje ustawień"
+      aria-label={d.panel.tabs.settingsAria}
       /*
         Poziome przewijanie zamiast zwijania do listy rozwijanej: cztery pozycje
         mieszczą się w jednym rzucie oka, a lista rozwijana chowa nazwy sekcji
@@ -36,7 +39,7 @@ export function SettingsTabs() {
       className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
     >
       <ul className="flex w-max min-w-full gap-1 border-b border-border">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           // Zakładka „Organizacja" siedzi pod ścieżką bazową, więc dopasowanie
           // przez prefiks zapaliłoby ją na każdej podstronie ustawień.
           const active =

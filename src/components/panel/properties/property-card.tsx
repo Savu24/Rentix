@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import type { PropertyListItem } from "@/lib/properties/service";
-import { plural } from "@/lib/utils";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { fill, pluralize } from "@/lib/i18n/format";
+import type { Dictionary } from "@/lib/i18n/types";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { propertyTypeLabels } from "@/lib/validations/property";
 
 /**
@@ -14,37 +15,43 @@ import { propertyTypeLabels } from "@/lib/validations/property";
  * Nie trzymamy go w bazie — zmienia się przy każdej umowie i byłby ciągle
  * nieaktualny.
  */
-function occupancyBadge(property: PropertyListItem) {
+function occupancyBadge(property: PropertyListItem, t: Dictionary["panel"]["propertiesPage"]) {
+  const badge = t.badge;
+
   // Remont przykrywa rachunek pokoi: lokal wyłączony z najmu nie jest „wolny",
   // choćby wszystkie pokoje stały puste.
   if (property.status === "UNAVAILABLE") {
-    return { tone: "neutral" as const, label: "W remoncie" };
+    return { tone: "neutral" as const, label: badge.underRefurbishment };
   }
 
   // Bez pokoi wynajmuje się całość — wtedy liczy się status nieruchomości.
   if (property.roomCount === 0) {
     return property.status === "OCCUPIED"
-      ? { tone: "good" as const, label: "Wynajęta" }
-      : { tone: "warning" as const, label: "Wolna" };
+      ? { tone: "good" as const, label: badge.let }
+      : { tone: "warning" as const, label: badge.vacant };
   }
   if (property.availableRoomCount === 0) {
     // Krótko, bo etykieta stoi w wąskiej kolumnie na telefonie — „Wszystkie
     // pokoje zajęte" nie mieściło się i rozpychało kartę poza ekran.
-    return { tone: "good" as const, label: "Wszystkie zajęte" };
+    return { tone: "good" as const, label: badge.allLet };
   }
   if (property.occupiedRoomCount === 0) {
-    return { tone: "warning" as const, label: "Wolna" };
+    return { tone: "warning" as const, label: badge.vacant };
   }
   return {
     tone: "warning" as const,
-    label: `${property.availableRoomCount}/${property.roomCount} wolnych`,
+    label: fill(badge.someVacant, {
+      available: property.availableRoomCount,
+      total: property.roomCount,
+    }),
   };
 }
 
 export async function PropertyCard({ property }: { property: PropertyListItem }) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.propertiesPage;
 
-  const badge = occupancyBadge(property);
+  const badge = occupancyBadge(property, t);
   const address = formatPropertyAddress(property);
 
   return (
@@ -83,11 +90,11 @@ export async function PropertyCard({ property }: { property: PropertyListItem })
           <span>{propertyTypeLabels(d)[property.type]}</span>
           {property.roomCount > 0 ? (
             <span>
-              {property.roomCount} {plural(property.roomCount, ["pokój", "pokoje", "pokoi"])}
+              {property.roomCount} {pluralize(locale, property.roomCount, t.rooms)}
             </span>
           ) : null}
           {property.areaM2 ? (
-            <span className="tabular">{property.areaM2.replace(".", ",")} m²</span>
+            <span className="tabular">{locale === "pl" ? property.areaM2.replace(".", ",") : property.areaM2} m²</span>
           ) : null}
           {/* Kod do domofonu na liście, bo po niego się tu wraca — zwykle
               stojąc przed budynkiem z telefonem w ręku. */}

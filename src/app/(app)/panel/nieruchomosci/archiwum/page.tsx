@@ -4,13 +4,18 @@ import Link from "next/link";
 
 import { ArchiveList } from "@/components/panel/archive/archive-list";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { panelDictionary } from "@/lib/panel/dictionary";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { listProperties } from "@/lib/properties/service";
 
-export const metadata: Metadata = { title: "Archiwum nieruchomości" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.propertiesPage.archiveTitle };
+}
 
 export default async function ArchivedPropertiesPage() {
   const session = await requireOwnerSession("/panel/nieruchomosci/archiwum");
+  const d = await panelDictionary();
+  const t = d.panel.propertiesPage;
 
   const properties = await listProperties(session.user.organizationId, {
     includeArchived: true,
@@ -27,19 +32,17 @@ export default async function ArchivedPropertiesPage() {
           className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Nieruchomości
+          {t.title}
         </Link>
         <div>
-          <h1 className="r-display text-[26px] leading-tight text-fg">Archiwum nieruchomości</h1>
-          <p className="mt-1 text-sm text-muted">
-            Zaznacz pozycje, żeby je przywrócić albo usunąć na zawsze.
-          </p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.archiveTitle}</h1>
+          <p className="mt-1 text-sm text-muted">{d.panel.archive.lead}</p>
         </div>
       </div>
 
       <ArchiveList
         endpoint="/api/properties"
-        nouns={["nieruchomość", "nieruchomości", "nieruchomości"]}
+        nouns={t.noun}
         items={archived.map((property) => ({
           id: property.id,
           title: property.name,

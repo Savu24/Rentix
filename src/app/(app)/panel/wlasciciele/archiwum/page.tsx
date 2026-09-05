@@ -5,11 +5,15 @@ import Link from "next/link";
 import { ArchiveList } from "@/components/panel/archive/archive-list";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listOwners } from "@/lib/owners/service";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
-export const metadata: Metadata = { title: "Archiwum właścicieli" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.ownersPage.archiveTitle };
+}
 
 export default async function ArchivedOwnersPage() {
   const session = await requireOwnerSession("/panel/wlasciciele/archiwum");
+  const t = (await panelDictionary()).panel.ownersPage;
 
   const owners = await listOwners(session.user.organizationId, { includeArchived: true });
   const archived = owners.filter((owner) => owner.archivedAt !== null);
@@ -22,20 +26,17 @@ export default async function ArchivedOwnersPage() {
           className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Właściciele
+          {t.title}
         </Link>
         <div>
-          <h1 className="r-display text-[26px] leading-tight text-fg">Archiwum właścicieli</h1>
-          <p className="mt-1 text-sm text-muted">
-            Właściciel z przypisanymi nieruchomościami nie da się usunąć trwale. Odepnij je
-            najpierw.
-          </p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.archiveTitle}</h1>
+          <p className="mt-1 text-sm text-muted">{t.archiveNote}</p>
         </div>
       </div>
 
       <ArchiveList
         endpoint="/api/owners"
-        nouns={["właściciela", "właścicieli", "właścicieli"]}
+        nouns={t.noun}
         items={archived.map((owner) => ({
           id: owner.id,
           title: owner.name,

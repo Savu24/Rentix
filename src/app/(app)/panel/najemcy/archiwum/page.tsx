@@ -6,10 +6,15 @@ import { ArchiveList } from "@/components/panel/archive/archive-list";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listTenants } from "@/lib/tenants/service";
 
-export const metadata: Metadata = { title: "Archiwum najemców" };
+import { panelDictionary } from "@/lib/panel/dictionary";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.tenantsPage.archiveTitle };
+}
 
 export default async function ArchivedTenantsPage() {
   const session = await requireOwnerSession("/panel/najemcy/archiwum");
+  const t = (await panelDictionary()).panel.tenantsPage;
 
   const tenants = await listTenants(session.user.organizationId, {
     includeArchived: true,
@@ -27,20 +32,17 @@ export default async function ArchivedTenantsPage() {
           className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Najemcy
+          {t.title}
         </Link>
         <div>
-          <h1 className="r-display text-[26px] leading-tight text-fg">Archiwum najemców</h1>
-          <p className="mt-1 text-sm text-muted">
-            Najemca z historią umów nie da się usunąć trwale. Jego dane widnieją na
-            wystawionych dokumentach.
-          </p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.archiveTitle}</h1>
+          <p className="mt-1 text-sm text-muted">{t.archiveNote}</p>
         </div>
       </div>
 
       <ArchiveList
         endpoint="/api/tenants"
-        nouns={["najemcę", "najemców", "najemców"]}
+        nouns={t.noun}
         items={archived.map((tenant) => ({
           id: tenant.id,
           title: `${tenant.firstName} ${tenant.lastName}`,

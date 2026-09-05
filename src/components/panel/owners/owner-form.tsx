@@ -16,7 +16,7 @@ import {
   type OwnerFormInput,
   type OwnerFormOutput,
 } from "@/lib/validations/owner";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export function OwnerForm({
   ownerId,
   defaultValues,
@@ -24,6 +24,8 @@ export function OwnerForm({
   ownerId?: string;
   defaultValues?: Partial<OwnerFormInput>;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.ownersPage.form;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -69,11 +71,8 @@ export function OwnerForm({
       <Card>
         <CardContent className="flex flex-col gap-4">
           <div>
-            <h2 className="text-[15px] font-semibold text-fg">Dane właściciela</h2>
-            <p className="mt-0.5 text-sm text-muted">
-              Właściciel lokalu, który obsługujesz w podnajmie. Nie jest stroną umowy
-              z najemcą, tą pozostajesz Ty.
-            </p>
+            <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
+            <p className="mt-0.5 text-sm text-muted">{t.lead}</p>
           </div>
 
           <OwnerFields register={register} errors={errors} disabled={isSubmitting} />
@@ -83,10 +82,10 @@ export function OwnerForm({
       <div className="flex flex-wrap gap-2.5">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          {isEdit ? "Zapisz zmiany" : "Dodaj właściciela"}
+          {isEdit ? t.save : d.panel.ownersPage.add}
         </Button>
         <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => router.back()}>
-          Anuluj
+          {d.panel.common.cancel}
         </Button>
       </div>
     </form>

@@ -8,7 +8,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
-import { plural } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/client";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 
 export type ArchivedItem = {
   id: string;
@@ -18,10 +19,13 @@ export type ArchivedItem = {
   archivedAt: Date | null;
 };
 
-/** Odmiana rzeczownika dla komunikatów: „2 najemców przywrócono". */
-export type ArchiveNouns = [string, string, string];
-
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
+/**
+ * Odmiana rzeczownika dla komunikatów: „2 najemców przywrócono".
+ *
+ * Tablica, nie trójka: polski ma trzy formy, angielski dwie, a o wyborze
+ * decyduje `pluralize` regułami języka, nie długość tablicy.
+ */
+export type ArchiveNouns = readonly string[];
 
 /**
  * Archiwum jednej kartoteki: zaznaczanie, przywracanie i usuwanie na zawsze.
@@ -46,6 +50,8 @@ export function ArchiveList({
   nouns: ArchiveNouns;
 }) {
   const router = useRouter();
+  const { d, locale } = useI18n();
+  const t = d.panel.archive;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<"restore" | "delete" | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -90,11 +96,8 @@ export function ArchiveList({
     setProblems(failures);
 
     if (done > 0) {
-      setMessage(
-        mode === "restore"
-          ? `Przywrócono ${done} ${plural(done, nouns)}.`
-          : `Usunięto na zawsze ${done} ${plural(done, nouns)}.`,
-      );
+      const noun = pluralize(locale, done, nouns);
+      setMessage(fill(mode === "restore" ? t.restored : t.deleted, { count: done, noun }));
     }
 
     router.refresh();
@@ -103,10 +106,7 @@ export function ArchiveList({
   if (items.length === 0) {
     return (
       <Card>
-        <CardContent className="p-4 text-sm text-muted">
-          Archiwum jest puste. Trafiają tu pozycje, które zarchiwizujesz. Nic nie znika
-          bezpowrotnie, dopóki sam tego nie zdecydujesz.
-        </CardContent>
+        <CardContent className="p-4 text-sm text-muted">{t.empty}</CardContent>
       </Card>
     );
   }
@@ -117,7 +117,7 @@ export function ArchiveList({
 
       {problems.length > 0 ? (
         <Alert tone="error">
-          <p className="font-medium">Część pozycji została nietknięta:</p>
+          <p className="font-medium">{t.partialFailure}</p>
           <ul className="mt-1 list-disc pl-4">
             {problems.map((problem) => (
               <li key={problem}>{problem}</li>
@@ -138,13 +138,16 @@ export function ArchiveList({
           ) : (
             <CheckSquare className="h-4 w-4" aria-hidden />
           )}
-          {allSelected ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
+          {allSelected ? t.deselectAll : t.selectAll}
         </Button>
 
         <span className="text-xs text-muted" aria-live="polite">
           {selected.size === 0
-            ? "Nic nie zaznaczono"
-            : `${selected.size} ${plural(selected.size, nouns)}`}
+            ? t.nothingSelected
+            : fill(t.selectedCount, {
+                count: selected.size,
+                noun: pluralize(locale, selected.size, nouns),
+              })}
         </span>
 
         <div className="ml-auto flex items-center gap-2">
@@ -158,7 +161,7 @@ export function ArchiveList({
             ) : (
               <RotateCcw className="h-4 w-4" aria-hidden />
             )}
-            Przywróć
+            {t.restore}
           </Button>
 
           <Button
@@ -172,16 +175,13 @@ export function ArchiveList({
             ) : (
               <Trash2 className="h-4 w-4" aria-hidden />
             )}
-            {confirmingDelete ? "Na pewno? Usuń trwale" : "Usuń trwale"}
+            {confirmingDelete ? t.confirmDelete : t.deleteForever}
           </Button>
         </div>
       </div>
 
       {confirmingDelete ? (
-        <Alert tone="warning">
-          Tego się nie cofnie. Nie ma kosza ani kopii. Pozycje powiązane z umowami albo
-          fakturami zostaną pominięte, bo ich usunięcie zerwałoby historię rozliczeń.
-        </Alert>
+        <Alert tone="warning">{t.deleteWarning}</Alert>
       ) : null}
 
       <Card>
@@ -217,7 +217,7 @@ export function ArchiveList({
 
                 {item.archivedAt ? (
                   <span className="shrink-0 text-xs text-muted">
-                    {dateFormat.format(item.archivedAt)}
+                    {formatDateIn(item.archivedAt, locale, "short")}
                   </span>
                 ) : null}
               </button>

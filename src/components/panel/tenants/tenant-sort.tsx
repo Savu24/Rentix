@@ -38,7 +38,7 @@ export function TenantSort() {
       <ArrowDownUp className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span className="shrink-0">Sortuj</span>
       <Select
-        aria-label="Sortowanie najemców"
+        aria-label={d.panel.tenantsPage.sortAria}
         value={searchParams.get("sort") ?? "name"}
         onChange={(event) => setSort(event.target.value)}
         disabled={isPending}
