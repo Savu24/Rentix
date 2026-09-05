@@ -24,15 +24,15 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = terminateLeaseSchema.safeParse(body);
+  const parsed = terminateLeaseSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const lease = await terminateLease(auth.organizationId, id, parsed.data);
 
-  if (!lease) return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+  if (!lease) return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease);
   return ok({ id: lease.id, status: lease.status });
 }

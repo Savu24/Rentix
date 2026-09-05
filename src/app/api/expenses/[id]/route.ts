@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const expense = await getExpense(auth.organizationId, id);
 
-  if (!expense) return apiError("NOT_FOUND", "Nie znaleziono kosztu.");
+  if (!expense) return apiError("NOT_FOUND", auth.d.panel.api.notFound.expense);
   return ok(expense);
 }
 
@@ -30,10 +30,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = expenseUpdateSchema.safeParse(body);
+  const parsed = expenseUpdateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
@@ -43,7 +43,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
   switch (result.reason) {
     case "NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono kosztu.");
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.expense);
     case "PROPERTY_NOT_FOUND":
       return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.", {
         fields: { propertyId: ["Wybierz nieruchomość z listy"] },
@@ -64,6 +64,6 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const removed = await deleteExpense(auth.organizationId, id);
 
-  if (!removed) return apiError("NOT_FOUND", "Nie znaleziono kosztu.");
+  if (!removed) return apiError("NOT_FOUND", auth.d.panel.api.notFound.expense);
   return ok({ id, deleted: true });
 }

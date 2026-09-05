@@ -18,7 +18,7 @@ import {
   type OrganizationSettingsInput,
   type OrganizationSettingsOutput,
 } from "@/lib/validations/settings";
-
+import { useValidationContext } from "@/lib/i18n/client";
 /**
  * Dane wystawcy dokumentów.
  *
@@ -31,6 +31,7 @@ export function OrganizationForm({
 }: {
   defaultValues: OrganizationSettingsInput;
 }) {
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -42,7 +43,7 @@ export function OrganizationForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<OrganizationSettingsInput, unknown, OrganizationSettingsOutput>({
-    resolver: zodResolver(organizationSettingsSchema),
+    resolver: zodResolver(organizationSettingsSchema(v)),
     defaultValues,
   });
 

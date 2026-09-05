@@ -29,10 +29,10 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = tenantFormSchema.safeParse(body);
+  const parsed = tenantFormSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return created(await createTenant(auth.organizationId, parsed.data));

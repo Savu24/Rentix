@@ -14,6 +14,6 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const restored = await restoreTenant(auth.organizationId, id);
 
-  if (!restored) return apiError("NOT_FOUND", "Nie znaleziono zarchiwizowanego najemcy.");
+  if (!restored) return apiError("NOT_FOUND", auth.d.panel.api.notFound.archivedTenant);
   return ok({ id, archivedAt: null });
 }

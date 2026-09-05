@@ -28,7 +28,7 @@ import {
   type EditableNotificationType,
 } from "@/lib/notifications/types";
 import { emailTemplateSchema, type EmailTemplateInput } from "@/lib/validations/settings";
-
+import { useValidationContext } from "@/lib/i18n/client";
 /**
  * Edytor treści jednego powiadomienia, z podglądem obok pól.
  *
@@ -65,6 +65,7 @@ export function TemplateEditor({
   landlordName: string;
   defaultValues: { subject: string; heading: string; intro: string; outro: string };
 }) {
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -80,7 +81,7 @@ export function TemplateEditor({
     setError,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<EmailTemplateInput>({
-    resolver: zodResolver(emailTemplateSchema),
+    resolver: zodResolver(emailTemplateSchema(v)),
     // `enabled` nie jest polem tego formularza — przełącznik stoi w zakładce
     // „Powiadomienia". Wysyłamy wartość, którą serwer i tak trzyma, żeby
     // schemat pozostał jeden dla całego wiersza.

@@ -13,8 +13,8 @@ import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { expenseSummary, expenseYears, listExpenses } from "@/lib/expenses/service";
 import { formatPLN } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import { EXPENSE_CATEGORY_LABEL, expenseListQuerySchema } from "@/lib/validations/expense";
-
+import { expenseCategoryLabels, expenseListQuerySchema } from "@/lib/validations/expense";
+import { panelDictionary } from "@/lib/panel/dictionary";
 export const metadata: Metadata = { title: "Koszty" };
 
 export default async function ExpensesPage({
@@ -22,6 +22,7 @@ export default async function ExpensesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession("/panel/finanse/koszty");
   const organizationId = session.user.organizationId;
   const params = await searchParams;
@@ -78,7 +79,7 @@ export default async function ExpensesPage({
               <div className="flex flex-wrap gap-2">
                 {summary.byCategory.slice(0, 3).map((bucket) => (
                   <Badge key={bucket.category}>
-                    {EXPENSE_CATEGORY_LABEL[bucket.category]} · {formatPLN(bucket.totalGrosze)}
+                    {expenseCategoryLabels(d)[bucket.category]} · {formatPLN(bucket.totalGrosze)}
                   </Badge>
                 ))}
               </div>

@@ -24,10 +24,10 @@ export async function PUT(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = organizationLogoSchema.safeParse(body);
+  const parsed = organizationLogoSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return ok(await saveOrganizationLogo(auth.organizationId, parsed.data.dataUrl));

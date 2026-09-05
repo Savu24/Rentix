@@ -6,8 +6,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { PROPERTY_TYPE_LABEL } from "@/lib/validations/property";
-
+import { propertyTypeLabels } from "@/lib/validations/property";
+import { useI18n } from "@/lib/i18n/client";
 /**
  * Filtry listy nieruchomości.
  *
@@ -17,6 +17,7 @@ import { PROPERTY_TYPE_LABEL } from "@/lib/validations/property";
  * przefiltrowana.
  */
 export function PropertyFilters({ total }: { total: number }) {
+  const { d } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -91,7 +92,7 @@ export function PropertyFilters({ total }: { total: number }) {
             className="sm:w-44"
           >
             <option value="all">Wszystkie typy</option>
-            {Object.entries(PROPERTY_TYPE_LABEL).map(([value, label]) => (
+            {Object.entries(propertyTypeLabels(d)).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

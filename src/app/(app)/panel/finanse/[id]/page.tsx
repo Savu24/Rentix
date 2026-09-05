@@ -18,8 +18,8 @@ import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { isSellerComplete } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
-import { INVOICE_KIND_LABEL, PAYMENT_METHOD_LABEL } from "@/lib/validations/invoice";
-
+import { invoiceKindLabels, paymentMethodLabels } from "@/lib/validations/invoice";
+import { panelDictionary } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -34,6 +34,7 @@ const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
 const shortDate = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function InvoiceDetailPage({ params }: Params) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -67,7 +68,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="r-display text-[26px] leading-tight text-fg">{invoice.number}</h1>
               <Badge tone={meta.tone}>{meta.label}</Badge>
-              <Badge>{INVOICE_KIND_LABEL[invoice.kind]}</Badge>
+              <Badge>{invoiceKindLabels(d)[invoice.kind]}</Badge>
             </div>
 
             <p className="text-sm text-muted">
@@ -226,7 +227,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-fg">
-                      {shortDate.format(payment.paidAt)} · {PAYMENT_METHOD_LABEL[payment.method]}
+                      {shortDate.format(payment.paidAt)} · {paymentMethodLabels(d)[payment.method]}
                     </p>
                     {payment.reference ? (
                       <p className="text-xs text-muted">{payment.reference}</p>

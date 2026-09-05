@@ -16,8 +16,8 @@ import { INVOICE_STATUS_META } from "@/lib/invoices/status";
 import { formatPLN } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getTenantPortal } from "@/lib/tenants/portal";
-import { LEASE_STATUS_LABEL, UTILITIES_MODE_LABEL } from "@/lib/validations/lease";
-
+import { leaseStatusLabels, utilitiesModeLabels } from "@/lib/validations/lease";
+import { panelDictionary } from "@/lib/panel/dictionary";
 export const metadata: Metadata = { title: "Twój najem" };
 
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
@@ -35,6 +35,7 @@ const shortDate = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
  * zobaczyć.
  */
 export default async function TenantPortalPage() {
+  const d = await panelDictionary();
   const session = await requireSession(ROUTES.tenantDashboard);
 
   // Właściciel, który trafił tu z zakładki, wraca do swojego panelu.
@@ -103,7 +104,7 @@ export default async function TenantPortalPage() {
                           {lease.property.name}
                           {lease.room ? ` · ${lease.room.name}` : ""}
                         </h2>
-                        <Badge>{LEASE_STATUS_LABEL[lease.status]}</Badge>
+                        <Badge>{leaseStatusLabels(d)[lease.status]}</Badge>
                       </div>
 
                       <p className="text-xs text-muted">
@@ -120,7 +121,7 @@ export default async function TenantPortalPage() {
                         />
                         <Term
                           label="Rozliczenie mediów"
-                          value={UTILITIES_MODE_LABEL[lease.utilitiesMode]}
+                          value={utilitiesModeLabels(d)[lease.utilitiesMode]}
                         />
                         {lease.utilitiesAdvanceGrosze > 0 ? (
                           <Term

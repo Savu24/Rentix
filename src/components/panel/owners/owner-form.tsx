@@ -16,7 +16,7 @@ import {
   type OwnerFormInput,
   type OwnerFormOutput,
 } from "@/lib/validations/owner";
-
+import { useValidationContext } from "@/lib/i18n/client";
 export function OwnerForm({
   ownerId,
   defaultValues,
@@ -24,6 +24,7 @@ export function OwnerForm({
   ownerId?: string;
   defaultValues?: Partial<OwnerFormInput>;
 }) {
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(ownerId);
@@ -35,7 +36,7 @@ export function OwnerForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<OwnerFormInput, unknown, OwnerFormOutput>({
-    resolver: zodResolver(ownerFormSchema),
+    resolver: zodResolver(ownerFormSchema(v)),
     defaultValues: { ...EMPTY_OWNER, ...defaultValues },
   });
 

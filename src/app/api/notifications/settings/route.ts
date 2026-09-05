@@ -23,7 +23,7 @@ export async function GET() {
   if ("response" in auth) return auth.response;
 
   const data = await getNotificationPanelData(auth.organizationId);
-  if (!data) return apiError("NOT_FOUND", "Nie znaleziono organizacji.");
+  if (!data) return apiError("NOT_FOUND", auth.d.panel.api.notFound.organization);
 
   return ok(data);
 }
@@ -37,10 +37,10 @@ export async function PATCH(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = notificationSettingsSchema.safeParse(body);
+  const parsed = notificationSettingsSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return ok(await updateNotificationSettings(auth.organizationId, parsed.data));

@@ -25,7 +25,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
 
   switch (result.reason) {
     case "NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono dokumentu.");
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
     case "NO_TENANT":
       return apiError(
         "CONFLICT",
@@ -37,7 +37,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
         "Najemca nie ma adresu e-mail. Uzupełnij go w kartotece, bo nie ma dokąd wysłać dokumentu.",
       );
     case "CANCELLED":
-      return apiError("CONFLICT", "Dokument jest anulowany. Nie wysyłamy go najemcy.");
+      return apiError("CONFLICT", auth.d.panel.api.cancelledNotSent);
     case "SEND_FAILED":
       return apiError("INTERNAL_ERROR", result.error);
   }

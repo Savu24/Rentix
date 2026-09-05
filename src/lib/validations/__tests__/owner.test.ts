@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import { formatBankAccount } from "@/lib/bank-account";
 import { formatContractPeriod, ownerFormSchema, ownerUpdateSchema } from "@/lib/validations/owner";
 
+import { localeContext } from "@/lib/i18n";
+
+/*
+  Schematy są fabrykami zależnymi od kraju, więc test podaje im kontekst wprost.
+  Sprawdzamy na wersji polskiej — reguły brytyjskie mają własne przypadki.
+*/
+const C = localeContext("pl");
+
 const VALID = { name: "Anna Nowak" };
 const ACCOUNT = "12345678901234567890123456";
 
@@ -11,17 +19,17 @@ describe("ownerFormSchema", () => {
     // Numer rachunku i NIP dostaje się zwykle dopiero przy pierwszym
     // rozliczeniu — formularz, którego bez nich nie da się zapisać, kończy się
     // notatką w telefonie zamiast wpisem w systemie.
-    const result = ownerFormSchema.parse(VALID);
+    const result = ownerFormSchema(C).parse(VALID);
     expect(result.name).toBe("Anna Nowak");
     expect(result.bankAccount).toBeUndefined();
   });
 
   it("wymaga nazwy", () => {
-    expect(ownerFormSchema.safeParse({ name: "   " }).success).toBe(false);
+    expect(ownerFormSchema(C).safeParse({ name: "   " }).success).toBe(false);
   });
 
   it("przyjmuje nazwę firmy tak samo jak osobę", () => {
-    expect(ownerFormSchema.parse({ name: "Nowak Nieruchomości sp. z o.o." }).name).toBe(
+    expect(ownerFormSchema(C).parse({ name: "Nowak Nieruchomości sp. z o.o." }).name).toBe(
       "Nowak Nieruchomości sp. z o.o.",
     );
   });
@@ -30,29 +38,29 @@ describe("ownerFormSchema", () => {
 describe("numer rachunku", () => {
   it("czyści spacje z numeru przepisanego z umowy", () => {
     const spaced = "12 3456 7890 1234 5678 9012 3456";
-    expect(ownerFormSchema.parse({ ...VALID, bankAccount: spaced }).bankAccount).toBe(ACCOUNT);
+    expect(ownerFormSchema(C).parse({ ...VALID, bankAccount: spaced }).bankAccount).toBe(ACCOUNT);
   });
 
   it("akceptuje prefiks PL", () => {
-    expect(ownerFormSchema.parse({ ...VALID, bankAccount: `PL${ACCOUNT}` }).bankAccount).toBe(
+    expect(ownerFormSchema(C).parse({ ...VALID, bankAccount: `PL${ACCOUNT}` }).bankAccount).toBe(
       ACCOUNT,
     );
   });
 
   it("odrzuca numer o złej długości", () => {
-    expect(ownerFormSchema.safeParse({ ...VALID, bankAccount: "123456" }).success).toBe(false);
-    expect(ownerFormSchema.safeParse({ ...VALID, bankAccount: `${ACCOUNT}7` }).success).toBe(false);
+    expect(ownerFormSchema(C).safeParse({ ...VALID, bankAccount: "123456" }).success).toBe(false);
+    expect(ownerFormSchema(C).safeParse({ ...VALID, bankAccount: `${ACCOUNT}7` }).success).toBe(false);
   });
 
   it("odrzuca numer z literami w środku", () => {
     expect(
-      ownerFormSchema.safeParse({ ...VALID, bankAccount: "12 3456 ABCD 1234 5678 9012 3456" })
+      ownerFormSchema(C).safeParse({ ...VALID, bankAccount: "12 3456 ABCD 1234 5678 9012 3456" })
         .success,
     ).toBe(false);
   });
 
   it("puste pole daje null, nie błąd", () => {
-    expect(ownerFormSchema.parse({ ...VALID, bankAccount: "" }).bankAccount).toBeNull();
+    expect(ownerFormSchema(C).parse({ ...VALID, bankAccount: "" }).bankAccount).toBeNull();
   });
 });
 
@@ -70,7 +78,7 @@ describe("formatBankAccount", () => {
 
 describe("okres umowy o zarządzanie", () => {
   it("zapisuje obie daty jako północ UTC", () => {
-    const result = ownerFormSchema.parse({
+    const result = ownerFormSchema(C).parse({
       ...VALID,
       contractStartDate: "2026-09-01",
       contractEndDate: "2027-08-31",
@@ -82,18 +90,18 @@ describe("okres umowy o zarządzanie", () => {
 
   it("puste daty dają null, nie błąd", () => {
     // Właściciela wpisuje się często zanim umowa zostanie podpisana.
-    const result = ownerFormSchema.parse({ ...VALID, contractStartDate: "", contractEndDate: "" });
+    const result = ownerFormSchema(C).parse({ ...VALID, contractStartDate: "", contractEndDate: "" });
     expect(result.contractStartDate).toBeNull();
     expect(result.contractEndDate).toBeNull();
   });
 
   it("sam początek znaczy czas nieokreślony", () => {
-    const result = ownerFormSchema.parse({ ...VALID, contractStartDate: "2026-09-01" });
+    const result = ownerFormSchema(C).parse({ ...VALID, contractStartDate: "2026-09-01" });
     expect(result.contractEndDate).toBeNull();
   });
 
   it("odrzuca koniec wcześniejszy niż początek", () => {
-    const result = ownerFormSchema.safeParse({
+    const result = ownerFormSchema(C).safeParse({
       ...VALID,
       contractStartDate: "2026-09-01",
       contractEndDate: "2026-08-31",
@@ -105,7 +113,7 @@ describe("okres umowy o zarządzanie", () => {
 
   it("dopuszcza umowę jednodniową", () => {
     expect(
-      ownerFormSchema.safeParse({
+      ownerFormSchema(C).safeParse({
         ...VALID,
         contractStartDate: "2026-09-01",
         contractEndDate: "2026-09-01",
@@ -116,7 +124,7 @@ describe("okres umowy o zarządzanie", () => {
   it("PATCH z samym telefonem nie wymaga przysyłania dat", () => {
     // `.partial()` na kształcie, nie na gotowym schemacie — inaczej sprawdzenie
     // kolejności dat wywracałoby każdą częściową aktualizację.
-    expect(ownerUpdateSchema.safeParse({ phone: "601100200" }).success).toBe(true);
+    expect(ownerUpdateSchema(C).safeParse({ phone: "601100200" }).success).toBe(true);
   });
 });
 
@@ -125,14 +133,14 @@ describe("formatContractPeriod", () => {
   const end = new Date("2027-08-31T00:00:00.000Z");
 
   it("składa zakres z obu dat", () => {
-    expect(formatContractPeriod(start, end)).toBe("1 wrz 2026 – 31 sie 2027");
+    expect(formatContractPeriod(start, end, C)).toBe("1 wrz 2026 – 31 sie 2027");
   });
 
   it("sam początek opisuje jako czas nieokreślony", () => {
-    expect(formatContractPeriod(start, null)).toBe("od 1 wrz 2026, czas nieokreślony");
+    expect(formatContractPeriod(start, null, C)).toBe("od 1 wrz 2026, czas nieokreślony");
   });
 
   it("bez dat nie ma czego pokazać", () => {
-    expect(formatContractPeriod(null, null)).toBeNull();
+    expect(formatContractPeriod(null, null, C)).toBeNull();
   });
 });

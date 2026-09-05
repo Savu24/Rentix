@@ -24,7 +24,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
   // Cudze id daje 404, a nie 403 — inaczej odpowiedź potwierdzałaby,
   // że taki rekord istnieje u kogoś innego.
-  if (!property) return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.");
+  if (!property) return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
 
   return ok(property);
 }
@@ -38,16 +38,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = propertyUpdateSchema.safeParse(body);
+  const parsed = propertyUpdateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const updated = await updateProperty(auth.organizationId, id, parsed.data);
 
-  if (!updated) return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.");
+  if (!updated) return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
   return ok(updated);
 }
 
@@ -66,7 +66,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   if (!force) {
     const archived = await archiveProperty(auth.organizationId, id);
-    if (!archived) return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.");
+    if (!archived) return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
     return ok({ id, archived: true });
   }
 
@@ -74,7 +74,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   if (result.ok) return ok({ id, deleted: true });
   if (result.reason === "NOT_FOUND") {
-    return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.");
+    return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
   }
 
   return apiError(

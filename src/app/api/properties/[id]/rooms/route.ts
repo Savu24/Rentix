@@ -27,16 +27,16 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = roomFormSchema.safeParse(body);
+  const parsed = roomFormSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const room = await createRoom(auth.organizationId, id, parsed.data);
 
-  if (!room) return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.");
+  if (!room) return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
   return created(room);
 }
 
@@ -54,15 +54,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = roomsBulkUpdateSchema.safeParse(body);
+  const parsed = roomsBulkUpdateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const rooms = await updateRoomsBulk(auth.organizationId, id, parsed.data.rooms);
 
-  if (!rooms) return apiError("NOT_FOUND", "Nie znaleziono pokoi tej nieruchomości.");
+  if (!rooms) return apiError("NOT_FOUND", auth.d.panel.api.notFound.propertyRooms);
   return ok(rooms);
 }

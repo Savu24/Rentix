@@ -27,10 +27,10 @@ export async function PUT(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = emailTemplateSchema.safeParse(body);
+  const parsed = emailTemplateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return ok(await saveEmailTemplate(auth.organizationId, parsed.data));
@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
   const parsed = toggleSchema.safeParse(body);

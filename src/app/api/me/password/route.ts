@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { apiError, ok, rateLimited, validationError } from "@/lib/api/response";
-import { getApiSession } from "@/lib/auth/session";
+import { getApiSession, sessionLocaleContext } from "@/lib/auth/session";
 import { changePassword } from "@/lib/organizations/service";
 import { consume, LIMITS, reset } from "@/lib/rate-limit";
 import { passwordChangeSchema } from "@/lib/validations/settings";
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
   }
 
-  const parsed = passwordChangeSchema.safeParse(body);
+  const parsed = passwordChangeSchema(await sessionLocaleContext(result.session)).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const changed = await changePassword(userId, parsed.data);

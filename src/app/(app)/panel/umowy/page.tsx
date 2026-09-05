@@ -10,11 +10,11 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { listLeases } from "@/lib/leases/service";
 import { formatPLN } from "@/lib/money";
 import {
-  LEASE_STATUS_LABEL,
+  leaseStatusLabels,
   LEASE_STATUS_TONE,
   leaseListQuerySchema,
 } from "@/lib/validations/lease";
-
+import { panelDictionary } from "@/lib/panel/dictionary";
 export const metadata: Metadata = { title: "Umowy" };
 
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
@@ -24,6 +24,7 @@ export default async function LeasesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession("/panel/umowy");
   const params = await searchParams;
 
@@ -92,7 +93,7 @@ export default async function LeasesPage({
                         </p>
                         {lease.room ? <Badge tone="accent">Najem pokoju</Badge> : null}
                         <Badge tone={LEASE_STATUS_TONE[lease.status]}>
-                          {LEASE_STATUS_LABEL[lease.status]}
+                          {leaseStatusLabels(d)[lease.status]}
                         </Badge>
                         {lease.overdueCount > 0 ? (
                           <Badge tone="critical">

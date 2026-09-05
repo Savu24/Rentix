@@ -17,16 +17,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = roomUpdateSchema.safeParse(body);
+  const parsed = roomUpdateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const updated = await updateRoom(auth.organizationId, id, parsed.data);
 
-  if (!updated) return apiError("NOT_FOUND", "Nie znaleziono pokoju.");
+  if (!updated) return apiError("NOT_FOUND", auth.d.panel.api.notFound.room);
   return ok(updated);
 }
 
@@ -39,7 +39,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   const result = await deleteRoom(auth.organizationId, id);
 
   if (result.ok) return ok({ id, deleted: true });
-  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono pokoju.");
+  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", auth.d.panel.api.notFound.room);
 
   return apiError(
     "CONFLICT",

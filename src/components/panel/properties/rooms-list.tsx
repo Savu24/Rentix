@@ -19,17 +19,18 @@ import { api } from "@/lib/api/client";
 import { formatPLN } from "@/lib/money";
 import { plural } from "@/lib/utils";
 import {
-  RENTAL_STATUS_LABEL,
+  rentalStatusLabels,
   RENTAL_STATUS_TONE,
   roomFormSchema,
   type RoomFormInput,
   type RoomFormOutput,
 } from "@/lib/validations/property";
-
+import type { RentalStatus } from "@/generated/prisma/enums";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export type RoomView = {
   id: string;
   name: string;
-  status: keyof typeof RENTAL_STATUS_LABEL;
+  status: RentalStatus;
   monthlyRentGrosze: number | null;
   /** Osoba przypisana przez aktywną umowę na ten pokój. */
   tenantId: string | null;
@@ -170,6 +171,7 @@ function RoomRow({
   disabled: boolean;
   onEdit: () => void;
 }) {
+  const { d } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +207,7 @@ function RoomRow({
               </Link>
             ) : (
               <Badge tone={RENTAL_STATUS_TONE[room.status]}>
-                {RENTAL_STATUS_LABEL[room.status]}
+                {rentalStatusLabels(d)[room.status]}
               </Badge>
             )}
           </span>
@@ -268,6 +270,8 @@ function RoomForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(room);
@@ -279,7 +283,7 @@ function RoomForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<RoomFormInput, unknown, RoomFormOutput>({
-    resolver: zodResolver(roomFormSchema),
+    resolver: zodResolver(roomFormSchema(v)),
     defaultValues: {
       name: room?.name ?? "",
       status: room?.status ?? "AVAILABLE",
@@ -342,7 +346,7 @@ function RoomForm({
                 disabled={isSubmitting}
                 {...register("status")}
               >
-                {Object.entries(RENTAL_STATUS_LABEL).map(([value, label]) => (
+                {Object.entries(rentalStatusLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

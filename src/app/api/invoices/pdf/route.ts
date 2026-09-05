@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     .filter(Boolean);
 
   if (ids.length === 0) {
-    return apiError("VALIDATION_ERROR", "Nie wskazano żadnego dokumentu.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.noInvoiceSelected);
   }
 
   if (ids.length > MAX_BATCH_PDF) {
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   // Żaden z podanych identyfikatorów nie należy do tej organizacji — to samo
   // co „nie znaleziono", bez zdradzania, że dokumenty istnieją u kogoś innego.
-  if (invoices.length === 0) return apiError("NOT_FOUND", "Nie znaleziono dokumentów.");
+  if (invoices.length === 0) return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoices);
 
   const documents = invoices.map(toInvoicePdfData);
   const authorName = invoices[0]!.organization.name;

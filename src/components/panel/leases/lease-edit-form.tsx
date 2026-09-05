@@ -18,15 +18,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import {
   LEASE_SETTABLE_STATUSES,
-  LEASE_STATUS_LABEL,
+  leaseStatusLabels,
   leaseEditSchema,
   type LeaseEditInput,
   type LeaseEditOutput,
-  UTILITIES_MODE_HINT,
-  UTILITIES_MODE_INCOMPLETE,
-  UTILITIES_MODE_LABEL,
+  utilitiesModeHints,
+  utilitiesModeIncomplete,
+  utilitiesModeLabels,
 } from "@/lib/validations/lease";
-
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 /**
  * Edycja warunków zawartej umowy.
  *
@@ -44,6 +44,8 @@ export function LeaseEditForm({
   leaseId: string;
   defaultValues: LeaseEditInput;
 }) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -55,7 +57,7 @@ export function LeaseEditForm({
     watch,
     formState: { errors, isSubmitting },
   } = useForm<LeaseEditInput, unknown, LeaseEditOutput>({
-    resolver: zodResolver(leaseEditSchema),
+    resolver: zodResolver(leaseEditSchema(v)),
     defaultValues,
   });
 
@@ -124,7 +126,7 @@ export function LeaseEditForm({
                 >
                   {LEASE_SETTABLE_STATUSES.map((value) => (
                     <option key={value} value={value}>
-                      {LEASE_STATUS_LABEL[value]}
+                      {leaseStatusLabels(d)[value]}
                     </option>
                   ))}
                 </Select>
@@ -179,14 +181,14 @@ export function LeaseEditForm({
               id="utilitiesMode"
               label="Rozliczenie mediów"
               error={errors.utilitiesMode?.message}
-              hint={UTILITIES_MODE_HINT[utilitiesMode ?? "FLAT_RATE"]}
+              hint={utilitiesModeHints(d)[utilitiesMode ?? "FLAT_RATE"]}
             >
               <Select
                 {...fieldAria("utilitiesMode", { error: errors.utilitiesMode?.message })}
                 disabled={isSubmitting}
                 {...register("utilitiesMode")}
               >
-                {Object.entries(UTILITIES_MODE_LABEL).map(([value, label]) => (
+                {Object.entries(utilitiesModeLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -194,9 +196,9 @@ export function LeaseEditForm({
               </Select>
             </FormField>
 
-            {utilitiesMode && UTILITIES_MODE_INCOMPLETE[utilitiesMode] ? (
+            {utilitiesMode && utilitiesModeIncomplete(d)[utilitiesMode] ? (
               <div className="sm:col-span-2">
-                <Alert tone="warning">{UTILITIES_MODE_INCOMPLETE[utilitiesMode]}</Alert>
+                <Alert tone="warning">{utilitiesModeIncomplete(d)[utilitiesMode]}</Alert>
               </div>
             ) : null}
 

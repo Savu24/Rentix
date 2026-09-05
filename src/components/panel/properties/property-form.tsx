@@ -19,16 +19,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { OwnerPicker, type OwnerOption } from "@/components/panel/owners/owner-picker";
 import { api } from "@/lib/api/client";
 import {
-  HEATING_TYPE_LABEL,
+  heatingTypeLabels,
   MAX_ROOMS_PER_PROPERTY,
   PROPERTY_SETTABLE_STATUSES,
-  PROPERTY_TYPE_LABEL,
-  RENTAL_STATUS_LABEL,
+  propertyTypeLabels,
+  rentalStatusLabels,
   propertyCreateSchema,
   type PropertyCreateInput,
   type PropertyCreateOutput,
 } from "@/lib/validations/property";
-
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 type Props = {
   /** Podany = edycja istniejącej nieruchomości (bez pola liczby pokoi). */
   propertyId?: string;
@@ -86,6 +86,8 @@ const EMPTY: PropertyCreateInput = {
 };
 
 export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(propertyId);
@@ -106,7 +108,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
     // Jeden schemat w obu trybach — `roomCount` jest opcjonalny i domyślnie 0.
     // Przy edycji pole po prostu się nie renderuje, a `propertyUpdateSchema`
     // po stronie API i tak je odrzuca.
-    resolver: zodResolver(propertyCreateSchema),
+    resolver: zodResolver(propertyCreateSchema(v)),
     defaultValues: { ...EMPTY, ...defaultValues },
   });
 
@@ -180,7 +182,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 disabled={isSubmitting}
                 {...register("type")}
               >
-                {Object.entries(PROPERTY_TYPE_LABEL).map(([value, label]) => (
+                {Object.entries(propertyTypeLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -202,7 +204,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 >
                   {PROPERTY_SETTABLE_STATUSES.map((value) => (
                     <option key={value} value={value}>
-                      {RENTAL_STATUS_LABEL[value]}
+                      {rentalStatusLabels(d)[value]}
                     </option>
                   ))}
                 </Select>
@@ -541,7 +543,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 {...register("heatingType")}
               >
                 <option value="">Nie podano</option>
-                {Object.entries(HEATING_TYPE_LABEL).map(([value, label]) => (
+                {Object.entries(heatingTypeLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

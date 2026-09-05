@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const lease = await getLease(auth.organizationId, id);
 
-  if (!lease) return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+  if (!lease) return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease);
   return ok(lease);
 }
 
@@ -28,17 +28,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = leaseUpdateSchema.safeParse(body);
+  const parsed = leaseUpdateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const updated = await updateLease(auth.organizationId, id, parsed.data);
 
   if (!updated.ok) {
-    if (updated.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+    if (updated.reason === "NOT_FOUND") return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease);
 
     return apiError(
       "CONFLICT",
@@ -67,7 +67,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const archived = await archiveLease(auth.organizationId, id);
 
     if (archived.ok) return ok({ id, archived: true });
-    if (archived.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+    if (archived.reason === "NOT_FOUND") return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease);
 
     return apiError(
       "CONFLICT",
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   const result = await deleteLease(auth.organizationId, id);
 
   if (result.ok) return ok({ id, deleted: true });
-  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease);
 
   return apiError(
     "CONFLICT",

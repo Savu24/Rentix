@@ -13,6 +13,7 @@ const PNG =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 const DOCUMENT: InvoicePdfData = {
+  locale: "pl" as const,
   kind: "BILL",
   number: "2026/08/1",
   issueDate: new Date("2026-08-01T00:00:00Z"),

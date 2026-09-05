@@ -5,13 +5,14 @@ import Link from "next/link";
 import { ArchiveList } from "@/components/panel/archive/archive-list";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listLeases } from "@/lib/leases/service";
-import { LEASE_STATUS_LABEL } from "@/lib/validations/lease";
-
+import { leaseStatusLabels } from "@/lib/validations/lease";
+import { panelDictionary } from "@/lib/panel/dictionary";
 export const metadata: Metadata = { title: "Archiwum umów" };
 
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function ArchivedLeasesPage() {
+  const d = await panelDictionary();
   const session = await requireOwnerSession("/panel/umowy/archiwum");
 
   const leases = await listLeases(session.user.organizationId, { includeArchived: true });
@@ -44,7 +45,7 @@ export default async function ArchivedLeasesPage() {
           title: `${lease.property.name}${lease.room ? ` · ${lease.room.name}` : ""}${
             lease.number ? `, nr ${lease.number}` : ""
           }`,
-          subtitle: `${LEASE_STATUS_LABEL[lease.status]} · od ${dateFormat.format(
+          subtitle: `${leaseStatusLabels(d)[lease.status]} · od ${dateFormat.format(
             lease.startDate,
           )}${
             lease.tenants[0]

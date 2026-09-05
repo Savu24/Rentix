@@ -22,12 +22,12 @@ import { groszeToPolishWords } from "@/lib/money-words";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { formatDate } from "@/lib/utils";
 import {
-  LEASE_STATUS_LABEL,
+  leaseStatusLabels,
   LEASE_STATUS_TONE,
-  UTILITIES_MODE_INCOMPLETE,
-  UTILITIES_MODE_LABEL,
+  utilitiesModeIncomplete,
+  utilitiesModeLabels,
 } from "@/lib/validations/lease";
-
+import { panelDictionary } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -41,6 +41,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
 
 export default async function LeaseDetailPage({ params }: Params) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -75,7 +76,7 @@ export default async function LeaseDetailPage({ params }: Params) {
                 {lease.number ? `Umowa ${lease.number}` : "Umowa najmu"}
               </h1>
               <Badge tone={LEASE_STATUS_TONE[lease.status]}>
-                {LEASE_STATUS_LABEL[lease.status]}
+                {leaseStatusLabels(d)[lease.status]}
               </Badge>
             </div>
 
@@ -172,7 +173,7 @@ export default async function LeaseDetailPage({ params }: Params) {
             <Term label="Czynsz miesięczny" value={formatPLN(lease.rentGrosze)} />
             <Term label="Słownie" value={groszeToPolishWords(lease.rentGrosze)} />
             <Term label="Kaucja" value={formatPLN(lease.depositGrosze)} />
-            <Term label="Rozliczenie mediów" value={UTILITIES_MODE_LABEL[lease.utilitiesMode]} />
+            <Term label="Rozliczenie mediów" value={utilitiesModeLabels(d)[lease.utilitiesMode]} />
             {lease.utilitiesAdvanceGrosze > 0 ? (
               <Term
                 label="Zaliczka na media"
@@ -199,8 +200,8 @@ export default async function LeaseDetailPage({ params }: Params) {
 
       {/* Ostrzeżenie zostaje na karcie umowy, nie tylko w formularzu: umowę
           zakłada się raz, a rozliczenia wystawia co miesiąc. */}
-      {UTILITIES_MODE_INCOMPLETE[lease.utilitiesMode] ? (
-        <Alert tone="warning">{UTILITIES_MODE_INCOMPLETE[lease.utilitiesMode]}</Alert>
+      {utilitiesModeIncomplete(d)[lease.utilitiesMode] ? (
+        <Alert tone="warning">{utilitiesModeIncomplete(d)[lease.utilitiesMode]}</Alert>
       ) : null}
 
       {canExtend && lease.endDate ? (

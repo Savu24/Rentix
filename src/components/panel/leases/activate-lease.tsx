@@ -8,10 +8,10 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
-import { LEASE_STATUS_LABEL } from "@/lib/validations/lease";
+import { leaseStatusLabels } from "@/lib/validations/lease";
 
 import type { LeaseStatus } from "@/generated/prisma/enums";
-
+import { useI18n } from "@/lib/i18n/client";
 /**
  * Uruchomienie umowy ze szkicu albo rezerwacji.
  *
@@ -29,6 +29,7 @@ export function ActivateLease({
   /** Bieżący status — szkic albo rezerwacja. */
   status: Extract<LeaseStatus, "DRAFT" | "RESERVED">;
 }) {
+  const { d } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +57,7 @@ export function ActivateLease({
             {status === "RESERVED" ? "Rezerwacja czeka na start" : "Szkic umowy"}
           </p>
           <p className="mt-0.5 text-xs text-muted">
-            Umowa ze statusem {LEASE_STATUS_LABEL[status].toLowerCase()} nie zajmuje lokalu i nie
+            Umowa ze statusem {leaseStatusLabels(d)[status].toLowerCase()} nie zajmuje lokalu i nie
             jest naliczana. Po aktywacji jednostka staje się zajęta, a najemcy czynni.
           </p>
         </div>

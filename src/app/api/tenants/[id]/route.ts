@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const tenant = await getTenant(auth.organizationId, id);
 
-  if (!tenant) return apiError("NOT_FOUND", "Nie znaleziono najemcy.");
+  if (!tenant) return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant);
   return ok(tenant);
 }
 
@@ -28,16 +28,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = tenantUpdateSchema.safeParse(body);
+  const parsed = tenantUpdateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
   const updated = await updateTenant(auth.organizationId, id, parsed.data);
 
-  if (!updated) return apiError("NOT_FOUND", "Nie znaleziono najemcy.");
+  if (!updated) return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant);
   return ok(updated);
 }
 
@@ -51,14 +51,14 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   if (!force) {
     const archived = await archiveTenant(auth.organizationId, id);
-    if (!archived) return apiError("NOT_FOUND", "Nie znaleziono najemcy.");
+    if (!archived) return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant);
     return ok({ id, archived: true });
   }
 
   const result = await deleteTenant(auth.organizationId, id);
 
   if (result.ok) return ok({ id, deleted: true });
-  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", "Nie znaleziono najemcy.");
+  if (result.reason === "NOT_FOUND") return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant);
 
   return apiError(
     "CONFLICT",

@@ -23,6 +23,6 @@ export async function POST(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const restored = await restoreProperty(auth.organizationId, id);
 
-  if (!restored) return apiError("NOT_FOUND", "Nie znaleziono zarchiwizowanej nieruchomości.");
+  if (!restored) return apiError("NOT_FOUND", auth.d.panel.api.notFound.archivedProperty);
   return ok({ id, archived: false });
 }

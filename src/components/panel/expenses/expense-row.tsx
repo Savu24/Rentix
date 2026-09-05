@@ -11,8 +11,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import type { ExpenseListItem } from "@/lib/expenses/service";
 import { formatPLN } from "@/lib/money";
-import { describeRecurrence, EXPENSE_CATEGORY_LABEL } from "@/lib/validations/expense";
-
+import { describeRecurrence, expenseCategoryLabels } from "@/lib/validations/expense";
+import { useI18n } from "@/lib/i18n/client";
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 /**
@@ -39,6 +39,7 @@ export function ExpenseRow({
   properties?: ExpensePropertyOption[];
   lockedPropertyId?: string | null;
 }) {
+  const { d } = useI18n();
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -81,7 +82,7 @@ export function ExpenseRow({
               „Podatek od nieruchomości" jest szersze niż kolumna
               opisu na telefonie i wychodziło poza wiersz. */}
           <Badge className="whitespace-normal text-left">
-            {EXPENSE_CATEGORY_LABEL[expense.category]}
+            {expenseCategoryLabels(d)[expense.category]}
           </Badge>
 
           {/* Cykl widać tylko na wzorcu. Naliczone z niego pozycje są zwykłymi
@@ -90,7 +91,7 @@ export function ExpenseRow({
           {expense.recurrence ? (
             <Badge tone="accent" className="whitespace-normal text-left">
               <Repeat className="h-3 w-3" aria-hidden />
-              {describeRecurrence(expense.recurrence, expense.recurrenceEveryDays)}
+              {describeRecurrence(expense.recurrence, expense.recurrenceEveryDays, d)}
             </Badge>
           ) : null}
         </div>

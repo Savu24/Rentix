@@ -19,7 +19,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const { id } = await params;
   const invoice = await deletePayment(auth.organizationId, id);
 
-  if (!invoice) return apiError("NOT_FOUND", "Nie znaleziono wpłaty.");
+  if (!invoice) return apiError("NOT_FOUND", auth.d.panel.api.notFound.payment);
 
   return ok({ invoice });
 }

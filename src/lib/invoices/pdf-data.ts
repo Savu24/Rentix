@@ -1,4 +1,5 @@
 import type { VatRate } from "@/generated/prisma/enums";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
 import { formatPropertyAddress, roomDesignation } from "@/lib/properties/address";
 
 import type { InvoicePdfData } from "./pdf";
@@ -36,6 +37,7 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
     : null;
 
   return {
+    locale: isLocale(invoice.organization.locale) ? invoice.organization.locale : DEFAULT_LOCALE,
     kind: invoice.kind,
     number: invoice.number,
     issueDate: invoice.issueDate,

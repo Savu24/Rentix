@@ -2,13 +2,22 @@ import { describe, expect, it } from "vitest";
 
 import {
   describeRecurrence,
-  EXPENSE_CATEGORY_LABEL,
+  expenseCategoryLabels,
   EXPENSE_CATEGORY_ORDER,
-  EXPENSE_RECURRENCE_LABEL,
+  expenseRecurrenceLabels,
   EXPENSE_RECURRENCE_ORDER,
   expenseFormSchema,
   expenseUpdateSchema,
 } from "@/lib/validations/expense";
+
+import { localeContext } from "@/lib/i18n";
+
+/*
+  Schematy są fabrykami zależnymi od kraju, więc test podaje im kontekst wprost.
+  Sprawdzamy na wersji polskiej — reguły brytyjskie mają własne przypadki.
+*/
+const C = localeContext("pl");
+const D = C.d;
 
 const VALID = {
   category: "COMMUNITY_FEE" as const,
@@ -19,26 +28,26 @@ const VALID = {
 
 describe("expenseFormSchema", () => {
   it("przelicza kwotę na grosze", () => {
-    expect(expenseFormSchema.parse(VALID).amountGrosze).toBe(45000);
+    expect(expenseFormSchema(C).parse(VALID).amountGrosze).toBe(45000);
   });
 
   it("odrzuca kwotę zerową i ujemną", () => {
-    expect(expenseFormSchema.safeParse({ ...VALID, amountGrosze: "0" }).success).toBe(false);
-    expect(expenseFormSchema.safeParse({ ...VALID, amountGrosze: "-10" }).success).toBe(false);
+    expect(expenseFormSchema(C).safeParse({ ...VALID, amountGrosze: "0" }).success).toBe(false);
+    expect(expenseFormSchema(C).safeParse({ ...VALID, amountGrosze: "-10" }).success).toBe(false);
   });
 
   it("wymaga opisu — bez niego zestawienie jest nieczytelne", () => {
-    expect(expenseFormSchema.safeParse({ ...VALID, description: "  " }).success).toBe(false);
+    expect(expenseFormSchema(C).safeParse({ ...VALID, description: "  " }).success).toBe(false);
   });
 
   it("buduje datę w UTC, niezależnie od strefy serwera", () => {
-    expect(expenseFormSchema.parse(VALID).paidAt.toISOString()).toBe("2026-08-10T00:00:00.000Z");
+    expect(expenseFormSchema(C).parse(VALID).paidAt.toISOString()).toBe("2026-08-10T00:00:00.000Z");
   });
 
   it("puste pole nieruchomości oznacza koszt ogólny", () => {
-    expect(expenseFormSchema.parse(VALID).propertyId).toBeNull();
-    expect(expenseFormSchema.parse({ ...VALID, propertyId: "" }).propertyId).toBeNull();
-    expect(expenseFormSchema.parse({ ...VALID, propertyId: "prop_1" }).propertyId).toBe("prop_1");
+    expect(expenseFormSchema(C).parse(VALID).propertyId).toBeNull();
+    expect(expenseFormSchema(C).parse({ ...VALID, propertyId: "" }).propertyId).toBeNull();
+    expect(expenseFormSchema(C).parse({ ...VALID, propertyId: "prop_1" }).propertyId).toBe("prop_1");
   });
 
   it("domyślną kategorią jest 'Inne'", () => {
@@ -47,11 +56,11 @@ describe("expenseFormSchema", () => {
       paidAt: VALID.paidAt,
       description: VALID.description,
     };
-    expect(expenseFormSchema.parse(withoutCategory).category).toBe("OTHER");
+    expect(expenseFormSchema(C).parse(withoutCategory).category).toBe("OTHER");
   });
 
   it("puste pola opcjonalne dają null, nie pusty string", () => {
-    const result = expenseFormSchema.parse({ ...VALID, vendor: "", documentRef: "", notes: "" });
+    const result = expenseFormSchema(C).parse({ ...VALID, vendor: "", documentRef: "", notes: "" });
     expect(result.vendor).toBeNull();
     expect(result.documentRef).toBeNull();
     expect(result.notes).toBeNull();
@@ -62,12 +71,12 @@ describe("koszt cykliczny", () => {
   it("bez zaznaczonego checkboxa nie zapisuje cyklu", () => {
     // Samo pole wyboru zostaje wypełnione domyślną wartością, więc gdyby
     // decydowało ono, każdy koszt naliczałby się co miesiąc.
-    const result = expenseFormSchema.parse({ ...VALID, recurrence: "MONTHLY" });
+    const result = expenseFormSchema(C).parse({ ...VALID, recurrence: "MONTHLY" });
     expect(result.recurrence).toBeNull();
   });
 
   it("zaznaczony checkbox zapisuje wybrany cykl", () => {
-    const result = expenseFormSchema.parse({
+    const result = expenseFormSchema(C).parse({
       ...VALID,
       recurring: true,
       recurrence: "YEARLY",
@@ -76,11 +85,11 @@ describe("koszt cykliczny", () => {
   });
 
   it("bez wybranego cyklu przyjmuje miesiąc", () => {
-    expect(expenseFormSchema.parse({ ...VALID, recurring: true }).recurrence).toBe("MONTHLY");
+    expect(expenseFormSchema(C).parse({ ...VALID, recurring: true }).recurrence).toBe("MONTHLY");
   });
 
   it("cykl niestandardowy wymaga liczby dni", () => {
-    const result = expenseFormSchema.safeParse({
+    const result = expenseFormSchema(C).safeParse({
       ...VALID,
       recurring: true,
       recurrence: "CUSTOM",
@@ -89,7 +98,7 @@ describe("koszt cykliczny", () => {
   });
 
   it("liczba dni zostaje wyłącznie przy cyklu niestandardowym", () => {
-    const custom = expenseFormSchema.parse({
+    const custom = expenseFormSchema(C).parse({
       ...VALID,
       recurring: true,
       recurrence: "CUSTOM",
@@ -97,7 +106,7 @@ describe("koszt cykliczny", () => {
     });
     expect(custom.recurrenceEveryDays).toBe(90);
 
-    const monthly = expenseFormSchema.parse({
+    const monthly = expenseFormSchema(C).parse({
       ...VALID,
       recurring: true,
       recurrence: "MONTHLY",
@@ -109,14 +118,14 @@ describe("koszt cykliczny", () => {
   it("nie przepuszcza pola formularza do kolumn", () => {
     // `recurring` istnieje tylko po to, by odznaczenie checkboxa dało się
     // odróżnić od braku pola — w bazie nie ma takiej kolumny.
-    expect(expenseFormSchema.parse({ ...VALID, recurring: true })).not.toHaveProperty(
+    expect(expenseFormSchema(C).parse({ ...VALID, recurring: true })).not.toHaveProperty(
       "recurring",
     );
   });
 
   it("opis cyklu bierze liczbę dni tylko z niestandardowego", () => {
-    expect(describeRecurrence("MONTHLY", null)).toBe("co miesiąc");
-    expect(describeRecurrence("CUSTOM", 90)).toBe("co 90 dni");
+    expect(describeRecurrence("MONTHLY", null, D)).toBe("co miesiąc");
+    expect(describeRecurrence("CUSTOM", 90, D)).toBe("co 90 dni");
   });
 });
 
@@ -124,7 +133,7 @@ describe("katalog kategorii", () => {
   it("kolejność na liście pokrywa wszystkie kategorie", () => {
     // Kategoria pominięta w kolejności zniknęłaby z listy wyboru, choć dalej
     // istniałaby w bazie — i nie dałoby się jej wpisać.
-    const labelled = Object.keys(EXPENSE_CATEGORY_LABEL).sort();
+    const labelled = Object.keys(expenseCategoryLabels(D)).sort();
     expect([...EXPENSE_CATEGORY_ORDER].sort()).toEqual(labelled);
   });
 
@@ -133,14 +142,14 @@ describe("katalog kategorii", () => {
   });
 
   it("kolejność cykli pokrywa wszystkie wartości", () => {
-    const labelled = Object.keys(EXPENSE_RECURRENCE_LABEL).sort();
+    const labelled = Object.keys(expenseRecurrenceLabels(D)).sort();
     expect([...EXPENSE_RECURRENCE_ORDER].sort()).toEqual(labelled);
   });
 });
 
 describe("expenseUpdateSchema — edycja wpisanego kosztu", () => {
   it("przyjmuje komplet pól tak, jak wysyła je formularz edycji", () => {
-    const result = expenseUpdateSchema.parse({
+    const result = expenseUpdateSchema(C).parse({
       ...VALID,
       amountGrosze: "480,00",
       vendor: "Wspólnota Kwiatowa 4",
@@ -154,14 +163,14 @@ describe("expenseUpdateSchema — edycja wpisanego kosztu", () => {
   it("odznaczony checkbox kasuje cykl, zamiast zostawiać go po staremu", () => {
     // Formularz edycji zawsze wysyła `recurring`, więc odznaczenie musi
     // dojechać do bazy jako `null` — inaczej koszt naliczałby się dalej.
-    const result = expenseUpdateSchema.parse({ ...VALID, recurring: false });
+    const result = expenseUpdateSchema(C).parse({ ...VALID, recurring: false });
     expect(result.recurrence).toBeNull();
     expect(result.recurrenceEveryDays).toBeNull();
   });
 
   it("zaznaczony cykl zapisuje razem z odstępem tylko przy niestandardowym", () => {
     expect(
-      expenseUpdateSchema.parse({
+      expenseUpdateSchema(C).parse({
         ...VALID,
         recurring: true,
         recurrence: "MONTHLY",
@@ -170,7 +179,7 @@ describe("expenseUpdateSchema — edycja wpisanego kosztu", () => {
     ).toBeNull();
 
     expect(
-      expenseUpdateSchema.parse({
+      expenseUpdateSchema(C).parse({
         ...VALID,
         recurring: true,
         recurrence: "CUSTOM",
@@ -181,7 +190,7 @@ describe("expenseUpdateSchema — edycja wpisanego kosztu", () => {
 
   it("cykl niestandardowy bez liczby dni nie przechodzi", () => {
     expect(
-      expenseUpdateSchema.safeParse({ ...VALID, recurring: true, recurrence: "CUSTOM" }).success,
+      expenseUpdateSchema(C).safeParse({ ...VALID, recurring: true, recurrence: "CUSTOM" }).success,
     ).toBe(false);
   });
 });

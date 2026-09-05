@@ -10,6 +10,7 @@ import { InvoiceDocument, type InvoicePdfData } from "@/lib/invoices/pdf";
 const ACCOUNT = "12345678901234567890123456";
 
 const DOCUMENT: InvoicePdfData = {
+  locale: "pl" as const,
   kind: "BILL",
   number: "2026/08/1",
   issueDate: new Date("2026-08-01T00:00:00Z"),

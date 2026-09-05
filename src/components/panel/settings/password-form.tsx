@@ -12,7 +12,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 import { passwordChangeSchema, type PasswordChangeInput } from "@/lib/validations/settings";
-
+import { useValidationContext } from "@/lib/i18n/client";
 /**
  * Zmiana hasła.
  *
@@ -20,6 +20,7 @@ import { passwordChangeSchema, type PasswordChangeInput } from "@/lib/validation
  * stronie, a odświeżenie tylko mignęłoby układem bez powodu.
  */
 export function PasswordForm() {
+  const v = useValidationContext();
   const [formError, setFormError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
 
@@ -31,7 +32,7 @@ export function PasswordForm() {
     setError,
     formState: { errors, isSubmitting },
   } = useForm<PasswordChangeInput>({
-    resolver: zodResolver(passwordChangeSchema),
+    resolver: zodResolver(passwordChangeSchema(v)),
     defaultValues: { currentPassword: "", newPassword: "" },
   });
 

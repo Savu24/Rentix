@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const invoice = await getInvoice(auth.organizationId, id);
 
-  if (!invoice) return apiError("NOT_FOUND", "Nie znaleziono dokumentu.");
+  if (!invoice) return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
   return ok(invoice);
 }
 
@@ -39,9 +39,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
   switch (result.reason) {
     case "NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono dokumentu.");
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
     case "ALREADY_CANCELLED":
-      return apiError("CONFLICT", "Ten dokument jest już anulowany.");
+      return apiError("CONFLICT", auth.d.panel.api.alreadyCancelled);
     case "HAS_PAYMENTS":
       return apiError(
         "CONFLICT",

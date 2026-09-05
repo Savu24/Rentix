@@ -24,10 +24,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = paymentFormSchema.safeParse(body);
+  const parsed = paymentFormSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const { id } = await params;
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   switch (result.reason) {
     case "NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono dokumentu.");
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
     case "CANCELLED":
       return apiError(
         "CONFLICT",

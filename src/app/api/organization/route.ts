@@ -20,7 +20,7 @@ export async function GET() {
   if ("response" in auth) return auth.response;
 
   const organization = await getOrganization(auth.organizationId);
-  if (!organization) return apiError("NOT_FOUND", "Nie znaleziono organizacji.");
+  if (!organization) return apiError("NOT_FOUND", auth.d.panel.api.notFound.organization);
 
   return ok({ ...organization, sellerComplete: isSellerComplete(organization) });
 }
@@ -34,10 +34,10 @@ export async function PATCH(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = organizationSettingsSchema.safeParse(body);
+  const parsed = organizationSettingsSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const organization = await updateOrganization(auth.organizationId, parsed.data);

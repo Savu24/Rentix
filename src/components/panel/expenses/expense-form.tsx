@@ -17,15 +17,15 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import {
-  EXPENSE_CATEGORY_LABEL,
+  expenseCategoryLabels,
   EXPENSE_CATEGORY_ORDER,
-  EXPENSE_RECURRENCE_LABEL,
+  expenseRecurrenceLabels,
   EXPENSE_RECURRENCE_ORDER,
   expenseFormSchema,
   type ExpenseFormInput,
   type ExpenseFormOutput,
 } from "@/lib/validations/expense";
-
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export type ExpensePropertyOption = { id: string; name: string };
 
 const EMPTY: ExpenseFormInput = {
@@ -71,6 +71,8 @@ export function ExpenseForm({
   defaultValues?: Partial<ExpenseFormInput>;
   onClose?: () => void;
 }) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const isEdit = Boolean(expenseId);
   // Edycja startuje rozwinięta: właściciel kliknął już ołówek przy wierszu,
@@ -87,7 +89,7 @@ export function ExpenseForm({
     watch,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormInput, unknown, ExpenseFormOutput>({
-    resolver: zodResolver(expenseFormSchema),
+    resolver: zodResolver(expenseFormSchema(v)),
     defaultValues: {
       ...EMPTY,
       propertyId: lockedPropertyId ?? "",
@@ -179,7 +181,7 @@ export function ExpenseForm({
               >
                 {EXPENSE_CATEGORY_ORDER.map((value) => (
                   <option key={value} value={value}>
-                    {EXPENSE_CATEGORY_LABEL[value]}
+                    {expenseCategoryLabels(d)[value]}
                   </option>
                 ))}
               </Select>
@@ -293,7 +295,7 @@ export function ExpenseForm({
                   >
                     {EXPENSE_RECURRENCE_ORDER.map((value) => (
                       <option key={value} value={value}>
-                        {EXPENSE_RECURRENCE_LABEL[value]}
+                        {expenseRecurrenceLabels(d)[value]}
                       </option>
                     ))}
                   </Select>

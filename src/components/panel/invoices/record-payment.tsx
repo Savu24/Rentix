@@ -13,8 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
 import { formatAmount } from "@/lib/money";
-import { PAYMENT_METHOD_LABEL } from "@/lib/validations/invoice";
-
+import { paymentMethodLabels } from "@/lib/validations/invoice";
+import { useI18n } from "@/lib/i18n/client";
 /**
  * Zapis wpłaty do dokumentu.
  *
@@ -29,6 +29,7 @@ export function RecordPayment({
   invoiceId: string;
   remainingGrosze: number;
 }) {
+  const { d } = useI18n();
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -105,7 +106,7 @@ export function RecordPayment({
               onChange={(event) => setMethod(event.target.value)}
               disabled={busy}
             >
-              {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+              {Object.entries(paymentMethodLabels(d)).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>

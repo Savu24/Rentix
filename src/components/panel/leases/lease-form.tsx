@@ -20,15 +20,15 @@ import { api } from "@/lib/api/client";
 import { formatAmount } from "@/lib/money";
 import {
   LEASE_SETTABLE_STATUSES,
-  LEASE_STATUS_LABEL,
-  UTILITIES_MODE_HINT,
-  UTILITIES_MODE_INCOMPLETE,
-  UTILITIES_MODE_LABEL,
+  leaseStatusLabels,
+  utilitiesModeHints,
+  utilitiesModeIncomplete,
+  utilitiesModeLabels,
   leaseFormSchema,
   type LeaseFormInput,
   type LeaseFormOutput,
 } from "@/lib/validations/lease";
-
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export type RoomOption = {
   id: string;
   name: string;
@@ -84,6 +84,8 @@ export function LeaseForm({
   /** Wstępny wybór — z przycisku „Przypisz” przy pokoju albo z karty najemcy. */
   preset?: { propertyId?: string; roomId?: string; tenantId?: string };
 }) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -100,7 +102,7 @@ export function LeaseForm({
     watch,
     formState: { errors, isSubmitting },
   } = useForm<LeaseFormInput, unknown, LeaseFormOutput>({
-    resolver: zodResolver(leaseFormSchema),
+    resolver: zodResolver(leaseFormSchema(v)),
     defaultValues: {
       ...EMPTY,
       propertyId: presetProperty?.id ?? "",
@@ -375,7 +377,7 @@ export function LeaseForm({
               >
                 {LEASE_SETTABLE_STATUSES.map((value) => (
                   <option key={value} value={value}>
-                    {LEASE_STATUS_LABEL[value]}
+                    {leaseStatusLabels(d)[value]}
                   </option>
                 ))}
               </Select>
@@ -424,14 +426,14 @@ export function LeaseForm({
               id="utilitiesMode"
               label="Rozliczenie mediów"
               error={errors.utilitiesMode?.message}
-              hint={UTILITIES_MODE_HINT[utilitiesMode ?? "FLAT_RATE"]}
+              hint={utilitiesModeHints(d)[utilitiesMode ?? "FLAT_RATE"]}
             >
               <Select
                 {...fieldAria("utilitiesMode", { error: errors.utilitiesMode?.message })}
                 disabled={isSubmitting}
                 {...register("utilitiesMode")}
               >
-                {Object.entries(UTILITIES_MODE_LABEL).map(([value, label]) => (
+                {Object.entries(utilitiesModeLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -441,9 +443,9 @@ export function LeaseForm({
 
             {/* Ostrzeżenie w momencie wyboru trybu, a nie dopiero przy
                 fakturze — wtedy zaniżony dokument już poszedł do najemcy. */}
-            {utilitiesMode && UTILITIES_MODE_INCOMPLETE[utilitiesMode] ? (
+            {utilitiesMode && utilitiesModeIncomplete(d)[utilitiesMode] ? (
               <div className="sm:col-span-2">
-                <Alert tone="warning">{UTILITIES_MODE_INCOMPLETE[utilitiesMode]}</Alert>
+                <Alert tone="warning">{utilitiesModeIncomplete(d)[utilitiesMode]}</Alert>
               </div>
             ) : null}
 

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { apiError, ok, rateLimited, validationError } from "@/lib/api/response";
-import { getApiSession } from "@/lib/auth/session";
+import { getApiSession, sessionLocaleContext } from "@/lib/auth/session";
 import { deleteAccount, updateProfile } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
 import { consume, LIMITS } from "@/lib/rate-limit";
@@ -81,7 +81,7 @@ export async function PATCH(request: NextRequest) {
     return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
   }
 
-  const parsed = profileSettingsSchema.safeParse(body);
+  const parsed = profileSettingsSchema(await sessionLocaleContext(result.session)).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return ok(await updateProfile(result.session.user.id, parsed.data));
@@ -119,7 +119,7 @@ export async function DELETE(request: NextRequest) {
     return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
   }
 
-  const parsed = accountDeleteSchema.safeParse(body);
+  const parsed = accountDeleteSchema(await sessionLocaleContext(result.session)).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const deleted = await deleteAccount(session.user.id, organizationId, parsed.data);

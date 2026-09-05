@@ -30,9 +30,9 @@ import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/li
 import { resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { formatPLN } from "@/lib/money";
 import { getTenant } from "@/lib/tenants/service";
-import { LEASE_STATUS_LABEL, LEASE_STATUS_TONE } from "@/lib/validations/lease";
-import { TENANT_STATUS_LABEL, TENANT_STATUS_TONE } from "@/lib/validations/tenant";
-
+import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
+import { tenantStatusLabels, TENANT_STATUS_TONE } from "@/lib/validations/tenant";
+import { panelDictionary } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -46,6 +46,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function TenantDetailPage({ params }: Params) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -126,7 +127,7 @@ export default async function TenantDetailPage({ params }: Params) {
                 {tenant.firstName} {tenant.lastName}
               </h1>
               <Badge tone={TENANT_STATUS_TONE[tenant.status]}>
-                {TENANT_STATUS_LABEL[tenant.status]}
+                {tenantStatusLabels(d)[tenant.status]}
               </Badge>
               {/* Osoby fizycznej nie oznaczamy — to domyślny przypadek,
                   a plakietka „osoba fizyczna" przy każdym najemcy nie niosłaby
@@ -215,7 +216,7 @@ export default async function TenantDetailPage({ params }: Params) {
                         {lease.room ? ` · ${lease.room.name}` : ""}
                       </p>
                       <Badge tone={LEASE_STATUS_TONE[lease.status]}>
-                        {LEASE_STATUS_LABEL[lease.status]}
+                        {leaseStatusLabels(d)[lease.status]}
                       </Badge>
                     </div>
                     <p className="mt-1 text-xs text-muted">

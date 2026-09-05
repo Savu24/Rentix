@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import type { PropertyListItem } from "@/lib/properties/service";
 import { plural } from "@/lib/utils";
-import { PROPERTY_TYPE_LABEL } from "@/lib/validations/property";
+import { panelDictionary } from "@/lib/panel/dictionary";
+import { propertyTypeLabels } from "@/lib/validations/property";
 
 /**
  * Status obłożenia całej nieruchomości, wyprowadzony z jej jednostek.
@@ -40,7 +41,9 @@ function occupancyBadge(property: PropertyListItem) {
   };
 }
 
-export function PropertyCard({ property }: { property: PropertyListItem }) {
+export async function PropertyCard({ property }: { property: PropertyListItem }) {
+  const d = await panelDictionary();
+
   const badge = occupancyBadge(property);
   const address = formatPropertyAddress(property);
 
@@ -77,7 +80,7 @@ export function PropertyCard({ property }: { property: PropertyListItem }) {
         </div>
 
         <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-          <span>{PROPERTY_TYPE_LABEL[property.type]}</span>
+          <span>{propertyTypeLabels(d)[property.type]}</span>
           {property.roomCount > 0 ? (
             <span>
               {property.roomCount} {plural(property.roomCount, ["pokój", "pokoje", "pokoi"])}

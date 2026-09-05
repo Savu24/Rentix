@@ -7,7 +7,8 @@ import {
   resolveDocumentKind,
   settlementStatus,
 } from "@/lib/invoices/rules";
-import { INVOICE_KIND_LABEL, isAccountingDocument } from "@/lib/validations/invoice";
+import { getDictionary } from "@/lib/i18n";
+import { invoiceKindLabels, isAccountingDocument } from "@/lib/validations/invoice";
 import { formatInvoiceNumber, withUniqueNumberRetry } from "@/lib/invoices/numbering";
 
 describe("buyerSnapshot", () => {
@@ -175,9 +176,12 @@ describe("naliczenie a dowód księgowy", () => {
     expect(formatInvoiceNumber("BILL", 1, 2026, 7)).toBe("R 1/08/2026");
   });
 
-  it("każdy rodzaj dokumentu ma etykietę", () => {
-    for (const kind of ["BILL", "VAT_INVOICE", "PROFORMA", "CHARGE"] as const) {
-      expect(INVOICE_KIND_LABEL[kind]).toBeTruthy();
+  it("każdy rodzaj dokumentu ma etykietę w obu wersjach krajowych", () => {
+    for (const locale of ["pl", "uk"] as const) {
+      const labels = invoiceKindLabels(getDictionary(locale));
+      for (const kind of ["BILL", "VAT_INVOICE", "PROFORMA", "CHARGE"] as const) {
+        expect(labels[kind]).toBeTruthy();
+      }
     }
   });
 });

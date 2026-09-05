@@ -7,8 +7,8 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { plural } from "@/lib/utils";
-import { EXPENSE_CATEGORY_LABEL, EXPENSE_CATEGORY_ORDER } from "@/lib/validations/expense";
-
+import { expenseCategoryLabels, EXPENSE_CATEGORY_ORDER } from "@/lib/validations/expense";
+import { useI18n } from "@/lib/i18n/client";
 /** Filtry listy kosztów. Stan w URL-u, jak przy pozostałych listach. */
 export function ExpenseFilters({
   total,
@@ -19,6 +19,7 @@ export function ExpenseFilters({
   years: number[];
   properties: Array<{ id: string; name: string }>;
 }) {
+  const { d } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -108,7 +109,7 @@ export function ExpenseFilters({
             <option value="all">Wszystkie kategorie</option>
             {EXPENSE_CATEGORY_ORDER.map((value) => (
               <option key={value} value={value}>
-                {EXPENSE_CATEGORY_LABEL[value]}
+                {expenseCategoryLabels(d)[value]}
               </option>
             ))}
           </Select>

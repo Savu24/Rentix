@@ -4,9 +4,11 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 
 import type { InvoiceKind, VatRate } from "@/generated/prisma/enums";
 import { formatBankAccount } from "@/lib/bank-account";
+import { getDictionary } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n/config";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
-import { INVOICE_KIND_LABEL, isAccountingDocument } from "@/lib/validations/invoice";
+import { invoiceKindLabels, isAccountingDocument } from "@/lib/validations/invoice";
 
 import { VAT_LABEL } from "./vat";
 
@@ -197,6 +199,12 @@ export type InvoicePdfLine = {
 };
 
 export type InvoicePdfData = {
+  /**
+   * Wersja krajowa wystawcy. Decyduje o walucie i o nazwie dokumentu — polska
+   * faktura VAT i brytyjski rachunek za czynsz to dwa różne dokumenty, a nie
+   * ten sam w dwóch językach.
+   */
+  locale: Locale;
   kind: InvoiceKind;
   number: string;
   issueDate: Date;
@@ -306,7 +314,7 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
             {/* eslint-disable-next-line jsx-a11y/alt-text -- <Image> renderera PDF-a, nie <img>: atrybutu alt nie przyjmuje */}
             {data.logoDataUrl ? <Image src={data.logoDataUrl} style={styles.logo} /> : null}
             <Text style={styles.title}>
-              {INVOICE_KIND_LABEL[data.kind]}
+              {invoiceKindLabels(getDictionary(data.locale))[data.kind]}
               {data.cancelled ? " (ANULOWANY)" : ""}
             </Text>
             <Text style={styles.number}>nr {data.number}</Text>
@@ -452,7 +460,7 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
 
       <View style={styles.footer} fixed>
         <Text>
-          {INVOICE_KIND_LABEL[data.kind]} nr {data.number} · {data.seller.name}
+          {invoiceKindLabels(getDictionary(data.locale))[data.kind]} nr {data.number} · {data.seller.name}
         </Text>
         {/* Numeracja stron jest w obrębie jednego dokumentu — w paczce każdy
             dokument zaczyna się od nowej strony, więc licznik globalny mówiłby
@@ -465,7 +473,7 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
 export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
   return (
     <Document
-      title={`${INVOICE_KIND_LABEL[data.kind]} ${data.number}`}
+      title={`${invoiceKindLabels(getDictionary(data.locale))[data.kind]} ${data.number}`}
       author={data.seller.name}
       language="pl"
     >

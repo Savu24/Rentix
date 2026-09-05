@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const invoice = await getInvoice(auth.organizationId, id);
 
-  if (!invoice) return apiError("NOT_FOUND", "Nie znaleziono dokumentu.");
+  if (!invoice) return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
 
   const buffer = await renderToBuffer(InvoiceDocument({ data: toInvoicePdfData(invoice) }));
 

@@ -10,10 +10,12 @@ import {
 } from "@react-pdf/renderer";
 
 import type { UtilitiesMode } from "@/generated/prisma/enums";
+import { getDictionary } from "@/lib/i18n";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { formatPLN } from "@/lib/money";
 import { formatPropertyAddress, formatUnitLabel, roomDesignation } from "@/lib/properties/address";
 import { groszeToPolishWords } from "@/lib/money-words";
-import { UTILITIES_MODE_LABEL } from "@/lib/validations/lease";
+import { utilitiesModeLabels } from "@/lib/validations/lease";
 
 /**
  * Umowa najmu jako PDF.
@@ -318,7 +320,7 @@ export function LeaseAgreementDocument({ data }: { data: LeasePdfData }) {
         <View style={styles.table}>
           <Row label="Czynsz miesięczny" value={formatPLN(data.rentGrosze)} alt />
           <Row label="Słownie" value={groszeToPolishWords(data.rentGrosze)} />
-          <Row label="Rozliczenie mediów" value={UTILITIES_MODE_LABEL[data.utilitiesMode]} alt />
+          <Row label="Rozliczenie mediów" value={utilitiesModeLabels(getDictionary(DEFAULT_LOCALE))[data.utilitiesMode]} alt />
           <Row label="Dzień naliczania" value={`${data.billingDay}. dzień miesiąca`} />
           <Row label="Termin płatności" value={`${data.paymentTermDays} dni od wystawienia`} alt />
         </View>

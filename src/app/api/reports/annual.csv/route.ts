@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { requireApiOwner } from "@/lib/auth/session";
 import { buildCsv, toCsvAmount } from "@/lib/reports/aggregate";
 import { annualReport } from "@/lib/reports/service";
-import { EXPENSE_CATEGORY_LABEL } from "@/lib/validations/expense";
+import { expenseCategoryLabels } from "@/lib/validations/expense";
 
 export const runtime = "nodejs";
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
   rows.push([]);
   rows.push(["Kategoria kosztu", "Kwota"]);
   for (const bucket of report.expensesByCategory) {
-    rows.push([EXPENSE_CATEGORY_LABEL[bucket.category], toCsvAmount(bucket.totalGrosze)]);
+    rows.push([expenseCategoryLabels(auth.d)[bucket.category], toCsvAmount(bucket.totalGrosze)]);
   }
 
   const csv = buildCsv([`Zestawienie roczne ${year} (rozliczenie kasowe)`], rows);

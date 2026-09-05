@@ -11,8 +11,8 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 import { plural } from "@/lib/utils";
-import { ACCOUNT_DELETE_PHRASE } from "@/lib/validations/settings";
-
+import { accountDeletePhrase } from "@/lib/validations/settings";
+import { useValidationContext } from "@/lib/i18n/client";
 export type DeletionSummary = {
   organizationName: string;
   isLastMember: boolean;
@@ -35,6 +35,7 @@ export type DeletionSummary = {
  * zatrzymuje.
  */
 export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
+  const v = useValidationContext();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,7 +132,7 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
               <FormField
                 id="delete-confirmation"
                 label="Potwierdzenie"
-                hint={`Przepisz: ${ACCOUNT_DELETE_PHRASE}`}
+                hint={`Przepisz: ${accountDeletePhrase(v)}`}
               >
                 <Input
                   id="delete-confirmation"
@@ -149,7 +150,7 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
                 onClick={submit}
                 // Przycisk zostaje nieaktywny, dopóki fraza się nie zgadza —
                 // walidacja po stronie serwera i tak sprawdzi to ponownie.
-                disabled={busy || confirmation.trim() !== ACCOUNT_DELETE_PHRASE || !password}
+                disabled={busy || confirmation.trim() !== accountDeletePhrase(v) || !password}
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                 Usuń konto na zawsze

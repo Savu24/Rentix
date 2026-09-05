@@ -5,8 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
 import { Select } from "@/components/ui/select";
-import { TENANT_SORT_LABEL, TENANT_SORT_OPTIONS } from "@/lib/validations/tenant";
-
+import { tenantSortLabels, TENANT_SORT_OPTIONS } from "@/lib/validations/tenant";
+import { useI18n } from "@/lib/i18n/client";
 /**
  * Porządek listy najemców.
  *
@@ -15,6 +15,7 @@ import { TENANT_SORT_LABEL, TENANT_SORT_OPTIONS } from "@/lib/validations/tenant
  * a sortuje serwer — klient nie dostaje listy tylko po to, żeby ją przełożyć.
  */
 export function TenantSort() {
+  const { d } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -45,7 +46,7 @@ export function TenantSort() {
       >
         {TENANT_SORT_OPTIONS.map((value) => (
           <option key={value} value={value}>
-            {TENANT_SORT_LABEL[value]}
+            {tenantSortLabels(d)[value]}
           </option>
         ))}
       </Select>

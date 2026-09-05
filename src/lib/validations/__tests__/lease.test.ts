@@ -8,6 +8,14 @@ import {
 } from "@/lib/validations/lease";
 import { tenantFormSchema } from "@/lib/validations/tenant";
 
+import { localeContext } from "@/lib/i18n";
+
+/*
+  Schematy są fabrykami zależnymi od kraju, więc test podaje im kontekst wprost.
+  Sprawdzamy na wersji polskiej — reguły brytyjskie mają własne przypadki.
+*/
+const C = localeContext("pl");
+
 const VALID_LEASE = {
   propertyId: "property_1",
   tenantIds: ["tenant_1"],
@@ -19,7 +27,7 @@ const VALID_LEASE = {
 
 describe("leaseFormSchema", () => {
   it("przyjmuje poprawną umowę i przelicza kwoty na grosze", () => {
-    const result = leaseFormSchema.parse(VALID_LEASE);
+    const result = leaseFormSchema(C).parse(VALID_LEASE);
     expect(result.rentGrosze).toBe(240000);
     expect(result.utilitiesAdvanceGrosze).toBe(45000);
     expect(result.depositGrosze).toBe(0);
@@ -30,40 +38,40 @@ describe("leaseFormSchema", () => {
   it("pusta kaucja to zero, nie błąd walidacji", () => {
     // Formularz wysyła "" gdy pole zostało puste — `moneyInput` sam
     // odrzucałby to jako „nie jest kwotą".
-    expect(leaseFormSchema.parse({ ...VALID_LEASE, depositGrosze: "" }).depositGrosze).toBe(0);
+    expect(leaseFormSchema(C).parse({ ...VALID_LEASE, depositGrosze: "" }).depositGrosze).toBe(0);
   });
 
   it("bez pokoju umowa dotyczy całej nieruchomości", () => {
-    expect(leaseFormSchema.parse(VALID_LEASE).roomId).toBeNull();
-    expect(leaseFormSchema.parse({ ...VALID_LEASE, roomId: "" }).roomId).toBeNull();
-    expect(leaseFormSchema.parse({ ...VALID_LEASE, roomId: "room_1" }).roomId).toBe("room_1");
+    expect(leaseFormSchema(C).parse(VALID_LEASE).roomId).toBeNull();
+    expect(leaseFormSchema(C).parse({ ...VALID_LEASE, roomId: "" }).roomId).toBeNull();
+    expect(leaseFormSchema(C).parse({ ...VALID_LEASE, roomId: "room_1" }).roomId).toBe("room_1");
   });
 
   it("wymaga wskazania nieruchomości", () => {
-    expect(leaseFormSchema.safeParse({ ...VALID_LEASE, propertyId: "" }).success).toBe(false);
+    expect(leaseFormSchema(C).safeParse({ ...VALID_LEASE, propertyId: "" }).success).toBe(false);
   });
 
   it("buduje daty w UTC, niezależnie od strefy serwera", () => {
-    const result = leaseFormSchema.parse(VALID_LEASE);
+    const result = leaseFormSchema(C).parse(VALID_LEASE);
     expect(result.startDate.toISOString()).toBe("2026-09-01T00:00:00.000Z");
   });
 
   it("puste „nie naliczaj przed” to brak odcięcia, nie błąd", () => {
-    expect(leaseFormSchema.parse(VALID_LEASE).billingStartsAt).toBeNull();
-    expect(leaseFormSchema.parse({ ...VALID_LEASE, billingStartsAt: "" }).billingStartsAt).toBeNull();
+    expect(leaseFormSchema(C).parse(VALID_LEASE).billingStartsAt).toBeNull();
+    expect(leaseFormSchema(C).parse({ ...VALID_LEASE, billingStartsAt: "" }).billingStartsAt).toBeNull();
   });
 
   it("odcięcie naliczania trafia do UTC tak samo jak pozostałe daty", () => {
-    const result = leaseFormSchema.parse({ ...VALID_LEASE, billingStartsAt: "2026-09-01" });
+    const result = leaseFormSchema(C).parse({ ...VALID_LEASE, billingStartsAt: "2026-09-01" });
     expect(result.billingStartsAt?.toISOString()).toBe("2026-09-01T00:00:00.000Z");
   });
 
   it("puste pole daty końcowej daje umowę bezterminową", () => {
-    expect(leaseFormSchema.parse({ ...VALID_LEASE, endDate: "" }).endDate).toBeNull();
+    expect(leaseFormSchema(C).parse({ ...VALID_LEASE, endDate: "" }).endDate).toBeNull();
   });
 
   it("odrzuca datę zakończenia wcześniejszą niż rozpoczęcia", () => {
-    const result = leaseFormSchema.safeParse({
+    const result = leaseFormSchema(C).safeParse({
       ...VALID_LEASE,
       startDate: "2026-09-01",
       endDate: "2026-08-01",
@@ -73,7 +81,7 @@ describe("leaseFormSchema", () => {
   });
 
   it("dopuszcza umowę jednodniową", () => {
-    const result = leaseFormSchema.safeParse({
+    const result = leaseFormSchema(C).safeParse({
       ...VALID_LEASE,
       startDate: "2026-09-01",
       endDate: "2026-09-01",
@@ -83,16 +91,16 @@ describe("leaseFormSchema", () => {
 
   it("odrzuca datę, która nie istnieje", () => {
     // Date po cichu przesunąłby 31 lutego na marzec — łapiemy to wcześniej.
-    expect(leaseFormSchema.safeParse({ ...VALID_LEASE, startDate: "2026-02-31" }).success).toBe(false);
+    expect(leaseFormSchema(C).safeParse({ ...VALID_LEASE, startDate: "2026-02-31" }).success).toBe(false);
   });
 
   it("odrzuca datę w złym formacie", () => {
-    expect(leaseFormSchema.safeParse({ ...VALID_LEASE, startDate: "01.09.2026" }).success).toBe(false);
+    expect(leaseFormSchema(C).safeParse({ ...VALID_LEASE, startDate: "01.09.2026" }).success).toBe(false);
   });
 
   it("wymaga zaliczki, gdy tryb mediów jej oczekuje", () => {
     for (const mode of ["FLAT_RATE", "MIXED"] as const) {
-      const result = leaseFormSchema.safeParse({
+      const result = leaseFormSchema(C).safeParse({
         ...VALID_LEASE,
         utilitiesMode: mode,
         utilitiesAdvanceGrosze: "0",
@@ -103,7 +111,7 @@ describe("leaseFormSchema", () => {
 
   it("nie wymaga zaliczki w trybie INCLUDED ani METERED", () => {
     for (const mode of ["INCLUDED", "METERED"] as const) {
-      const result = leaseFormSchema.safeParse({
+      const result = leaseFormSchema(C).safeParse({
         ...VALID_LEASE,
         utilitiesMode: mode,
         utilitiesAdvanceGrosze: "0",
@@ -113,11 +121,11 @@ describe("leaseFormSchema", () => {
   });
 
   it("wymaga przynajmniej jednego najemcy", () => {
-    expect(leaseFormSchema.safeParse({ ...VALID_LEASE, tenantIds: [] }).success).toBe(false);
+    expect(leaseFormSchema(C).safeParse({ ...VALID_LEASE, tenantIds: [] }).success).toBe(false);
   });
 
   it("odrzuca tego samego najemcę wskazanego dwa razy", () => {
-    const result = leaseFormSchema.safeParse({
+    const result = leaseFormSchema(C).safeParse({
       ...VALID_LEASE,
       tenantIds: ["tenant_1", "tenant_1"],
     });
@@ -126,8 +134,8 @@ describe("leaseFormSchema", () => {
 
   it("ogranicza dzień naliczania do 28", () => {
     // 29–31 wymagałoby wyjątku dla lutego przy każdym naliczeniu.
-    expect(leaseFormSchema.safeParse({ ...VALID_LEASE, billingDay: 29 }).success).toBe(false);
-    expect(leaseFormSchema.safeParse({ ...VALID_LEASE, billingDay: 28 }).success).toBe(true);
+    expect(leaseFormSchema(C).safeParse({ ...VALID_LEASE, billingDay: 29 }).success).toBe(false);
+    expect(leaseFormSchema(C).safeParse({ ...VALID_LEASE, billingDay: 28 }).success).toBe(true);
   });
 
   /**
@@ -137,10 +145,10 @@ describe("leaseFormSchema", () => {
    * kwoty. Ten test pilnuje, żeby ktoś nie „uprościł" tego z powrotem.
    */
   it("wyniku walidacji nie wolno wysyłać ponownie do API", () => {
-    const parsed = leaseFormSchema.parse(VALID_LEASE);
+    const parsed = leaseFormSchema(C).parse(VALID_LEASE);
     const overTheWire = JSON.parse(JSON.stringify(parsed)) as unknown;
 
-    const again = leaseFormSchema.safeParse(overTheWire);
+    const again = leaseFormSchema(C).safeParse(overTheWire);
     expect(again.success).toBe(false);
     if (!again.success) {
       expect(again.error.issues.map((issue) => issue.path[0])).toContain("startDate");
@@ -150,26 +158,26 @@ describe("leaseFormSchema", () => {
 
 describe("leaseUpdateSchema", () => {
   it("pozwala zmienić pojedyncze pole", () => {
-    const result = leaseUpdateSchema.parse({ rentGrosze: "2 600,00" });
+    const result = leaseUpdateSchema(C).parse({ rentGrosze: "2 600,00" });
     expect(result.rentGrosze).toBe(260000);
   });
 
   it("pustym polem czyści odcięcie naliczania, a pominiętym go nie rusza", () => {
     // Rozróżnienie jest istotne: PATCH z jednym polem nie może po cichu
     // skasować daty, której formularz w ogóle nie przysłał.
-    expect(leaseUpdateSchema.parse({ billingStartsAt: "" }).billingStartsAt).toBeNull();
-    expect(leaseUpdateSchema.parse({ rentGrosze: "2 600,00" }).billingStartsAt).toBeUndefined();
+    expect(leaseUpdateSchema(C).parse({ billingStartsAt: "" }).billingStartsAt).toBeNull();
+    expect(leaseUpdateSchema(C).parse({ rentGrosze: "2 600,00" }).billingStartsAt).toBeUndefined();
     expect(
-      leaseUpdateSchema.parse({ billingStartsAt: "2026-09-01" }).billingStartsAt?.toISOString(),
+      leaseUpdateSchema(C).parse({ billingStartsAt: "2026-09-01" }).billingStartsAt?.toISOString(),
     ).toBe("2026-09-01T00:00:00.000Z");
   });
 
   it("nie sprawdza spójności dat, gdy przyszła tylko jedna", () => {
-    expect(leaseUpdateSchema.safeParse({ endDate: "2026-01-01" }).success).toBe(true);
+    expect(leaseUpdateSchema(C).safeParse({ endDate: "2026-01-01" }).success).toBe(true);
   });
 
   it("sprawdza spójność, gdy przyszły obie daty", () => {
-    const result = leaseUpdateSchema.safeParse({
+    const result = leaseUpdateSchema(C).safeParse({
       startDate: "2026-09-01",
       endDate: "2026-08-01",
     });
@@ -181,7 +189,7 @@ describe("tenantFormSchema", () => {
   const VALID = { firstName: "Jan", lastName: "Kowalski" };
 
   it("wystarczy imię i nazwisko", () => {
-    const result = tenantFormSchema.parse(VALID);
+    const result = tenantFormSchema(C).parse(VALID);
     expect(result.status).toBe("PROSPECT");
     // Pominięte pole zostaje `undefined`, nie `null` — przy PATCH-u oznacza to
     // „nie zmieniaj", a `null` oznaczałoby „wyczyść". To rozróżnienie jest istotne.
@@ -189,32 +197,32 @@ describe("tenantFormSchema", () => {
   });
 
   it("odróżnia pole pominięte od jawnie wyczyszczonego", () => {
-    const cleared = tenantFormSchema.parse({ ...VALID, email: "", phone: "" });
+    const cleared = tenantFormSchema(C).parse({ ...VALID, email: "", phone: "" });
     expect(cleared.email).toBeNull();
     expect(cleared.phone).toBeNull();
   });
 
   it("normalizuje e-mail do małych liter i przycina spacje", () => {
-    const result = tenantFormSchema.parse({ ...VALID, email: "  JAN@Przyklad.PL " });
+    const result = tenantFormSchema(C).parse({ ...VALID, email: "  JAN@Przyklad.PL " });
     expect(result.email).toBe("jan@przyklad.pl");
   });
 
   it("czyści NIP ze spacji i myślników", () => {
-    expect(tenantFormSchema.parse({ ...VALID, taxId: "123-456-32-18" }).taxId).toBe("1234563218");
+    expect(tenantFormSchema(C).parse({ ...VALID, taxId: "123-456-32-18" }).taxId).toBe("1234563218");
   });
 
   it("odrzuca NIP o złej długości", () => {
-    expect(tenantFormSchema.safeParse({ ...VALID, taxId: "12345" }).success).toBe(false);
+    expect(tenantFormSchema(C).safeParse({ ...VALID, taxId: "12345" }).success).toBe(false);
   });
 
   it("odrzuca niepoprawny e-mail, ale akceptuje jego brak", () => {
-    expect(tenantFormSchema.safeParse({ ...VALID, email: "to-nie-email" }).success).toBe(false);
-    expect(tenantFormSchema.safeParse({ ...VALID, email: "" }).success).toBe(true);
+    expect(tenantFormSchema(C).safeParse({ ...VALID, email: "to-nie-email" }).success).toBe(false);
+    expect(tenantFormSchema(C).safeParse({ ...VALID, email: "" }).success).toBe(true);
   });
 
   it("przyjmuje polskie formaty telefonu", () => {
     for (const phone of ["+48 601 100 200", "601100200", "(12) 345-67-89"]) {
-      expect(tenantFormSchema.safeParse({ ...VALID, phone }).success).toBe(true);
+      expect(tenantFormSchema(C).safeParse({ ...VALID, phone }).success).toBe(true);
     }
   });
 });
@@ -238,27 +246,27 @@ describe("leaseUpdateSchema", () => {
   it("pominięte pola nie pojawiają się w wyniku", () => {
     // Przełącznik wysyłki maili wysyła jedno pole. Gdyby kaucja czy zaliczka
     // wracały z niego jako zero, każde jego kliknięcie kasowałoby kwoty.
-    const result = leaseUpdateSchema.parse({ sendInvoicesByEmail: false });
+    const result = leaseUpdateSchema(C).parse({ sendInvoicesByEmail: false });
     expect(result).toEqual({ sendInvoicesByEmail: false });
   });
 
   it("puste pole kwoty znaczy zero, a nie błąd", () => {
-    const result = leaseUpdateSchema.parse({ depositGrosze: "", utilitiesAdvanceGrosze: "" });
+    const result = leaseUpdateSchema(C).parse({ depositGrosze: "", utilitiesAdvanceGrosze: "" });
     expect(result.depositGrosze).toBe(0);
     expect(result.utilitiesAdvanceGrosze).toBe(0);
   });
 
   it("przedłużenie to sama data zakończenia", () => {
-    const result = leaseUpdateSchema.parse({ endDate: "2027-12-31" });
+    const result = leaseUpdateSchema(C).parse({ endDate: "2027-12-31" });
     expect(result.endDate?.toISOString()).toBe("2027-12-31T00:00:00.000Z");
   });
 
   it("puste pole daty zakończenia robi umowę bezterminową", () => {
-    expect(leaseUpdateSchema.parse({ endDate: "" }).endDate).toBeNull();
+    expect(leaseUpdateSchema(C).parse({ endDate: "" }).endDate).toBeNull();
   });
 
   it("nie przepuszcza końca wcześniejszego niż początek", () => {
-    const result = leaseUpdateSchema.safeParse({
+    const result = leaseUpdateSchema(C).safeParse({
       startDate: "2026-06-01",
       endDate: "2026-05-31",
     });
@@ -268,33 +276,33 @@ describe("leaseUpdateSchema", () => {
   it("nie wymusza zaliczki, gdy pole nie przyszło w żądaniu", () => {
     // Sam tryb bez kwoty znaczy „zostaw zaliczkę, jaka jest" — inaczej
     // zmiana trybu z widoku umowy byłaby nie do zapisania.
-    expect(leaseUpdateSchema.safeParse({ utilitiesMode: "FLAT_RATE" }).success).toBe(true);
+    expect(leaseUpdateSchema(C).safeParse({ utilitiesMode: "FLAT_RATE" }).success).toBe(true);
   });
 });
 
 describe("leaseEditSchema", () => {
   it("przyjmuje komplet warunków", () => {
-    const result = leaseEditSchema.parse(EDIT_VALID);
+    const result = leaseEditSchema(C).parse(EDIT_VALID);
     expect(result.rentGrosze).toBe(240000);
     expect(result.depositGrosze).toBe(240000);
     expect(result.billingStartsAt).toBeNull();
   });
 
   it("pusta data zakończenia to czas nieokreślony", () => {
-    expect(leaseEditSchema.parse({ ...EDIT_VALID, endDate: "" }).endDate).toBeNull();
+    expect(leaseEditSchema(C).parse({ ...EDIT_VALID, endDate: "" }).endDate).toBeNull();
   });
 
   it("pusta kaucja to zero, nie błąd", () => {
-    expect(leaseEditSchema.parse({ ...EDIT_VALID, depositGrosze: "" }).depositGrosze).toBe(0);
+    expect(leaseEditSchema(C).parse({ ...EDIT_VALID, depositGrosze: "" }).depositGrosze).toBe(0);
   });
 
   it("przy zaliczce na media wymaga kwoty", () => {
-    const result = leaseEditSchema.safeParse({ ...EDIT_VALID, utilitiesAdvanceGrosze: "" });
+    const result = leaseEditSchema(C).safeParse({ ...EDIT_VALID, utilitiesAdvanceGrosze: "" });
     expect(result.success).toBe(false);
   });
 
   it("bez zaliczki tryb 'media w czynszu' nie potrzebuje kwoty", () => {
-    const result = leaseEditSchema.safeParse({
+    const result = leaseEditSchema(C).safeParse({
       ...EDIT_VALID,
       utilitiesMode: "INCLUDED",
       utilitiesAdvanceGrosze: "",
@@ -303,14 +311,14 @@ describe("leaseEditSchema", () => {
   });
 
   it("nie przepuszcza końca wcześniejszego niż początek", () => {
-    const result = leaseEditSchema.safeParse({ ...EDIT_VALID, endDate: "2025-12-31" });
+    const result = leaseEditSchema(C).safeParse({ ...EDIT_VALID, endDate: "2025-12-31" });
     expect(result.success).toBe(false);
   });
 
   it("nie zna lokalu ani najemców", () => {
     // Te pola mają własne drogi zmiany — gdyby przeciekły tutaj, PATCH
     // przepiąłby umowę bez zwolnienia poprzedniej jednostki.
-    const result = leaseEditSchema.parse({
+    const result = leaseEditSchema(C).parse({
       ...EDIT_VALID,
       propertyId: "prop_1",
       tenantIds: ["t1"],
@@ -321,7 +329,7 @@ describe("leaseEditSchema", () => {
 
   it("przepuszcza statusy ustawiane ręcznie", () => {
     for (const status of LEASE_SETTABLE_STATUSES) {
-      expect(leaseEditSchema.parse({ ...EDIT_VALID, status }).status).toBe(status);
+      expect(leaseEditSchema(C).parse({ ...EDIT_VALID, status }).status).toBe(status);
     }
   });
 
@@ -329,12 +337,12 @@ describe("leaseEditSchema", () => {
     // Jedno i drugie bierze się ze zdarzenia: wypowiedzenie zwalnia lokal
     // i zapisuje datę, a wygaśnięcie wynika z końca umowy. Z listy wyboru
     // zostałaby umowa zakończona z nazwy, z lokalem dalej zajętym.
-    expect(leaseEditSchema.safeParse({ ...EDIT_VALID, status: "TERMINATED" }).success).toBe(false);
-    expect(leaseEditSchema.safeParse({ ...EDIT_VALID, status: "EXPIRED" }).success).toBe(false);
+    expect(leaseEditSchema(C).safeParse({ ...EDIT_VALID, status: "TERMINATED" }).success).toBe(false);
+    expect(leaseEditSchema(C).safeParse({ ...EDIT_VALID, status: "EXPIRED" }).success).toBe(false);
   });
 
   it("bez statusu zostawia umowę tam, gdzie była", () => {
     // Umowa wypowiedziana nie dostaje selecta, więc formularz nie przysyła pola.
-    expect(leaseEditSchema.parse(EDIT_VALID).status).toBeUndefined();
+    expect(leaseEditSchema(C).parse(EDIT_VALID).status).toBeUndefined();
   });
 });

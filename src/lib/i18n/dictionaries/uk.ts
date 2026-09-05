@@ -337,7 +337,18 @@ export const uk: Dictionary = {
         invoice: "Document not found.",
         payment: "Payment not found.",
         expense: "Cost not found.",
+        organization: "Organisation not found.",
+        account: "Account not found.",
+        invoices: "No documents found.",
+        selectedTenant: "The selected tenant was not found.",
+        roomInProperty: "That room was not found in this property.",
+        propertyRooms: "No rooms found for this property.",
       },
+      fixFields: "Please correct the highlighted fields.",
+      noInvoiceSelected: "No document was selected.",
+      alreadyCancelled: "This document is already cancelled.",
+      cancelledNotSent: "This document is cancelled, so we are not sending it to the tenant.",
+      noAccountEmail: "Your account has no email address to send the test to.",
     },
 
     invoices: {
@@ -505,6 +516,7 @@ export const uk: Dictionary = {
         floor: "Floor",
         askingRent: "Asking rent for the whole property",
         internetSpeed: "Broadband speed",
+        internetContractEnd: "Broadband contract ends",
         /*
           Polski wskaźnik EP ze świadectwa charakterystyki energetycznej
           odpowiada brytyjskiemu EPC — tam podaje się literę od A do G, ale

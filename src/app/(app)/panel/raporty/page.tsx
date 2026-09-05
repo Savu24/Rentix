@@ -12,8 +12,8 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { formatAmount, formatPLN } from "@/lib/money";
 import { annualReport, reportYears } from "@/lib/reports/service";
 import { plural } from "@/lib/utils";
-import { EXPENSE_CATEGORY_LABEL } from "@/lib/validations/expense";
-
+import { expenseCategoryLabels } from "@/lib/validations/expense";
+import { panelDictionary } from "@/lib/panel/dictionary";
 export const metadata: Metadata = { title: "Raporty" };
 
 export default async function ReportsPage({
@@ -21,6 +21,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession("/panel/raporty");
   const organizationId = session.user.organizationId;
   const params = await searchParams;
@@ -156,7 +157,7 @@ export default async function ReportsPage({
                     <div key={bucket.category} className="flex flex-col gap-1 py-2">
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="text-sm text-fg">
-                          {EXPENSE_CATEGORY_LABEL[bucket.category]}
+                          {expenseCategoryLabels(d)[bucket.category]}
                         </span>
                         <span className="tabular font-mono text-xs text-muted">
                           {formatPLN(bucket.totalGrosze)} · {share}%

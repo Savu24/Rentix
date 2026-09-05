@@ -81,6 +81,21 @@ export async function getApiSession(): Promise<
  * Zwraca `organizationId` wprost, bo to jedyna wartość, której route'y
  * naprawdę potrzebują — i trudniej wtedy napisać zapytanie bez zawężenia.
  */
+/**
+ * Kontekst językowy dla endpointów, które obsługują też najemcę.
+ *
+ * Najemca nie należy do organizacji właściciela, więc `organizationId` bywa
+ * puste — wtedy zostaje preferencja z ciasteczka. Właściciel dostaje język
+ * swojego konta, bo to on decyduje, w jakim kraju prowadzi najem.
+ */
+export async function sessionLocaleContext(session: AppSession) {
+  const locale = session.user.organizationId
+    ? await organizationLocale(session.user.organizationId)
+    : await requestLocale();
+
+  return localeContext(locale);
+}
+
 export type ApiOwnerContext = {
   session: AppSession;
   organizationId: string;

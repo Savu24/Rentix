@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = expenseFormSchema.safeParse(body);
+  const parsed = expenseFormSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const result = await createExpense(auth.organizationId, parsed.data);

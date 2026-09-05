@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const parsed = ownerFormSchema.safeParse(body);
+  const parsed = ownerFormSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return created(await createOwner(auth.organizationId, parsed.data));

@@ -11,13 +11,13 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { formatPLN } from "@/lib/money";
 import { listTenants } from "@/lib/tenants/service";
-import { LEASE_STATUS_LABEL, LEASE_STATUS_TONE } from "@/lib/validations/lease";
+import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
 import {
-  TENANT_STATUS_LABEL,
+  tenantStatusLabels,
   TENANT_STATUS_TONE,
   tenantListQuerySchema,
 } from "@/lib/validations/tenant";
-
+import { panelDictionary } from "@/lib/panel/dictionary";
 export const metadata: Metadata = { title: "Najemcy" };
 
 export default async function TenantsPage({
@@ -25,6 +25,7 @@ export default async function TenantsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession("/panel/najemcy");
   const params = await searchParams;
 
@@ -107,7 +108,7 @@ export default async function TenantsPage({
                           {tenant.firstName} {tenant.lastName}
                         </p>
                         <Badge tone={TENANT_STATUS_TONE[tenant.status]}>
-                          {TENANT_STATUS_LABEL[tenant.status]}
+                          {tenantStatusLabels(d)[tenant.status]}
                         </Badge>
                         {tenant.archivedAt ? <Badge tone="neutral">Zarchiwizowany</Badge> : null}
                         {/* Odliczanie stoi przy nazwisku, a nie przy kwocie:
@@ -130,7 +131,7 @@ export default async function TenantsPage({
                               {lease.roomName ? ` · ${lease.roomName}` : ""}
                             </span>
                             <Badge tone={LEASE_STATUS_TONE[lease.status]}>
-                              {LEASE_STATUS_LABEL[lease.status]}
+                              {leaseStatusLabels(d)[lease.status]}
                             </Badge>
                           </>
                         ) : (

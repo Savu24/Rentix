@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
   const parsed = testSendSchema.safeParse(body);
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   if (!result.ok) {
     if (result.reason === "NO_RECIPIENT") {
-      return apiError("VALIDATION_ERROR", "Twoje konto nie ma adresu e-mail, na który wysłać test.");
+      return apiError("VALIDATION_ERROR", auth.d.panel.api.noAccountEmail);
     }
     return apiError("INTERNAL_ERROR", `Nie udało się wysłać: ${result.error}`);
   }

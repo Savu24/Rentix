@@ -12,7 +12,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
 import { ownerFormSchema, type OwnerFormInput } from "@/lib/validations/owner";
-
+import { useValidationContext } from "@/lib/i18n/client";
 export type OwnerOption = { id: string; name: string; city: string | null };
 
 /**
@@ -37,6 +37,7 @@ export function OwnerPicker({
   onChange: (ownerId: string) => void;
   disabled?: boolean;
 }) {
+  const v = useValidationContext();
   const [options, setOptions] = useState(owners);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -50,7 +51,7 @@ export function OwnerPicker({
     setError: setFieldError,
     formState: { errors },
   } = useForm<OwnerFormInput>({
-    resolver: zodResolver(ownerFormSchema),
+    resolver: zodResolver(ownerFormSchema(v)),
     defaultValues: EMPTY_OWNER,
   });
 

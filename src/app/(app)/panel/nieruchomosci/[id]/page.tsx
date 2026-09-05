@@ -28,12 +28,12 @@ import { formatPropertyAddress } from "@/lib/properties/address";
 import { formatDistance, mapsUrl } from "@/lib/properties/details";
 import { getProperty } from "@/lib/properties/service";
 import {
-  HEATING_TYPE_LABEL,
-  PROPERTY_TYPE_LABEL,
-  RENTAL_STATUS_LABEL,
+  heatingTypeLabels,
+  propertyTypeLabels,
+  rentalStatusLabels,
   RENTAL_STATUS_TONE,
 } from "@/lib/validations/property";
-
+import { panelDictionary } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
@@ -47,6 +47,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function PropertyDetailPage({ params }: Params) {
+  const d = await panelDictionary();
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -136,9 +137,9 @@ export default async function PropertyDetailPage({ params }: Params) {
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="r-display text-[26px] leading-tight text-fg">{property.name}</h1>
-              <Badge tone="accent">{PROPERTY_TYPE_LABEL[property.type]}</Badge>
+              <Badge tone="accent">{propertyTypeLabels(d)[property.type]}</Badge>
               <Badge tone={RENTAL_STATUS_TONE[property.status]}>
-                {RENTAL_STATUS_LABEL[property.status]}
+                {rentalStatusLabels(d)[property.status]}
               </Badge>
               {property.archivedAt ? <Badge tone="warning">Zarchiwizowana</Badge> : null}
               {/* Oznaczenie do przyszłej strony ofert — sama strona jest poza
@@ -283,7 +284,7 @@ export default async function PropertyDetailPage({ params }: Params) {
         >
           <DetailItem
             label="Ogrzewanie"
-            value={property.heatingType ? HEATING_TYPE_LABEL[property.heatingType] : null}
+            value={property.heatingType ? heatingTypeLabels(d)[property.heatingType] : null}
           />
           <DetailItem
             label="Prędkość łącza"

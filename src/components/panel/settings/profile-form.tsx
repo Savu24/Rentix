@@ -17,7 +17,7 @@ import {
   type ProfileSettingsInput,
   type ProfileSettingsOutput,
 } from "@/lib/validations/settings";
-
+import { useValidationContext } from "@/lib/i18n/client";
 export function ProfileForm({
   email,
   defaultValues,
@@ -25,6 +25,7 @@ export function ProfileForm({
   email: string;
   defaultValues: ProfileSettingsInput;
 }) {
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -36,7 +37,7 @@ export function ProfileForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<ProfileSettingsInput, unknown, ProfileSettingsOutput>({
-    resolver: zodResolver(profileSettingsSchema),
+    resolver: zodResolver(profileSettingsSchema(v)),
     defaultValues,
   });
 

@@ -17,7 +17,7 @@ import {
   type NotificationSettingsInput,
   type NotificationSettingsOutput,
 } from "@/lib/validations/settings";
-
+import { useValidationContext } from "@/lib/i18n/client";
 /**
  * Rytm przypominania i nazwa nadawcy.
  *
@@ -34,6 +34,7 @@ export function NotificationForm({
   organizationName: string;
   contactEmail: string | null;
 }) {
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -45,7 +46,7 @@ export function NotificationForm({
     setError,
     formState: { errors, isSubmitting },
   } = useForm<NotificationSettingsInput, unknown, NotificationSettingsOutput>({
-    resolver: zodResolver(notificationSettingsSchema),
+    resolver: zodResolver(notificationSettingsSchema(v)),
     defaultValues,
   });
 

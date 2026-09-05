@@ -16,17 +16,17 @@ import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
-import { INVOICE_KIND_LABEL } from "@/lib/validations/invoice";
+import { invoiceKindLabels } from "@/lib/validations/invoice";
 import {
-  TENANT_DOCUMENT_KIND_HINT,
+  tenantDocumentKindHints,
   TENANT_DOCUMENT_KIND_OPTIONS,
-  TENANT_LEGAL_FORM_LABEL,
-  TENANT_STATUS_LABEL,
+  tenantLegalFormLabels,
+  tenantStatusLabels,
   tenantFormSchema,
   type TenantFormInput,
   type TenantFormOutput,
 } from "@/lib/validations/tenant";
-
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 const EMPTY: TenantFormInput = {
   firstName: "",
   lastName: "",
@@ -70,6 +70,8 @@ export function TenantForm({
   tenantId?: string;
   defaultValues?: Partial<TenantFormInput>;
 }) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = Boolean(tenantId);
@@ -83,7 +85,7 @@ export function TenantForm({
     watch,
     formState: { errors, isSubmitting },
   } = useForm<TenantFormInput, unknown, TenantFormOutput>({
-    resolver: zodResolver(tenantFormSchema),
+    resolver: zodResolver(tenantFormSchema(v)),
     defaultValues: { ...EMPTY, ...defaultValues },
   });
 
@@ -196,7 +198,7 @@ export function TenantForm({
                 disabled={isSubmitting}
                 {...register("status")}
               >
-                {Object.entries(TENANT_STATUS_LABEL).map(([value, label]) => (
+                {Object.entries(tenantStatusLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -217,7 +219,7 @@ export function TenantForm({
                 disabled={isSubmitting}
                 {...register("legalForm")}
               >
-                {Object.entries(TENANT_LEGAL_FORM_LABEL).map(([value, label]) => (
+                {Object.entries(tenantLegalFormLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -689,7 +691,7 @@ export function TenantForm({
               id="documentKind"
               label="Co wystawiamy"
               error={errors.documentKind?.message}
-              hint={TENANT_DOCUMENT_KIND_HINT[documentKind ?? "BILL"]}
+              hint={tenantDocumentKindHints(d)[documentKind ?? "BILL"]}
               className="sm:col-span-2"
             >
               <Select
@@ -701,7 +703,7 @@ export function TenantForm({
               >
                 {TENANT_DOCUMENT_KIND_OPTIONS.map((value) => (
                   <option key={value} value={value}>
-                    {INVOICE_KIND_LABEL[value]}
+                    {invoiceKindLabels(d)[value]}
                   </option>
                 ))}
               </Select>

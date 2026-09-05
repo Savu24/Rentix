@@ -1,4 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
+import type { Dictionary } from "@/lib/i18n/types";
 import { prisma } from "@/lib/prisma";
 import type {
   PropertyCreateOutput,
@@ -134,7 +135,12 @@ export async function getProperty(organizationId: string, propertyId: string) {
  * liczbę, więc nieruchomość bez nich byłaby stanem pośrednim, którego nikt nie
  * zamawiał. Ceny wpisuje w kolejnym kroku.
  */
-export async function createProperty(organizationId: string, data: PropertyCreateOutput) {
+export async function createProperty(
+  organizationId: string,
+  data: PropertyCreateOutput,
+  /** Nazwy pokoi zakładanych razem z nieruchomością idą za językiem konta. */
+  d: Dictionary,
+) {
   const { roomCount, ...propertyData } = data;
 
   return prisma.property.create({
@@ -144,7 +150,7 @@ export async function createProperty(organizationId: string, data: PropertyCreat
       rooms: {
         create: Array.from({ length: roomCount }, (_, index) => ({
           organizationId,
-          name: defaultRoomName(index),
+          name: defaultRoomName(index, d),
           position: index,
         })),
       },

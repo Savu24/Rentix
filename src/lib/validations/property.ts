@@ -156,7 +156,7 @@ export const propertyFormSchema = (c: ValidationContext) =>
   buildingNumber: requiredText(c, c.d.panel.properties.fields.buildingNumber, 20),
   /** Puste przy domu i budynku w całości — tam numeru lokalu nie ma. */
   apartmentNumber: optionalText(c, 20),
-  postalCode: postalCodeSchema,
+  postalCode: postalCodeSchema(c),
   city: requiredText(c, c.d.panel.properties.fields.city, 80),
   district: optionalText(c, 80),
 
@@ -187,7 +187,7 @@ export const propertyFormSchema = (c: ValidationContext) =>
   internetSpeedMbps: optionalInt(c, c.d.panel.properties.fields.internetSpeed, { min: 1, max: 100_000 }),
   wifiSsid: optionalText(c, 64),
   wifiPassword: optionalText(c, 120),
-  internetContractEndsAt: optionalDateInput("Koniec umowy na internet"),
+  internetContractEndsAt: optionalDateInput(c, c.d.panel.properties.fields.internetContractEnd),
 
   // Przeglądy i dokumenty.
   landRegistryNumber: optionalText(c, 60),
@@ -199,7 +199,7 @@ export const propertyFormSchema = (c: ValidationContext) =>
 
   // Okolica i dojazd. Odległości w metrach — 100 km to sufit z zapasem,
   // powyżej tego „w okolicy" przestaje cokolwiek znaczyć.
-  gpsCoordinates: coordinatesSchema,
+  gpsCoordinates: coordinatesSchema(c),
   transitLines: optionalText(c, 200),
   transitStopDistanceM: optionalInt(c, c.d.panel.properties.fields.transitDistance, { min: 0, max: 100_000 }),
   universityDistanceM: optionalInt(c, c.d.panel.properties.fields.universityDistance, { min: 0, max: 100_000 }),
@@ -210,8 +210,8 @@ export const propertyFormSchema = (c: ValidationContext) =>
   publiclyListed: z.boolean().default(false),
 });
 
-export type PropertyFormInput = z.input<typeof propertyFormSchema>;
-export type PropertyFormOutput = z.output<typeof propertyFormSchema>;
+export type PropertyFormInput = z.input<ReturnType<typeof propertyFormSchema>>;
+export type PropertyFormOutput = z.output<ReturnType<typeof propertyFormSchema>>;
 
 /**
  * Zakładanie nieruchomości: dane plus liczba pokoi.
@@ -244,8 +244,8 @@ export const propertyCreateSchema = (c: ValidationContext) =>
     }),
 });
 
-export type PropertyCreateInput = z.input<typeof propertyCreateSchema>;
-export type PropertyCreateOutput = z.output<typeof propertyCreateSchema>;
+export type PropertyCreateInput = z.input<ReturnType<typeof propertyCreateSchema>>;
+export type PropertyCreateOutput = z.output<ReturnType<typeof propertyCreateSchema>>;
 
 export const propertyUpdateSchema = (c: ValidationContext) => propertyFormSchema(c).partial();
 
@@ -260,8 +260,8 @@ export const roomFormSchema = (c: ValidationContext) =>
   notes: optionalText(c, 1000),
 });
 
-export type RoomFormInput = z.input<typeof roomFormSchema>;
-export type RoomFormOutput = z.output<typeof roomFormSchema>;
+export type RoomFormInput = z.input<ReturnType<typeof roomFormSchema>>;
+export type RoomFormOutput = z.output<ReturnType<typeof roomFormSchema>>;
 
 export const roomUpdateSchema = (c: ValidationContext) => roomFormSchema(c).partial();
 
@@ -284,7 +284,7 @@ export const roomsBulkUpdateSchema = (c: ValidationContext) =>
     .max(MAX_ROOMS_PER_PROPERTY),
 });
 
-export type RoomsBulkUpdateInput = z.input<typeof roomsBulkUpdateSchema>;
+export type RoomsBulkUpdateInput = z.input<ReturnType<typeof roomsBulkUpdateSchema>>;
 
 export const propertyListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),

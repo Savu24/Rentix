@@ -20,12 +20,12 @@ import { calculateInvoiceTotals } from "@/lib/invoices/totals";
 import { VAT_LABEL, VAT_PERCENT } from "@/lib/invoices/vat";
 import { formatPLN, parsePLN } from "@/lib/money";
 import {
-  INVOICE_KIND_LABEL,
+  invoiceKindLabels,
   invoiceCreateSchema,
   type InvoiceCreateInput,
   type InvoiceCreateOutput,
 } from "@/lib/validations/invoice";
-
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export type ManualInvoiceLease = {
   id: string;
   label: string;
@@ -68,6 +68,8 @@ export function ManualInvoiceForm({
   tenantName: string;
   leases: ManualInvoiceLease[];
 }) {
+  const { d } = useI18n();
+  const v = useValidationContext();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export function ManualInvoiceForm({
     reset,
     formState: { errors, isSubmitting },
   } = useForm<InvoiceCreateInput, unknown, InvoiceCreateOutput>({
-    resolver: zodResolver(invoiceCreateSchema),
+    resolver: zodResolver(invoiceCreateSchema(v)),
     defaultValues: {
       tenantId,
       leaseId: leases[0]?.id ?? "",
@@ -192,7 +194,7 @@ export function ManualInvoiceForm({
               >
                 {KIND_OPTIONS.map((kind) => (
                   <option key={kind} value={kind}>
-                    {INVOICE_KIND_LABEL[kind]}
+                    {invoiceKindLabels(d)[kind]}
                   </option>
                 ))}
               </Select>

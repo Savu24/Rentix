@@ -10,8 +10,8 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { plural } from "@/lib/utils";
-import { INVOICE_KIND_LABEL } from "@/lib/validations/invoice";
-
+import { invoiceKindLabels } from "@/lib/validations/invoice";
+import { useI18n } from "@/lib/i18n/client";
 /**
  * Filtry listy dokumentów.
  *
@@ -39,6 +39,7 @@ const DETAILED_KEYS = [
 ] as const;
 
 export function InvoiceFilters({ total }: { total: number }) {
+  const { d } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -154,7 +155,7 @@ export function InvoiceFilters({ total }: { total: number }) {
               onChange={(event) => setParam("kind", event.target.value)}
             >
               <option value="all">Wszystkie</option>
-              {Object.entries(INVOICE_KIND_LABEL).map(([value, label]) => (
+              {Object.entries(invoiceKindLabels(d)).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>

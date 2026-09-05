@@ -14,11 +14,11 @@ import { getOwner } from "@/lib/owners/service";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { formatContractPeriod } from "@/lib/validations/owner";
 import {
-  PROPERTY_TYPE_LABEL,
-  RENTAL_STATUS_LABEL,
+  propertyTypeLabels,
+  rentalStatusLabels,
   RENTAL_STATUS_TONE,
 } from "@/lib/validations/property";
-
+import { panelDictionary, panelValidationContext } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -30,6 +30,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function OwnerDetailPage({ params }: Params) {
+  const d = await panelDictionary();
+  const c = await panelValidationContext();
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -40,7 +42,7 @@ export default async function OwnerDetailPage({ params }: Params) {
     .filter((part) => part && part.trim() !== "")
     .join(", ");
 
-  const contractPeriod = formatContractPeriod(owner.contractStartDate, owner.contractEndDate);
+  const contractPeriod = formatContractPeriod(owner.contractStartDate, owner.contractEndDate, c);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -132,12 +134,12 @@ export default async function OwnerDetailPage({ params }: Params) {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-medium text-fg">{property.name}</p>
                       <Badge tone={RENTAL_STATUS_TONE[property.status]}>
-                        {RENTAL_STATUS_LABEL[property.status]}
+                        {rentalStatusLabels(d)[property.status]}
                       </Badge>
                       {property.archivedAt ? <Badge tone="warning">Zarchiwizowana</Badge> : null}
                     </div>
                     <p className="text-xs text-muted">
-                      {PROPERTY_TYPE_LABEL[property.type]} · {formatPropertyAddress(property)}
+                      {propertyTypeLabels(d)[property.type]} · {formatPropertyAddress(property)}
                     </p>
                   </div>
 

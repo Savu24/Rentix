@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const { id } = await params;
   const lease = await getLease(auth.organizationId, id);
 
-  if (!lease) return apiError("NOT_FOUND", "Nie znaleziono umowy.");
+  if (!lease) return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease);
 
   // Liczba pokoi na dokument — bierzemy stan faktyczny z bazy, a nie
   // deklarację, bo umowa musi opisywać to, co istnieje.
