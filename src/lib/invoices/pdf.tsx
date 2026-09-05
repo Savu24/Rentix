@@ -5,12 +5,11 @@ import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/
 import type { InvoiceKind, VatRate } from "@/generated/prisma/enums";
 import { formatBankAccount } from "@/lib/bank-account";
 import { getDictionary } from "@/lib/i18n";
-import type { Locale } from "@/lib/i18n/config";
-import { formatPLN } from "@/lib/money";
+import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "@/lib/i18n/config";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { invoiceKindLabels, isAccountingDocument } from "@/lib/validations/invoice";
-
-import { VAT_LABEL } from "./vat";
 
 /**
  * Rachunek / faktura jako PDF.
@@ -103,6 +102,15 @@ const styles = StyleSheet.create({
   colNet: { width: "10%", textAlign: "right" },
   colGross: { width: "12%", textAlign: "right" },
 
+  /*
+    Układ bez rozbicia na VAT — dla brytyjskiego rachunku za czynsz, gdzie
+    najem mieszkaniowy jest z podatku zwolniony i trzy kolumny pokazywałyby
+    tę samą liczbę obok pustego pola. Zwolniony metraż rozchodzi się na opis
+    i wartość, bo to one niosą treść dokumentu.
+  */
+  colDescriptionWide: { width: "52%", paddingRight: 6 },
+  colAmount: { width: "18%", textAlign: "right" },
+
   summary: { flexDirection: "row", justifyContent: "flex-end", marginTop: 14 },
   summaryBox: { width: "56%" },
   summaryRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
@@ -132,6 +140,21 @@ const styles = StyleSheet.create({
   },
   paymentLabel: { color: COLORS.muted },
   paymentAccount: { fontWeight: 600, letterSpacing: 0.3 },
+
+  /*
+    Wariant pionowy — dla rachunku, który ma więcej niż jedną wartość do
+    przepisania (sort code i numer konta) plus prośbę o tytuł przelewu.
+    W jednym wierszu te trzy rzeczy nachodziły na siebie.
+  */
+  paymentStacked: {
+    marginTop: 14,
+    paddingTop: 8,
+    borderTopWidth: 0.7,
+    borderTopColor: COLORS.rule,
+    gap: 2,
+  },
+  paymentPair: { flexDirection: "row", gap: 6 },
+  paymentPairLabel: { color: COLORS.muted, width: 86 },
 
   settlement: {
     marginTop: 18,
@@ -171,20 +194,18 @@ const styles = StyleSheet.create({
   },
 });
 
-const dateFormatter = new Intl.DateTimeFormat("pl-PL", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
-const formatDate = (date: Date | null | undefined) => (date ? dateFormatter.format(date) : "brak");
-
-/** 4235 tysięcznych → „4,235"; całkowite ilości bez zbędnych zer. */
-function formatQuantity(quantityMilli: number): string {
+/**
+ * 4235 tysięcznych → „4,235" po polsku, „4.235" po brytyjsku.
+ *
+ * Separator dziesiętny idzie za krajem tak samo jak w kwotach — dokument,
+ * na którym cena ma kropkę, a ilość przecinek, czyta się jak literówkę.
+ */
+function formatQuantity(quantityMilli: number, locale: Locale): string {
   const value = quantityMilli / 1000;
-  return Number.isInteger(value)
-    ? String(value)
-    : value.toFixed(3).replace(/0+$/, "").replace(".", ",");
+  if (Number.isInteger(value)) return String(value);
+
+  const text = value.toFixed(3).replace(/0+$/, "");
+  return locale === "pl" ? text.replace(".", ",") : text;
 }
 
 export type InvoicePdfLine = {
@@ -257,29 +278,164 @@ export type InvoicePdfData = {
   notes: string | null;
 };
 
-function addressLines(party: { street: string | null; postalCode: string | null; city: string | null }) {
-  return [party.street, [party.postalCode, party.city].filter(Boolean).join(" ")]
-    .filter((part) => part && part.trim() !== "")
-    .map((part) => part as string);
+/**
+ * Co pokazać na dokumencie — same rozstrzygnięcia, bez JSX-a.
+ *
+ * Wydzielone z komponentu, bo to tu siedzą różnice między polską fakturą
+ * a brytyjskim rachunkiem, a treści złożonego PDF-a nie da się odczytać
+ * z bufora (strumień jest skompresowany). Testowanie tego przez porównywanie
+ * rozmiarów plików mówiłoby tylko tyle, że coś się zmieniło.
+ */
+export function invoiceLayout(data: InvoicePdfData) {
+  const t = getDictionary(data.locale).documents.invoice;
+  const remaining = Math.max(0, data.totalGrossGrosze - data.paidGrosze);
+
+  return {
+    remaining,
+
+    /*
+      Rozliczenie wpłat pokazujemy tylko wtedy, gdy zostało coś do zapłaty.
+      Na dokumencie spłaconym w całości para „Wpłacono / Pozostaje 0,00 zł" nic
+      nie wnosi, a zmienia treść rachunku po jego wystawieniu — najemca dostaje
+      wtedy dwie różne wersje tego samego numeru.
+    */
+    showSettlement: data.paidGrosze > 0 && remaining > 0,
+
+    /*
+      Rozbicie na netto, VAT i brutto jest obowiązkową częścią polskiej faktury,
+      także przy stawce zwolnionej — dlatego po polsku pokazujemy je zawsze.
+
+      Brytyjski najem mieszkaniowy jest z VAT zwolniony, więc te same trzy
+      kolumny niosłyby tę samą liczbę trzy razy. Pokazujemy je dopiero wtedy,
+      gdy podatek naprawdę jest: przy lokalu użytkowym albo najmie
+      krótkoterminowym wystawianym przez wynajmującego zarejestrowanego do VAT.
+    */
+    showVat: data.locale === "pl" || data.kind === "VAT_INVOICE" || data.totalVatGrosze !== 0,
+
+    /* Rozbicie po stawkach ma sens dopiero przy więcej niż jednej. */
+    showBreakdown: data.vatBreakdown.length > 1,
+
+    /*
+      Data sprzedaży to pozycja wymagana przez strukturę FA(2). Na brytyjskim
+      rachunku za czynsz nie znaczy nic i tylko myli — zostaje tam, gdzie
+      odpowiada tax pointowi, czyli na fakturze VAT.
+    */
+    showSaleDate: data.locale === "pl" || data.kind === "VAT_INVOICE",
+
+    /*
+      Naliczenie nie jest dowodem księgowym, więc dokument musi to powiedzieć
+      wprost — inaczej najemca odda je księgowej, a ta odeśle je z powrotem.
+    */
+    accounting: isAccountingDocument(data.kind),
+
+    /* Kwota słownie i rubryki podpisu to wymogi i konwencje polskiego dokumentu. */
+    showAmountInWords: Boolean(t.amountInWords),
+    showSignatures: isAccountingDocument(data.kind) && Boolean(t.signedBy),
+
+    /* Prośba o numer w tytule przelewu — bez niej brytyjskiej wpłaty nie da się dopasować. */
+    showPaymentReference: Boolean(t.paymentReference),
+  };
+}
+
+/**
+ * Adres w zapisie kraju.
+ *
+ * Polska stawia kod pocztowy przed miejscowością w jednej linii („30-001
+ * Kraków"). Wielka Brytania odwrotnie: miasto w swojej linii, kod pocztowy
+ * w ostatniej, sam. Adres złożony po polsku wygląda na brytyjskiej kopercie
+ * jak literówka, a listonoszowi utrudnia sortowanie.
+ */
+function addressLines(
+  party: { street: string | null; postalCode: string | null; city: string | null },
+  locale: Locale,
+): string[] {
+  const parts =
+    locale === "uk"
+      ? [party.street, party.city, party.postalCode]
+      : [party.street, [party.postalCode, party.city].filter(Boolean).join(" ")];
+
+  return parts.filter((part): part is string => Boolean(part && part.trim() !== ""));
 }
 
 function Party({
   label,
+  taxIdLabel,
+  locale,
   party,
 }: {
   label: string;
+  taxIdLabel: string;
+  locale: Locale;
   party: InvoicePdfData["seller"];
 }) {
   return (
     <View style={styles.party}>
       <Text style={styles.partyLabel}>{label}</Text>
       <Text style={styles.partyName}>{party.name}</Text>
-      {addressLines(party).map((line, index) => (
+      {addressLines(party, locale).map((line, index) => (
         <Text key={index} style={styles.partyLine}>
           {line}
         </Text>
       ))}
-      {party.taxId ? <Text style={styles.partyLine}>NIP: {party.taxId}</Text> : null}
+      {party.taxId ? (
+        <Text style={styles.partyLine}>
+          {taxIdLabel}: {party.taxId}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Jak zapłacić.
+ *
+ * Polska mieści się w jednym wierszu: jeden numer rachunku i nic poza nim.
+ * Brytyjski przelew wymaga sort code'u i numeru konta — dwóch wartości, które
+ * wpisuje się w dwa osobne pola w banku — plus prośby o tytuł przelewu, bo bez
+ * niej wpłata przychodzi bez żadnego opisu i nie da się jej dopasować do
+ * rachunku. Trzy rzeczy obok siebie nachodziły na siebie, więc ten wariant
+ * układa je jedna pod drugą.
+ */
+function PaymentBlock({
+  data,
+  showReference,
+}: {
+  data: InvoicePdfData;
+  showReference: boolean;
+}) {
+  const t = getDictionary(data.locale).documents.invoice;
+  const account = formatBankAccount(data.bankAccount ?? "", data.locale);
+
+  if (!t.sortCode) {
+    return (
+      <View style={styles.payment}>
+        <Text style={styles.paymentLabel}>{t.paymentLabel}</Text>
+        <Text style={styles.paymentAccount}>{account}</Text>
+      </View>
+    );
+  }
+
+  // „12-34-56 12345678" — spacja rozdziela sort code od numeru konta.
+  const [sortCode, accountNumber] = account.split(" ");
+
+  return (
+    <View style={styles.paymentStacked}>
+      <Text style={styles.paymentLabel}>{t.paymentLabel}</Text>
+
+      <View style={styles.paymentPair}>
+        <Text style={styles.paymentPairLabel}>{t.sortCode}</Text>
+        <Text style={styles.paymentAccount}>{sortCode}</Text>
+      </View>
+      <View style={styles.paymentPair}>
+        <Text style={styles.paymentPairLabel}>{t.accountNumber}</Text>
+        <Text style={styles.paymentAccount}>{accountNumber}</Text>
+      </View>
+
+      {showReference ? (
+        <Text style={styles.paymentLabel}>
+          {fill(t.paymentReference, { number: data.number })}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -292,20 +448,25 @@ function Party({
  * który za pół roku rozjechałby się między wariantami.
  */
 function InvoicePage({ data }: { data: InvoicePdfData }) {
-  const remaining = Math.max(0, data.totalGrossGrosze - data.paidGrosze);
+  const dictionary = getDictionary(data.locale);
+  const t = dictionary.documents.invoice;
+  const vatLabels = dictionary.documents.vat;
 
-  // Rozliczenie wpłat pokazujemy tylko wtedy, gdy zostało coś do zapłaty.
-  // Na dokumencie spłaconym w całości para „Wpłacono / Pozostaje 0,00 zł" nic
-  // nie wnosi, a zmienia treść rachunku po jego wystawieniu — najemca dostaje
-  // wtedy dwie różne wersje tego samego numeru.
-  const showSettlement = data.paidGrosze > 0 && remaining > 0;
-  // Rozbicie po stawkach pokazujemy tylko wtedy, gdy na dokumencie jest więcej
-  // niż jedna — przy samym „zw." powielałoby wiersz sumy.
-  const showBreakdown = data.vatBreakdown.length > 1;
+  const money = (grosze: number) => formatMoney(grosze, data.locale);
+  const date = (value: Date | null | undefined) =>
+    value ? formatDateIn(value, data.locale, "numeric") : t.noDate;
 
-  // Naliczenie nie jest dowodem księgowym, więc dokument musi to powiedzieć
-  // wprost — inaczej najemca odda je księgowej, a ta odeśle je z powrotem.
-  const accounting = isAccountingDocument(data.kind);
+  const {
+    remaining,
+    showSettlement,
+    showBreakdown,
+    showVat,
+    showSaleDate,
+    accounting,
+    showAmountInWords,
+    showSignatures,
+    showPaymentReference,
+  } = invoiceLayout(data);
 
   return (
     <Page size="A4" style={styles.page}>
@@ -314,153 +475,196 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
             {/* eslint-disable-next-line jsx-a11y/alt-text -- <Image> renderera PDF-a, nie <img>: atrybutu alt nie przyjmuje */}
             {data.logoDataUrl ? <Image src={data.logoDataUrl} style={styles.logo} /> : null}
             <Text style={styles.title}>
-              {invoiceKindLabels(getDictionary(data.locale))[data.kind]}
-              {data.cancelled ? " (ANULOWANY)" : ""}
+              {invoiceKindLabels(dictionary)[data.kind]}
+              {data.cancelled ? t.cancelled : ""}
             </Text>
-            <Text style={styles.number}>nr {data.number}</Text>
+            <Text style={styles.number}>
+              {t.numberPrefix}
+              {data.number}
+            </Text>
           </View>
 
           <View style={styles.headerDates}>
             <View style={styles.headerDateRow}>
-              <Text style={styles.headerDateLabel}>Data wystawienia</Text>
-              <Text style={styles.headerDateValue}>{formatDate(data.issueDate)}</Text>
+              <Text style={styles.headerDateLabel}>{t.issueDate}</Text>
+              <Text style={styles.headerDateValue}>{date(data.issueDate)}</Text>
             </View>
+            {showSaleDate ? (
+              <View style={styles.headerDateRow}>
+                <Text style={styles.headerDateLabel}>{t.saleDate}</Text>
+                <Text style={styles.headerDateValue}>{date(data.saleDate)}</Text>
+              </View>
+            ) : null}
             <View style={styles.headerDateRow}>
-              <Text style={styles.headerDateLabel}>Data sprzedaży</Text>
-              <Text style={styles.headerDateValue}>{formatDate(data.saleDate)}</Text>
-            </View>
-            <View style={styles.headerDateRow}>
-              <Text style={styles.headerDateLabel}>Termin płatności</Text>
-              <Text style={styles.headerDateValue}>{formatDate(data.dueDate)}</Text>
+              <Text style={styles.headerDateLabel}>{t.dueDate}</Text>
+              <Text style={styles.headerDateValue}>{date(data.dueDate)}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.parties}>
-          <Party label="Sprzedawca" party={data.seller} />
-          <Party label="Nabywca" party={data.buyer} />
+          <Party
+            label={t.seller}
+            taxIdLabel={t.taxIdLabel}
+            locale={data.locale}
+            party={data.seller}
+          />
+          <Party
+            label={t.buyer}
+            taxIdLabel={t.taxIdLabel}
+            locale={data.locale}
+            party={data.buyer}
+          />
         </View>
 
         {data.subject || data.periodStart ? (
           <Text style={styles.periodNote}>
-            {data.subject ? `Dotyczy: ${data.subject}` : ""}
+            {data.subject ? fill(t.subject, { subject: data.subject }) : ""}
             {data.subject && data.periodStart ? " · " : ""}
             {data.periodStart
-              ? `Okres rozliczeniowy: ${formatDate(data.periodStart)} – ${formatDate(data.periodEnd)}`
+              ? fill(t.period, { from: date(data.periodStart), to: date(data.periodEnd) })
               : ""}
           </Text>
         ) : null}
 
         <View style={styles.tableHead}>
-          <Text style={[styles.headCell, styles.colIndex]}>#</Text>
-          <Text style={[styles.headCell, styles.colDescription]}>Nazwa usługi</Text>
-          <Text style={[styles.headCell, styles.colQuantity]}>Ilość</Text>
-          <Text style={[styles.headCell, styles.colUnitPrice]}>Cena netto</Text>
-          <Text style={[styles.headCell, styles.colVat]}>VAT</Text>
-          <Text style={[styles.headCell, styles.colNet]}>Netto</Text>
-          <Text style={[styles.headCell, styles.colGross]}>Brutto</Text>
+          <Text style={[styles.headCell, styles.colIndex]}>{t.columns.index}</Text>
+          <Text
+            style={[
+              styles.headCell,
+              showVat ? styles.colDescription : styles.colDescriptionWide,
+            ]}
+          >
+            {t.columns.description}
+          </Text>
+          <Text style={[styles.headCell, styles.colQuantity]}>{t.columns.quantity}</Text>
+          <Text style={[styles.headCell, styles.colUnitPrice]}>{t.columns.unitPrice}</Text>
+          {showVat ? (
+            <>
+              <Text style={[styles.headCell, styles.colVat]}>{t.columns.vat}</Text>
+              <Text style={[styles.headCell, styles.colNet]}>{t.columns.net}</Text>
+              <Text style={[styles.headCell, styles.colGross]}>{t.columns.gross}</Text>
+            </>
+          ) : (
+            <Text style={[styles.headCell, styles.colAmount]}>{t.columns.amount}</Text>
+          )}
         </View>
 
         {data.lines.map((line, index) => (
           <View key={index} style={index % 2 === 1 ? [styles.row, styles.rowAlt] : styles.row}>
             <Text style={styles.colIndex}>{index + 1}</Text>
-            <Text style={styles.colDescription}>{line.description}</Text>
-            <Text style={styles.colQuantity}>
-              {formatQuantity(line.quantityMilli)} {line.unit}
+            <Text style={showVat ? styles.colDescription : styles.colDescriptionWide}>
+              {line.description}
             </Text>
-            <Text style={styles.colUnitPrice}>{formatPLN(line.unitPriceNetGrosze)}</Text>
-            <Text style={styles.colVat}>{VAT_LABEL[line.vatRate]}</Text>
-            <Text style={styles.colNet}>{formatPLN(line.netGrosze)}</Text>
-            <Text style={styles.colGross}>{formatPLN(line.grossGrosze)}</Text>
+            <Text style={styles.colQuantity}>
+              {formatQuantity(line.quantityMilli, data.locale)} {line.unit}
+            </Text>
+            <Text style={styles.colUnitPrice}>{money(line.unitPriceNetGrosze)}</Text>
+            {showVat ? (
+              <>
+                <Text style={styles.colVat}>{vatLabels[line.vatRate]}</Text>
+                <Text style={styles.colNet}>{money(line.netGrosze)}</Text>
+                <Text style={styles.colGross}>{money(line.grossGrosze)}</Text>
+              </>
+            ) : (
+              <Text style={styles.colAmount}>{money(line.grossGrosze)}</Text>
+            )}
           </View>
         ))}
 
         <View style={styles.summary}>
           <View style={styles.summaryBox}>
-            {showBreakdown
+            {showBreakdown && showVat
               ? data.vatBreakdown.map((bucket) => (
                   <View key={bucket.rate} style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>
-                      Netto {VAT_LABEL[bucket.rate]} · VAT {formatPLN(bucket.vatGrosze)}
+                      {fill(t.breakdown, {
+                        rate: vatLabels[bucket.rate],
+                        vat: money(bucket.vatGrosze),
+                      })}
                     </Text>
-                    <Text style={styles.summaryValue}>{formatPLN(bucket.netGrosze)}</Text>
+                    <Text style={styles.summaryValue}>{money(bucket.netGrosze)}</Text>
                   </View>
                 ))
               : null}
 
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Razem netto</Text>
-              <Text style={styles.summaryValue}>{formatPLN(data.totalNetGrosze)}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Razem VAT</Text>
-              <Text style={styles.summaryValue}>{formatPLN(data.totalVatGrosze)}</Text>
-            </View>
+            {showVat ? (
+              <>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{t.totalNet}</Text>
+                  <Text style={styles.summaryValue}>{money(data.totalNetGrosze)}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{t.totalVat}</Text>
+                  <Text style={styles.summaryValue}>{money(data.totalVatGrosze)}</Text>
+                </View>
+              </>
+            ) : null}
 
             <View style={styles.summaryTotal}>
-              <Text style={styles.summaryTotalLabel}>Do zapłaty</Text>
-              <Text style={styles.summaryTotalValue}>{formatPLN(data.totalGrossGrosze)}</Text>
+              <Text style={styles.summaryTotalLabel}>{t.totalDue}</Text>
+              <Text style={styles.summaryTotalValue}>{money(data.totalGrossGrosze)}</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.words}>
-          <Text style={styles.wordsLabel}>Słownie: </Text>
-          {groszeToPolishWords(data.totalGrossGrosze)}
-        </Text>
+        {/*
+          Kwota słownie jest wymogiem polskiej faktury i pisownią polską —
+          pusty tekst w słowniku wyłącza ten wiersz w wersjach, które go
+          nie potrzebują.
+        */}
+        {showAmountInWords ? (
+          <Text style={styles.words}>
+            <Text style={styles.wordsLabel}>{t.amountInWords}</Text>
+            {groszeToPolishWords(data.totalGrossGrosze)}
+          </Text>
+        ) : null}
 
         {/* Rachunek do przelewu zostaje na dokumencie niezależnie od wpłat:
             to dana wystawcy, nie stan rozliczenia. Znika tylko z anulowanego,
             bo na anulowany nikt nie ma już przelewać. */}
         {data.bankAccount && !data.cancelled ? (
-          <View style={styles.payment}>
-            <Text style={styles.paymentLabel}>Płatność przelewem na rachunek</Text>
-            <Text style={styles.paymentAccount}>{formatBankAccount(data.bankAccount)}</Text>
-          </View>
+          <PaymentBlock data={data} showReference={showPaymentReference} />
         ) : null}
 
         {showSettlement ? (
           <View style={styles.settlement}>
             <View style={styles.settlementRow}>
-              <Text style={styles.summaryLabel}>Wpłacono</Text>
-              <Text style={styles.summaryValue}>{formatPLN(data.paidGrosze)}</Text>
+              <Text style={styles.summaryLabel}>{t.paidSoFar}</Text>
+              <Text style={styles.summaryValue}>{money(data.paidGrosze)}</Text>
             </View>
             <View style={styles.settlementRow}>
-              <Text style={styles.summaryLabel}>Pozostaje do zapłaty</Text>
-              <Text style={styles.summaryValue}>{formatPLN(remaining)}</Text>
+              <Text style={styles.summaryLabel}>{t.remaining}</Text>
+              <Text style={styles.summaryValue}>{money(remaining)}</Text>
             </View>
           </View>
         ) : null}
 
         {data.notes ? <Text style={styles.notes}>{data.notes}</Text> : null}
 
-        {!accounting ? (
-          <Text style={styles.disclaimer}>
-            Naliczenie ma charakter informacyjny. Wskazuje kwotę i termin płatności.
-            Nie jest fakturą ani rachunkiem w rozumieniu przepisów o rachunkowości i nie
-            stanowi podstawy do księgowania ani odliczenia podatku. Dokument księgowy
-            wystawiamy na życzenie.
-          </Text>
-        ) : null}
+        {!accounting ? <Text style={styles.disclaimer}>{t.chargeDisclaimer}</Text> : null}
 
         {/* Rubryki podpisu tylko na dokumencie księgowym — pod naliczeniem
             sugerowałyby moc dowodową, której ono nie ma. */}
-        {accounting ? (
+        {/* Rubryki podpisu to polska konwencja papierowa — brytyjski rachunek
+            ich nie ma, więc słownik zostawia tam pusty tekst. */}
+        {showSignatures ? (
           <View style={styles.signatures}>
             <View style={styles.signature}>
               <View style={styles.signatureLine} />
-              <Text style={styles.signatureCaption}>Wystawił</Text>
+              <Text style={styles.signatureCaption}>{t.signedBy}</Text>
             </View>
             <View style={styles.signature}>
               <View style={styles.signatureLine} />
-              <Text style={styles.signatureCaption}>Odebrał</Text>
+              <Text style={styles.signatureCaption}>{t.receivedBy}</Text>
             </View>
           </View>
         ) : null}
 
       <View style={styles.footer} fixed>
         <Text>
-          {invoiceKindLabels(getDictionary(data.locale))[data.kind]} nr {data.number} · {data.seller.name}
+          {invoiceKindLabels(dictionary)[data.kind]} {t.numberPrefix}
+          {data.number} · {data.seller.name}
         </Text>
         {/* Numeracja stron jest w obrębie jednego dokumentu — w paczce każdy
             dokument zaczyna się od nowej strony, więc licznik globalny mówiłby
@@ -475,7 +679,7 @@ export function InvoiceDocument({ data }: { data: InvoicePdfData }) {
     <Document
       title={`${invoiceKindLabels(getDictionary(data.locale))[data.kind]} ${data.number}`}
       author={data.seller.name}
-      language="pl"
+      language={LOCALE_META[data.locale].htmlLang}
     >
       <InvoicePage data={data} />
     </Document>
@@ -496,8 +700,18 @@ export function InvoiceBatchDocument({
   documents: InvoicePdfData[];
   authorName: string;
 }) {
+  // Paczka jest zawsze z jednego konta, więc kraj bierzemy z pierwszego
+  // dokumentu; pusta paczka i tak nie ma czego opisać.
+  const locale = documents[0]?.locale ?? DEFAULT_LOCALE;
+
   return (
-    <Document title={`Dokumenty rozliczeniowe (${documents.length})`} author={authorName} language="pl">
+    <Document
+      title={fill(getDictionary(locale).documents.invoice.batchTitle, {
+        count: documents.length,
+      })}
+      author={authorName}
+      language={LOCALE_META[locale].htmlLang}
+    >
       {documents.map((data, index) => (
         <InvoicePage key={index} data={data} />
       ))}

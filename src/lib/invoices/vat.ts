@@ -1,4 +1,5 @@
 import type { VatRate } from "@/generated/prisma/enums";
+import type { Dictionary } from "@/lib/i18n/types";
 
 /**
  * Stawki VAT używane przez Rentix, w rozbiciu zgodnym ze strukturą FA(2).
@@ -17,15 +18,16 @@ export const VAT_PERCENT: Record<VatRate, number> = {
   RATE_23: 23,
 };
 
-/** Etykieta stawki na dokumencie — "zw." i "np." to zapis wymagany na fakturze. */
-export const VAT_LABEL: Record<VatRate, string> = {
-  ZW: "zw.",
-  NP: "np.",
-  RATE_0: "0%",
-  RATE_5: "5%",
-  RATE_8: "8%",
-  RATE_23: "23%",
-};
+/**
+ * Etykieta stawki na dokumencie i w panelu.
+ *
+ * „zw." i „np." to zapis wymagany na polskiej fakturze. Po brytyjsku te same
+ * stany nazywają się „Exempt" i „Outside scope" — skrótu z polskiej ustawy
+ * nikt tam nie odczyta.
+ */
+export function vatLabels(d: Dictionary): Record<VatRate, string> {
+  return d.documents.vat;
+}
 
 /**
  * Czy stawka oznacza brak podatku należnego.

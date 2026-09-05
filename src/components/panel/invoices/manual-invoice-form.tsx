@@ -17,10 +17,11 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import { calculateInvoiceTotals } from "@/lib/invoices/totals";
-import { VAT_LABEL, VAT_PERCENT } from "@/lib/invoices/vat";
+import { VAT_PERCENT, vatLabels } from "@/lib/invoices/vat";
 import { formatPLN, parsePLN } from "@/lib/money";
 import {
   invoiceKindLabels,
+  selectableInvoiceKinds,
   invoiceCreateSchema,
   type InvoiceCreateInput,
   type InvoiceCreateOutput,
@@ -32,7 +33,6 @@ export type ManualInvoiceLease = {
   rentGrosze: number;
 };
 
-const KIND_OPTIONS = ["BILL", "VAT_INVOICE", "CHARGE", "PROFORMA"] as const;
 const VAT_OPTIONS = Object.keys(VAT_PERCENT) as Array<keyof typeof VAT_PERCENT>;
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -68,7 +68,7 @@ export function ManualInvoiceForm({
   tenantName: string;
   leases: ManualInvoiceLease[];
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
   const v = useValidationContext();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -192,7 +192,7 @@ export function ManualInvoiceForm({
                 disabled={isSubmitting}
                 {...register("kind")}
               >
-                {KIND_OPTIONS.map((kind) => (
+                {selectableInvoiceKinds(locale).map((kind) => (
                   <option key={kind} value={kind}>
                     {invoiceKindLabels(d)[kind]}
                   </option>
@@ -376,7 +376,7 @@ export function ManualInvoiceForm({
                   >
                     {VAT_OPTIONS.map((rate) => (
                       <option key={rate} value={rate}>
-                        {VAT_LABEL[rate]}
+                        {vatLabels(d)[rate]}
                       </option>
                     ))}
                   </Select>

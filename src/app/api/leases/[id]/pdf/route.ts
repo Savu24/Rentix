@@ -22,6 +22,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const auth = await requireApiOwner();
   if ("response" in auth) return auth.response;
 
+  /*
+    Wzór umowy jest napisany pod polskie prawo. W wersji, która go nie
+    obsługuje, panel nie pokazuje przycisku — ale adres da się otworzyć wprost
+    albo z zakładki, więc odmowa musi być tutaj, nie tylko w widoku.
+  */
+  const unavailable = auth.d.panel.leases.leaseDocument.unavailable;
+  if (unavailable) return apiError("FORBIDDEN", unavailable);
+
   const { id } = await params;
   const lease = await getLease(auth.organizationId, id);
 

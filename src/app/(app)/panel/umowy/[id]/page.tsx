@@ -99,16 +99,30 @@ export default async function LeaseDetailPage({ params }: Params) {
               </Link>
             </Button>
 
-            <Button asChild size="sm">
-              {/* target="_blank": PDF otwiera się w podglądzie, a użytkownik
-                  nie traci widoku umowy. */}
-              <a href={`/api/leases/${lease.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                <Download className="h-4 w-4" aria-hidden />
-                Pobierz PDF
-              </a>
-            </Button>
+            {/*
+              Wzór umowy jest napisany pod polskie prawo, więc w wersji, która
+              go nie obsługuje, przycisku nie ma — zamiast wypuścić dokument
+              mówiący najemcy nieprawdę o jego prawach, mówimy wprost, czego
+              brakuje. Wraca razem z edytowalnym szablonem w ustawieniach.
+            */}
+            {d.panel.leases.leaseDocument.unavailable ? null : (
+              <Button asChild size="sm">
+                {/* target="_blank": PDF otwiera się w podglądzie, a użytkownik
+                    nie traci widoku umowy. */}
+                <a href={`/api/leases/${lease.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4" aria-hidden />
+                  {d.panel.leases.leaseDocument.download}
+                </a>
+              </Button>
+            )}
           </div>
         </div>
+
+        {d.panel.leases.leaseDocument.unavailable ? (
+          <p className="mt-3 text-[13px] text-muted">
+            {d.panel.leases.leaseDocument.unavailable}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

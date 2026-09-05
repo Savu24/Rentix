@@ -407,6 +407,10 @@ export const pl = {
     },
 
     leases: {
+      leaseDocument: {
+        download: "Pobierz PDF",
+        unavailable: "",
+      },
       fields: {
         startDate: "Data rozpoczęcia",
         endDate: "Data zakończenia",
@@ -506,4 +510,64 @@ export const pl = {
       },
     },
   },
+  documents: {
+    invoice: {
+      batchTitle: "Dokumenty rozliczeniowe ({count})",
+      cancelled: " (ANULOWANY)",
+      numberPrefix: "nr ",
+      issueDate: "Data wystawienia",
+      saleDate: "Data sprzedaży",
+      dueDate: "Termin płatności",
+      seller: "Sprzedawca",
+      buyer: "Nabywca",
+      taxIdLabel: "NIP",
+      subject: "Dotyczy: {subject}",
+      period: "Okres rozliczeniowy: {from} – {to}",
+      noDate: "brak",
+      columns: {
+        index: "#",
+        description: "Nazwa usługi",
+        quantity: "Ilość",
+        unitPrice: "Cena netto",
+        vat: "VAT",
+        net: "Netto",
+        gross: "Brutto",
+        amount: "Wartość",
+      },
+      breakdown: "Netto {rate} · VAT {vat}",
+      totalNet: "Razem netto",
+      totalVat: "Razem VAT",
+      totalDue: "Do zapłaty",
+      /**
+       * Kwota słownie jest wymogiem polskiej faktury. Pusty tekst wyłącza ten
+       * wiersz — w brytyjskim rachunku nie ma czego nim potwierdzać.
+       */
+      amountInWords: "Słownie: ",
+      sortCode: "",
+      accountNumber: "",
+      paymentLabel: "Płatność przelewem na rachunek",
+      paymentReference: "",
+      paidSoFar: "Wpłacono",
+      remaining: "Pozostaje do zapłaty",
+      chargeDisclaimer:
+        "Naliczenie ma charakter informacyjny. Wskazuje kwotę i termin płatności. Nie jest fakturą ani rachunkiem w rozumieniu przepisów o rachunkowości i nie stanowi podstawy do księgowania ani odliczenia podatku. Dokument księgowy wystawiamy na życzenie.",
+      signedBy: "Wystawił",
+      receivedBy: "Odebrał",
+    },
+    vat: {
+      ZW: "zw.",
+      NP: "np.",
+      RATE_0: "0%",
+      RATE_5: "5%",
+      RATE_8: "8%",
+      RATE_23: "23%",
+    },
+    numberPrefix: {
+      BILL: "R",
+      VAT_INVOICE: "FV",
+      PROFORMA: "PF",
+      CHARGE: "N",
+    },
+  },
+
 };

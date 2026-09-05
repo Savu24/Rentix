@@ -450,6 +450,20 @@ export const uk: Dictionary = {
     },
 
     leases: {
+      leaseDocument: {
+        download: "Download PDF",
+        /*
+          Wzór umowy w Rentiksie jest napisany pod polskie prawo — najem
+          okazjonalny, kaucja, wypowiedzenie według kodeksu cywilnego.
+          W Wielkiej Brytanii obowiązuje AST z ochroną kaucji w rządowym
+          schemacie depozytowym i sprawdzeniem Right to Rent, więc ten sam
+          dokument nie tylko nie pasuje — wprowadzałby w błąd co do praw
+          najemcy. Do czasu edytowalnego szablonu w ustawieniach nie
+          wystawiamy go wcale.
+        */
+        unavailable:
+          "The tenancy agreement template follows Polish law and does not apply to a UK tenancy, so it is not available here. Keep using your own AST.",
+      },
       fields: {
         startDate: "Start date",
         endDate: "End date",
@@ -564,4 +578,77 @@ export const uk: Dictionary = {
       },
     },
   },
+  documents: {
+    invoice: {
+      batchTitle: "Rent documents ({count})",
+      cancelled: " (CANCELLED)",
+      numberPrefix: "no. ",
+      issueDate: "Invoice date",
+      /*
+        Data sprzedaży jest wymogiem polskiej faktury (FA(2)). Na brytyjskim
+        rachunku za czynsz nie znaczy nic — dokument pokazuje ją tylko wtedy,
+        gdy naprawdę jest fakturą VAT, gdzie odpowiada tax point.
+      */
+      saleDate: "Supply date",
+      dueDate: "Payment due",
+      /*
+        „Sprzedawca / nabywca" to język polskiej faktury. Brytyjski rachunek
+        mówi po prostu, od kogo jest i do kogo.
+      */
+      seller: "From",
+      buyer: "Bill to",
+      taxIdLabel: "VAT no.",
+      subject: "For: {subject}",
+      period: "Period: {from} – {to}",
+      noDate: "not set",
+      columns: {
+        index: "#",
+        description: "Description",
+        quantity: "Qty",
+        unitPrice: "Unit price",
+        vat: "VAT",
+        net: "Net",
+        gross: "Gross",
+        amount: "Amount",
+      },
+      breakdown: "Net {rate} · VAT {vat}",
+      totalNet: "Subtotal",
+      totalVat: "VAT",
+      totalDue: "Total due",
+      /* Pusty tekst = wiersz „słownie" nie pojawia się na dokumencie. */
+      amountInWords: "",
+      /* Brytyjczyk podaje sort code i numer konta osobno — jeden ciąg cyfr nic mu nie mówi. */
+      sortCode: "Sort code",
+      accountNumber: "Account number",
+      paymentLabel: "Pay by bank transfer to",
+      /* Brytyjski wynajmujący prosi o numer w tytule przelewu — inaczej wpłaty nie da się dopasować. */
+      paymentReference: "Please use {number} as the payment reference.",
+      paidSoFar: "Paid so far",
+      remaining: "Still to pay",
+      chargeDisclaimer:
+        "This is a statement of the amount and date due. It is not an invoice or a receipt and should not be used for accounting purposes. An invoice is available on request.",
+      /* Rubryki podpisu to polska konwencja papierowa — na brytyjskim rachunku ich nie ma. */
+      signedBy: "",
+      receivedBy: "",
+    },
+    vat: {
+      /*
+        Najem mieszkaniowy jest w Wielkiej Brytanii zwolniony z VAT, więc
+        „Exempt" to stan domyślny. „Outside scope" odpowiada polskiemu „np.".
+      */
+      ZW: "Exempt",
+      NP: "Outside scope",
+      RATE_0: "0%",
+      RATE_5: "5%",
+      RATE_8: "8%",
+      RATE_23: "23%",
+    },
+    numberPrefix: {
+      BILL: "INV",
+      VAT_INVOICE: "VAT",
+      PROFORMA: "PF",
+      CHARGE: "CHG",
+    },
+  },
+
 };

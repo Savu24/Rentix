@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { InvoiceKind, InvoiceStatus, PaymentMethod, VatRate } from "@/generated/prisma/enums";
 
+import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/types";
 
 import {
@@ -36,6 +37,29 @@ export function isAccountingDocument(kind: InvoiceKind): boolean {
 
 export function paymentMethodLabels(d: Dictionary): Record<PaymentMethod, string> {
   return d.panel.invoices.method;
+}
+
+/**
+ * Rodzaje dokumentu, które wolno wybrać w danym kraju.
+ *
+ * Faktura VAT w kształcie, jaki wystawia Rentix, jest dokumentem polskim:
+ * rozbicie netto/VAT/brutto, stawka „zw." z art. 43, kwota słownie. Brytyjski
+ * najem mieszkaniowy jest z VAT zwolniony i takiego dokumentu tam nie ma —
+ * wystawienie go byłoby podaniem najemcy papieru, który nic nie znaczy,
+ * a wygląda na urzędowy. Dlatego w wersji brytyjskiej po prostu nie ma jej
+ * na liście.
+ *
+ * Enum w bazie zostaje nietknięty: konto przeniesione między krajami nie może
+ * gubić dokumentów już wystawionych.
+ */
+export function selectableInvoiceKinds(locale: Locale): readonly InvoiceKind[] {
+  const all = ["BILL", "VAT_INVOICE", "CHARGE", "PROFORMA"] as const;
+  return locale === "uk" ? all.filter((kind) => kind !== "VAT_INVOICE") : all;
+}
+
+/** To samo dla kartoteki najemcy — bez proformy, która jest dokumentem doraźnym. */
+export function selectableTenantDocumentKinds(locale: Locale): readonly InvoiceKind[] {
+  return selectableInvoiceKinds(locale).filter((kind) => kind !== "PROFORMA");
 }
 
 /**

@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getInvoice } from "@/lib/invoices/service";
 import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
-import { VAT_LABEL } from "@/lib/invoices/vat";
+import { vatLabels } from "@/lib/invoices/vat";
 import { formatPLN } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { isSellerComplete } from "@/lib/organizations/service";
@@ -177,7 +177,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
                   .replace(".", ",")}{" "}
                 {line.unit}
               </span>
-              <span className="w-14 text-right text-xs text-muted">{VAT_LABEL[line.vatRate]}</span>
+              <span className="w-14 text-right text-xs text-muted">{vatLabels(d)[line.vatRate]}</span>
               <span className="tabular w-24 text-right font-mono text-xs text-muted">
                 {formatPLN(line.netGrosze)}
               </span>

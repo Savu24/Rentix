@@ -1,5 +1,7 @@
 import type { InvoiceKind } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
+import { getDictionary } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
 /**
  * Numeracja dokumentów.
@@ -9,18 +11,21 @@ import type { Prisma } from "@/generated/prisma/client";
  * i biegnie osobno dla każdego rodzaju dokumentu, bo rachunek i faktura VAT
  * to dwa odrębne rejestry.
  *
+ * Sam układ zostaje w wersji brytyjskiej, bo miesięczna seria czyta się tak
+ * samo dobrze; zmienia się prefiks, żeby „R" i „FV" nie wyglądały jak literówka
+ * na dokumencie po angielsku. Prefiksy siedzą w słowniku pod
+ * `documents.numberPrefix`.
+ *
  * Numer anulowanego dokumentu zostaje zajęty — rejestr ma być ciągły, a dziura
  * po numerze jest dla księgowego sygnałem, że coś zniknęło bez śladu.
+ *
+ * Numer nadaje się raz, przy wystawieniu, i zostaje w bazie — zmiana prefiksów
+ * nie rusza dokumentów już wystawionych.
  */
 
-export const INVOICE_NUMBER_PREFIX: Record<InvoiceKind, string> = {
-  BILL: "R",
-  VAT_INVOICE: "FV",
-  PROFORMA: "PF",
-  // Naliczenie ma własny prefiks i własną serię, bo nie jest dowodem
-  // księgowym — nie może zajmować numerów w rejestrze rachunków i faktur.
-  CHARGE: "N",
-};
+export function invoiceNumberPrefixes(locale: Locale): Record<InvoiceKind, string> {
+  return getDictionary(locale).documents.numberPrefix;
+}
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
@@ -30,8 +35,9 @@ export function formatInvoiceNumber(
   year: number,
   /** Miesiąc liczony od zera, jak w `Date`. */
   month: number,
+  locale: Locale = DEFAULT_LOCALE,
 ): string {
-  return `${INVOICE_NUMBER_PREFIX[kind]} ${sequence}/${pad(month + 1)}/${year}`;
+  return `${invoiceNumberPrefixes(locale)[kind]} ${sequence}/${pad(month + 1)}/${year}`;
 }
 
 /**
@@ -58,6 +64,16 @@ export async function nextInvoiceNumber(
   const monthStart = new Date(Date.UTC(year, month, 1));
   const nextMonthStart = new Date(Date.UTC(year, month + 1, 1));
 
+  /*
+    Prefiks bierze się z kraju wystawcy, więc musimy go znać przed nadaniem
+    numeru. Zapytanie jest w tej samej transakcji co reszta wystawienia.
+  */
+  const organization = await tx.organization.findUnique({
+    where: { id: organizationId },
+    select: { locale: true },
+  });
+  const locale = isLocale(organization?.locale) ? organization.locale : DEFAULT_LOCALE;
+
   const used = await tx.invoice.count({
     where: {
       organizationId,
@@ -68,7 +84,7 @@ export async function nextInvoiceNumber(
     },
   });
 
-  return formatInvoiceNumber(kind, used + 1, year, month);
+  return formatInvoiceNumber(kind, used + 1, year, month, locale);
 }
 
 /** Prisma sygnalizuje naruszenie unikalności kodem P2002. */

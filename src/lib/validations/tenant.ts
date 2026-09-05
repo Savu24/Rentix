@@ -20,14 +20,6 @@ const tenantStatuses = Object.values(TenantStatus) as [TenantStatus, ...TenantSt
 const legalForms = Object.values(TenantLegalForm) as [TenantLegalForm, ...TenantLegalForm[]];
 const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind[]];
 
-/**
- * Co wystawiamy temu najemcy przy naliczaniu czynszu.
- *
- * Proformy nie ma na liście: to dokument doraźny, wystawiany ręcznie przed
- * zapłatą, a nie stałe ustawienie kartoteki.
- */
-export const TENANT_DOCUMENT_KIND_OPTIONS = ["BILL", "VAT_INVOICE", "CHARGE"] as const;
-
 export function tenantDocumentKindHints(d: Dictionary): Partial<Record<InvoiceKind, string>> {
   return d.panel.tenants.documentKindHint;
 }

@@ -16,10 +16,12 @@ import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
-import { invoiceKindLabels } from "@/lib/validations/invoice";
+import {
+  invoiceKindLabels,
+  selectableTenantDocumentKinds,
+} from "@/lib/validations/invoice";
 import {
   tenantDocumentKindHints,
-  TENANT_DOCUMENT_KIND_OPTIONS,
   tenantLegalFormLabels,
   tenantStatusLabels,
   tenantFormSchema,
@@ -70,7 +72,7 @@ export function TenantForm({
   tenantId?: string;
   defaultValues?: Partial<TenantFormInput>;
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -701,7 +703,7 @@ export function TenantForm({
                 disabled={isSubmitting}
                 {...register("documentKind")}
               >
-                {TENANT_DOCUMENT_KIND_OPTIONS.map((value) => (
+                {selectableTenantDocumentKinds(locale).map((value) => (
                   <option key={value} value={value}>
                     {invoiceKindLabels(d)[value]}
                   </option>
