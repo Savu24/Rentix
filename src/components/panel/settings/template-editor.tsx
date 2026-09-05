@@ -13,7 +13,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
-import { TEMPLATE_VARIABLES } from "@/lib/email/render";
+import { templateVariables } from "@/lib/email/render";
 import { sampleInvoiceData } from "@/lib/email/sample";
 import {
   DEFAULT_FIELDS,
@@ -28,7 +28,8 @@ import {
   type EditableNotificationType,
 } from "@/lib/notifications/types";
 import { emailTemplateSchema, type EmailTemplateInput } from "@/lib/validations/settings";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
 /**
  * Edytor treści jednego powiadomienia, z podglądem obok pól.
  *
@@ -43,8 +44,9 @@ function buildContent(
   type: EditableNotificationType,
   landlordName: string,
   fields: TemplateFields,
+  locale: Locale,
 ) {
-  const data = sampleInvoiceData(landlordName);
+  const data = sampleInvoiceData(landlordName, locale);
 
   switch (type) {
     case "PAYMENT_OVERDUE":
@@ -65,6 +67,7 @@ export function TemplateEditor({
   landlordName: string;
   defaultValues: { subject: string; heading: string; intro: string; outro: string };
 }) {
+  const { d, locale } = useI18n();
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -99,24 +102,37 @@ export function TemplateEditor({
    */
   const preview = useMemo(
     () =>
-      buildContent(type, landlordName, {
-        subject: watched.subject ?? "",
-        heading: watched.heading ?? "",
-        intro: watched.intro ?? "",
-        outro: watched.outro ?? "",
-      }),
-    [type, landlordName, watched.subject, watched.heading, watched.intro, watched.outro],
+      buildContent(
+        type,
+        landlordName,
+        {
+          subject: watched.subject ?? "",
+          heading: watched.heading ?? "",
+          intro: watched.intro ?? "",
+          outro: watched.outro ?? "",
+        },
+        locale,
+      ),
+    [
+      type,
+      landlordName,
+      locale,
+      watched.subject,
+      watched.heading,
+      watched.intro,
+      watched.outro,
+    ],
   );
 
   /** Domyślki jako podpowiedzi w tle pustych pól. */
   const defaults = useMemo(() => {
-    const data = sampleInvoiceData(landlordName);
+    const data = sampleInvoiceData(landlordName, locale);
     return type === "PAYMENT_OVERDUE"
       ? DEFAULT_FIELDS.PAYMENT_OVERDUE(data)
       : type === "PAYMENT_REMINDER"
         ? DEFAULT_FIELDS.PAYMENT_REMINDER(data)
         : DEFAULT_FIELDS.INVOICE_ISSUED(data);
-  }, [type, landlordName]);
+  }, [type, landlordName, locale]);
 
   async function onSubmit() {
     setFormError(null);
@@ -226,7 +242,7 @@ export function TemplateEditor({
                 Wpisz nazwę w podwójnych klamrach. Podstawi się dana z dokumentu.
               </p>
               <ul className="mt-2 flex flex-wrap gap-1.5">
-                {TEMPLATE_VARIABLES.map((variable) => (
+                {templateVariables(d).map((variable) => (
                   <li key={variable.name}>
                     <span
                       title={variable.description}

@@ -1,7 +1,10 @@
-import { formatPLN } from "@/lib/money";
+import { getDictionary } from "@/lib/i18n";
+import { LOCALE_META, type Locale } from "@/lib/i18n/config";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 
 import type { EmailContent } from "./client";
-import { escapeHtml, renderField, textToHtml, type TemplateValues } from "./render";
+import { escapeHtml, renderField, textToHtml, valuesForLocale, type TemplateValues } from "./render";
 
 /**
  * Szablony wiadomości do najemcy.
@@ -17,6 +20,11 @@ import { escapeHtml, renderField, textToHtml, type TemplateValues } from "./rend
  * i dwa akapity własnymi (model `EmailTemplate`); brak wpisu zostawia to, co
  * tutaj. Domyślek nie kopiujemy do bazy przy zakładaniu konta — inaczej
  * poprawka literówki nie dotarłaby do kont założonych wcześniej.
+ *
+ * Język wiadomości idzie za kontem wynajmującego, a nie za przeglądarką kogoś,
+ * kto akurat kliknął „wyślij". Te wiadomości czyta najemca — człowiek spoza
+ * systemu, który nigdy się w nim nie loguje — więc jedynym sensownym źródłem
+ * języka jest kraj, w którym prowadzony jest najem.
  */
 
 const COLORS = {
@@ -29,9 +37,11 @@ const COLORS = {
   rule: "#DED2B8",
 };
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
+const formatDate = (date: Date, locale: Locale) => formatDateIn(date, locale, "long");
 
 export type InvoiceEmailData = {
+  /** Kraj wynajmującego — decyduje o języku, walucie i zapisie daty. */
+  locale: Locale;
   tenantFirstName: string;
   landlordName: string;
   invoiceNumber: string;
@@ -64,18 +74,18 @@ export function templateValues(
   data: InvoiceEmailData,
   overdueDaysCount = 0,
 ): TemplateValues {
-  return {
-    imie_najemcy: data.tenantFirstName,
-    nazwisko_najemcy: data.tenantLastName ?? "",
-    nazwa_wynajmujacego: data.landlordName,
-    numer_dokumentu: data.invoiceNumber,
-    kwota: formatPLN(data.amountGrosze),
-    do_zaplaty: formatPLN(data.remainingGrosze),
-    termin: dateFormat.format(data.dueDate),
-    okres: data.periodLabel ?? "",
-    dni_po_terminie: String(overdueDaysCount),
-    adres_lokalu: data.propertyAddress ?? "",
-  };
+  return valuesForLocale(getDictionary(data.locale), {
+    tenantFirstName: data.tenantFirstName,
+    tenantLastName: data.tenantLastName ?? "",
+    landlordName: data.landlordName,
+    documentNumber: data.invoiceNumber,
+    amount: formatMoney(data.amountGrosze, data.locale),
+    amountDue: formatMoney(data.remainingGrosze, data.locale),
+    dueDate: formatDate(data.dueDate, data.locale),
+    period: data.periodLabel ?? "",
+    daysOverdue: String(overdueDaysCount),
+    propertyAddress: data.propertyAddress ?? "",
+  });
 }
 
 /**
@@ -88,6 +98,7 @@ export function templateValues(
  * w pole edytora psuje ją znacznie skuteczniej.
  */
 function layout(options: {
+  locale: Locale;
   heading: string;
   accentColor: string;
   intro: string;
@@ -96,6 +107,7 @@ function layout(options: {
   attached: boolean;
   landlordName: string;
 }): string {
+  const t = getDictionary(options.locale).emails;
   const rows = options.rows
     .map(
       ([label, value]) => `
@@ -116,12 +128,12 @@ function layout(options: {
   const attachmentNote = options.attached
     ? `<p style="margin:20px 0 0;padding:10px 12px;background:${COLORS.page};border-radius:8px;
                  font-size:13.5px;color:${COLORS.ink};">
-         Dokument w formacie PDF znajdziesz w załączniku tej wiadomości.
+         ${escapeHtml(t.attachmentNote)}
        </p>`
     : "";
 
   return `<!doctype html>
-<html lang="pl">
+<html lang="${LOCALE_META[options.locale].htmlLang}">
   <head>
     <!--
       Deklaracja kodowania w samym dokumencie, mimo że nagłówek MIME wiadomości
@@ -155,7 +167,7 @@ function layout(options: {
         <td style="padding:20px 28px 28px;">
           <p style="margin:0;color:${COLORS.muted};font-size:13px;line-height:1.6;">${textToHtml(options.outro)}</p>
           <p style="margin:16px 0 0;color:${COLORS.muted};font-size:12px;">
-            ${escapeHtml(options.landlordName)} · wiadomość wysłana automatycznie z systemu Rentix
+            ${escapeHtml(options.landlordName)} · ${escapeHtml(t.automaticFooter)}
           </p>
         </td>
       </tr>
@@ -195,31 +207,60 @@ export type Defaults = {
  * przez „dzień" i „dni".
  */
 export const DEFAULT_FIELDS = {
-  INVOICE_ISSUED: (data: InvoiceEmailData): Defaults => ({
-    subject: `${data.invoiceNumber}: ${formatPLN(data.amountGrosze)} do ${dateFormat.format(data.dueDate)}`,
-    heading: "Nowy dokument",
-    intro: `Dzień dobry, ${data.tenantFirstName}. Wystawiliśmy dokument rozliczeniowy${
-      data.periodLabel ? ` za ${data.periodLabel}` : ""
-    }.`,
-    outro: "Jeśli płatność została już wykonana, prosimy potraktować tę wiadomość jako informacyjną.",
-  }),
+  INVOICE_ISSUED: (data: InvoiceEmailData): Defaults => {
+    const t = getDictionary(data.locale).emails.issued;
 
-  PAYMENT_REMINDER: (data: InvoiceEmailData): Defaults => ({
-    subject: `Przypomnienie: ${data.invoiceNumber}, termin ${dateFormat.format(data.dueDate)}`,
-    heading: "Zbliża się termin",
-    intro: `Dzień dobry, ${data.tenantFirstName}. Przypominamy o zbliżającym się terminie płatności.`,
-    outro: "Jeśli przelew jest już w drodze, prosimy zignorować tę wiadomość.",
-  }),
+    return {
+      subject: fill(t.subject, {
+        number: data.invoiceNumber,
+        amount: formatMoney(data.amountGrosze, data.locale),
+        due: formatDate(data.dueDate, data.locale),
+      }),
+      heading: t.heading,
+      intro: fill(t.intro, {
+        name: data.tenantFirstName,
+        // Zdanie o okresie znika przy dokumencie jednorazowym, który go nie ma.
+        period: data.periodLabel ? fill(t.introPeriod, { period: data.periodLabel }) : "",
+      }),
+      outro: t.outro,
+    };
+  },
 
-  PAYMENT_OVERDUE: (data: InvoiceEmailData & { daysOverdue: number }): Defaults => ({
-    subject: `Zaległość: ${data.invoiceNumber}, ${formatPLN(data.remainingGrosze)}`,
-    heading: "Płatność po terminie",
-    intro: `Dzień dobry, ${data.tenantFirstName}. Termin płatności minął ${data.daysOverdue} ${
-      data.daysOverdue === 1 ? "dzień" : "dni"
-    } temu, a wpłata nie została jeszcze odnotowana.`,
-    outro:
-      "Jeśli płatność została wykonana w ciągu ostatnich dni, prosimy o kontakt. Sprawdzimy, czy wpłata do nas dotarła.",
-  }),
+  PAYMENT_REMINDER: (data: InvoiceEmailData): Defaults => {
+    const t = getDictionary(data.locale).emails.reminder;
+
+    return {
+      subject: fill(t.subject, {
+        number: data.invoiceNumber,
+        due: formatDate(data.dueDate, data.locale),
+      }),
+      heading: t.heading,
+      intro: fill(t.intro, { name: data.tenantFirstName }),
+      outro: t.outro,
+    };
+  },
+
+  PAYMENT_OVERDUE: (data: InvoiceEmailData & { daysOverdue: number }): Defaults => {
+    const emails = getDictionary(data.locale).emails;
+    const t = emails.overdue;
+
+    return {
+      subject: fill(t.subject, {
+        number: data.invoiceNumber,
+        amount: formatMoney(data.remainingGrosze, data.locale),
+      }),
+      heading: t.heading,
+      intro: fill(t.intro, {
+        name: data.tenantFirstName,
+        days: data.daysOverdue,
+        // „dzień" kontra „dni", „day" kontra „days" — liczba mnoga idzie
+        // regułami języka, a nie warunkiem `=== 1`, który po polsku myli się
+        // przy 22 i 102.
+        dayWord: pluralize(data.locale, data.daysOverdue, emails.days),
+      }),
+      outro: t.outro,
+    };
+  },
 };
 
 /**
@@ -253,15 +294,17 @@ function plainVersion(
   rows: Array<[string, string]>,
   data: InvoiceEmailData,
 ): string {
+  const t = getDictionary(data.locale).emails;
+
   return textVersion([
     parts.intro,
     "",
     ...rows.map(([label, value]) => `${label}: ${value}`),
-    data.attached ? "\nDokument PDF jest w załączniku tej wiadomości." : null,
+    data.attached ? `\n${t.attachmentPlain}` : null,
     "",
     parts.outro,
     "",
-    `${data.landlordName} · wiadomość wysłana automatycznie z systemu Rentix`,
+    `${data.landlordName} · ${t.automaticFooter}`,
   ]);
 }
 
@@ -273,15 +316,17 @@ export function invoiceIssuedEmail(
   const values = templateValues(data);
   const parts = resolveFields(DEFAULT_FIELDS.INVOICE_ISSUED(data), fields, values);
 
+  const labels = getDictionary(data.locale).emails.rows;
   const rows: Array<[string, string]> = [
-    ["Numer", data.invoiceNumber],
-    ["Kwota", formatPLN(data.amountGrosze)],
-    ["Termin płatności", dateFormat.format(data.dueDate)],
+    [labels.number, data.invoiceNumber],
+    [labels.amount, formatMoney(data.amountGrosze, data.locale)],
+    [labels.dueDate, formatDate(data.dueDate, data.locale)],
   ];
 
   return {
     subject: parts.subject,
     html: layout({
+      locale: data.locale,
       heading: parts.heading,
       accentColor: COLORS.accent,
       intro: parts.intro,
@@ -302,15 +347,17 @@ export function paymentReminderEmail(
   const values = templateValues(data);
   const parts = resolveFields(DEFAULT_FIELDS.PAYMENT_REMINDER(data), fields, values);
 
+  const labels = getDictionary(data.locale).emails.rows;
   const rows: Array<[string, string]> = [
-    ["Numer", data.invoiceNumber],
-    ["Do zapłaty", formatPLN(data.remainingGrosze)],
-    ["Termin", dateFormat.format(data.dueDate)],
+    [labels.number, data.invoiceNumber],
+    [labels.amountDue, formatMoney(data.remainingGrosze, data.locale)],
+    [labels.due, formatDate(data.dueDate, data.locale)],
   ];
 
   return {
     subject: parts.subject,
     html: layout({
+      locale: data.locale,
       heading: parts.heading,
       accentColor: COLORS.accent,
       intro: parts.intro,
@@ -331,15 +378,17 @@ export function paymentOverdueEmail(
   const values = templateValues(data, data.daysOverdue);
   const parts = resolveFields(DEFAULT_FIELDS.PAYMENT_OVERDUE(data), fields, values);
 
+  const labels = getDictionary(data.locale).emails.rows;
   const rows: Array<[string, string]> = [
-    ["Numer", data.invoiceNumber],
-    ["Do zapłaty", formatPLN(data.remainingGrosze)],
-    ["Termin minął", dateFormat.format(data.dueDate)],
+    [labels.number, data.invoiceNumber],
+    [labels.amountDue, formatMoney(data.remainingGrosze, data.locale)],
+    [labels.wasDue, formatDate(data.dueDate, data.locale)],
   ];
 
   return {
     subject: parts.subject,
     html: layout({
+      locale: data.locale,
       heading: parts.heading,
       accentColor: COLORS.bad,
       intro: parts.intro,

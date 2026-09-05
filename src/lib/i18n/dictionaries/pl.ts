@@ -194,6 +194,10 @@ export const pl = {
       settingsShort: "Konto",
     },
 
+    dateInput: {
+      placeholder: "dd.mm.rrrr",
+      openCalendar: "Wybierz z kalendarza",
+    },
     shell: {
       navAria: "Nawigacja panelu",
       mobileNavAria: "Nawigacja mobilna",
@@ -568,6 +572,100 @@ export const pl = {
       PROFORMA: "PF",
       CHARGE: "N",
     },
+  },
+
+  emails: {
+    attachmentNote: "Dokument w formacie PDF znajdziesz w załączniku tej wiadomości.",
+    attachmentPlain: "Dokument PDF jest w załączniku tej wiadomości.",
+    automaticFooter: "wiadomość wysłana automatycznie z systemu Rentix",
+
+    rows: {
+      number: "Numer",
+      amount: "Kwota",
+      amountDue: "Do zapłaty",
+      dueDate: "Termin płatności",
+      due: "Termin",
+      wasDue: "Termin minął",
+    },
+
+    /** Odmiana „dzień / dni" w zdaniu o zaległości. */
+    days: ["dzień", "dni", "dni"],
+
+    issued: {
+      subject: "{number}: {amount} do {due}",
+      heading: "Nowy dokument",
+      intro: "Dzień dobry, {name}. Wystawiliśmy dokument rozliczeniowy{period}.",
+      introPeriod: " za {period}",
+      outro: "Jeśli płatność została już wykonana, prosimy potraktować tę wiadomość jako informacyjną.",
+    },
+
+    reminder: {
+      subject: "Przypomnienie: {number}, termin {due}",
+      heading: "Zbliża się termin",
+      intro: "Dzień dobry, {name}. Przypominamy o zbliżającym się terminie płatności.",
+      outro: "Jeśli przelew jest już w drodze, prosimy zignorować tę wiadomość.",
+    },
+
+    overdue: {
+      subject: "Zaległość: {number}, {amount}",
+      heading: "Płatność po terminie",
+      intro:
+        "Dzień dobry, {name}. Termin płatności minął {days} {dayWord} temu, a wpłata nie została jeszcze odnotowana.",
+      outro:
+        "Jeśli płatność została wykonana w ciągu ostatnich dni, prosimy o kontakt. Sprawdzimy, czy wpłata do nas dotarła.",
+    },
+
+    /**
+     * Nazwy zmiennych, których wynajmujący używa w swojej treści.
+     *
+     * Idą za językiem konta, bo wpisuje je człowiek: `{{imie_najemcy}}`
+     * w angielskim edytorze byłoby zagadką, a nie podpowiedzią.
+     */
+    variables: {
+      tenantFirstName: { name: "imie_najemcy", description: "Imię najemcy", example: "Jan" },
+      tenantLastName: {
+        name: "nazwisko_najemcy",
+        description: "Nazwisko najemcy",
+        example: "Kowalski",
+      },
+      landlordName: {
+        name: "nazwa_wynajmujacego",
+        description: "Twoja nazwa albo nazwa firmy",
+        example: "Miret sp. z o.o.",
+      },
+      documentNumber: {
+        name: "numer_dokumentu",
+        description: "Numer rachunku",
+        example: "R 6/08/2026",
+      },
+      amount: { name: "kwota", description: "Kwota dokumentu", example: "629,03 zł" },
+      amountDue: {
+        name: "do_zaplaty",
+        description: "Kwota pozostała do zapłaty",
+        example: "629,03 zł",
+      },
+      dueDate: { name: "termin", description: "Termin płatności", example: "22 sierpnia 2026" },
+      period: { name: "okres", description: "Okres rozliczeniowy", example: "sierpień 2026" },
+      daysOverdue: {
+        name: "dni_po_terminie",
+        description: "Ile dni minęło od terminu",
+        example: "5",
+      },
+      propertyAddress: {
+        name: "adres_lokalu",
+        description: "Adres wynajmowanego lokalu",
+        example: "Długa 14/3, 30-001 Kraków",
+      },
+    },
+  },
+
+  billing: {
+    rentLine: "Czynsz najmu za {period}",
+    rentLineProrated: "Czynsz najmu za {period} ({covered}/{total} dni)",
+    utilitiesLine: "Zaliczka na media za {period}",
+    utilitiesLineProrated: "Zaliczka na media za {period} ({covered}/{total} dni)",
+    unitMonth: "mies.",
+    invoiceNote: "Rozliczenie za {period}.",
   },
 
 };

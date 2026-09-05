@@ -1,6 +1,9 @@
 import type { UtilitiesMode, VatRate } from "@/generated/prisma/enums";
 import type { InvoiceLineInput } from "@/lib/invoices/totals";
 import { roundHalf } from "@/lib/money";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import type { Dictionary } from "@/lib/i18n/types";
 
 /**
  * Naliczanie czynszu za okres rozliczeniowy.
@@ -138,14 +141,15 @@ export function prorateRent(rentGrosze: number, period: BillingPeriod): number {
   return roundHalf((rentGrosze * period.coveredDays) / period.totalDays);
 }
 
-const MONTH_NAMES = [
-  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
-  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
-];
-
-/** "sierpień 2026" — na pozycję faktury. */
-export function periodLabel(year: number, month: number): string {
-  return `${MONTH_NAMES[month]} ${year}`;
+/**
+ * „sierpień 2026" albo „August 2026" — na pozycję faktury.
+ *
+ * Nazwa miesiąca idzie z `Intl`, a nie z listy w kodzie: ta sama pozycja trafia
+ * na dokument, który czyta najemca, więc musi być w jego języku, a nie
+ * w języku tego, kto akurat kliknął naliczanie.
+ */
+export function periodLabel(year: number, month: number, locale: Locale = DEFAULT_LOCALE): string {
+  return formatDateIn(new Date(Date.UTC(year, month, 1)), locale, "monthYear");
 }
 
 export type BillingLinesOptions = {
@@ -166,19 +170,27 @@ export function buildRentInvoiceLines(
   period: BillingPeriod,
   year: number,
   month: number,
+  /**
+   * Teksty pozycji. Trafiają na dokument i zostają w bazie na zawsze, więc
+   * muszą powstać w języku wynajmującego, a nie tego, kto uruchomił naliczanie.
+   */
+  d: Dictionary,
+  locale: Locale = DEFAULT_LOCALE,
   options: BillingLinesOptions = {},
 ): InvoiceLineInput[] {
   const { rentVatRate = "ZW", utilitiesVatRate = "ZW" } = options;
-  const label = periodLabel(year, month);
+  const t = d.billing;
+  const label = periodLabel(year, month, locale);
   const prorated = period.coveredDays < period.totalDays;
+  const proration = { period: label, covered: period.coveredDays, total: period.totalDays };
 
   const lines: InvoiceLineInput[] = [
     {
       description: prorated
-        ? `Czynsz najmu za ${label} (${period.coveredDays}/${period.totalDays} dni)`
-        : `Czynsz najmu za ${label}`,
+        ? fill(t.rentLineProrated, proration)
+        : fill(t.rentLine, { period: label }),
       quantityMilli: 1000,
-      unit: "mies.",
+      unit: t.unitMonth,
       unitPriceNetGrosze: prorateRent(lease.rentGrosze, period),
       vatRate: rentVatRate,
     },
@@ -190,10 +202,10 @@ export function buildRentInvoiceLines(
   if (chargesUtilities && lease.utilitiesAdvanceGrosze > 0) {
     lines.push({
       description: prorated
-        ? `Zaliczka na media za ${label} (${period.coveredDays}/${period.totalDays} dni)`
-        : `Zaliczka na media za ${label}`,
+        ? fill(t.utilitiesLineProrated, proration)
+        : fill(t.utilitiesLine, { period: label }),
       quantityMilli: 1000,
-      unit: "mies.",
+      unit: t.unitMonth,
       unitPriceNetGrosze: prorateRent(lease.utilitiesAdvanceGrosze, period),
       vatRate: utilitiesVatRate,
     });

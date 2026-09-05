@@ -15,6 +15,7 @@ import type {
 
 import { organizationMailSettings } from "./settings";
 import { EDITABLE_NOTIFICATION_TYPES, type EditableNotificationType } from "./types";
+import type { Locale } from "@/lib/i18n/config";
 
 /**
  * Ustawienia powiadomień w panelu: rytm, nadawca i treści.
@@ -162,8 +163,9 @@ export function buildPreview(
   type: EmailTemplateType,
   landlordName: string,
   fields: TemplateFields,
+  locale: Locale,
 ) {
-  const data = sampleInvoiceData(landlordName);
+  const data = sampleInvoiceData(landlordName, locale);
 
   switch (type) {
     case "PAYMENT_OVERDUE":
@@ -195,7 +197,12 @@ export async function sendTestEmail(
   if (!toEmail) return { ok: false, reason: "NO_RECIPIENT" };
 
   const settings = await organizationMailSettings(organizationId);
-  const content = buildPreview(type, settings.senderName, settings.templates.get(type) ?? {});
+  const content = buildPreview(
+    type,
+    settings.senderName,
+    settings.templates.get(type) ?? {},
+    settings.locale,
+  );
 
   const result = await sendEmail({
     to: toEmail,

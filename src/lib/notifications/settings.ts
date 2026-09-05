@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 import { type NotificationSchedule } from "./schedule";
 import { EDITABLE_NOTIFICATION_TYPES } from "./types";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
 export {
   EDITABLE_NOTIFICATION_TYPES,
@@ -19,6 +20,13 @@ export {
  */
 
 export type MailSettings = {
+  /**
+   * Kraj konta — język wiadomości do najemcy.
+   *
+   * Nie bierze się z przeglądarki: te wiadomości czyta najemca, człowiek spoza
+   * systemu, a wysyła je często cron, który żadnej przeglądarki nie ma.
+   */
+  locale: Locale;
   /** Nazwa w polu nadawcy — własna albo nazwa organizacji. */
   senderName: string;
   replyTo: string | null;
@@ -40,6 +48,7 @@ export async function organizationMailSettings(organizationId: string): Promise<
       where: { id: organizationId },
       select: {
         name: true,
+        locale: true,
         senderName: true,
         contactEmail: true,
         reminderDaysBefore: true,
@@ -66,6 +75,7 @@ export async function organizationMailSettings(organizationId: string): Promise<
   }
 
   return {
+    locale: isLocale(organization?.locale) ? organization.locale : DEFAULT_LOCALE,
     senderName: organization?.senderName?.trim() || organization?.name || "",
     replyTo: organization?.contactEmail ?? null,
     schedule: {

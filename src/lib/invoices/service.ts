@@ -25,6 +25,9 @@ import {
 } from "./rules";
 import { overdueWhere, remainingGrosze, resolveInvoiceStatus } from "./status";
 import { calculateInvoiceTotals, type InvoiceLineInput } from "./totals";
+import { getDictionary } from "@/lib/i18n";
+import { fill } from "@/lib/i18n/format";
+import { organizationLocale } from "@/lib/i18n/server";
 
 /**
  * Dokumenty rozliczeniowe i wpłaty.
@@ -440,6 +443,14 @@ export async function generateInvoicesForMonth(
   // Wejście jest w zapisie ludzkim (1–12), Date liczy miesiące od zera.
   const monthIndex = month - 1;
 
+  /*
+    Opisy pozycji i notatka trafiają na dokument i zostają w bazie na zawsze,
+    więc powstają w języku wynajmującego. Naliczanie odpala też cron, który
+    żadnego „języka przeglądarki" nie ma — jedynym źródłem jest konto.
+  */
+  const locale = await organizationLocale(organizationId);
+  const d = getDictionary(locale);
+
   const leases = await prisma.lease.findMany({
     where: {
       organizationId,
@@ -509,7 +520,7 @@ export async function generateInvoicesForMonth(
     }
 
     const vatRate = rentVatRate(lease.property.type);
-    const lines = buildRentInvoiceLines(billing, period, year, monthIndex, {
+    const lines = buildRentInvoiceLines(billing, period, year, monthIndex, d, locale, {
       rentVatRate: vatRate,
       utilitiesVatRate: vatRate,
     });
@@ -554,7 +565,7 @@ export async function generateInvoicesForMonth(
             dueDate: period.dueDate,
             periodStart: period.periodStart,
             periodEnd: period.periodEnd,
-            notes: `Rozliczenie za ${periodLabel(year, monthIndex)}.`,
+            notes: fill(d.billing.invoiceNote, { period: periodLabel(year, monthIndex, locale) }),
             ...totals,
             ...buyerSnapshot(tenant),
             lines: { create: lineData },

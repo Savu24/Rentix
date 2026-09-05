@@ -1,3 +1,6 @@
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/types";
+
 /**
  * Podstawianie zmiennych w treści pisanej przez wynajmującego.
  *
@@ -14,29 +17,32 @@
  * ogólnego przeznaczenia w miejscu, w którym tekst pochodzi od użytkownika,
  * a wynik idzie pocztą do osób trzecich, to nieproporcjonalne ryzyko wobec
  * korzyści — tutaj potrzebne są podstawienia, nie pętle i warunki.
+ *
+ * Nazwy znaczników idą za językiem konta. To nie jest kosmetyka: wpisuje je
+ * człowiek, a `{{imie_najemcy}}` w angielskim edytorze byłoby zagadką.
+ * Organizacja ma jeden kraj, więc jej szablony mówią jednym zestawem nazw.
  */
 
-/** Nazwy zmiennych, których wolno użyć w treści. Kolejność jak w podpowiedzi UI. */
-export const TEMPLATE_VARIABLES = [
-  { name: "imie_najemcy", description: "Imię najemcy", example: "Jan" },
-  { name: "nazwisko_najemcy", description: "Nazwisko najemcy", example: "Kowalski" },
-  { name: "nazwa_wynajmujacego", description: "Twoja nazwa albo nazwa firmy", example: "Miret sp. z o.o." },
-  { name: "numer_dokumentu", description: "Numer rachunku", example: "R 6/08/2026" },
-  { name: "kwota", description: "Kwota dokumentu", example: "629,03 zł" },
-  { name: "do_zaplaty", description: "Kwota pozostała do zapłaty", example: "629,03 zł" },
-  { name: "termin", description: "Termin płatności", example: "22 sierpnia 2026" },
-  { name: "okres", description: "Okres rozliczeniowy", example: "sierpień 2026" },
-  { name: "dni_po_terminie", description: "Ile dni minęło od terminu", example: "5" },
-  { name: "adres_lokalu", description: "Adres wynajmowanego lokalu", example: "Długa 14/3, 30-001 Kraków" },
-] as const;
+/** Miejsca, w które wchodzą wartości — wspólne dla wszystkich wersji krajowych. */
+export type VariableSlot = keyof Dictionary["emails"]["variables"];
 
-export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number]["name"];
+export type TemplateVariable = {
+  readonly slot: VariableSlot;
+  readonly name: string;
+  readonly description: string;
+  readonly example: string;
+};
 
-export type TemplateValues = Partial<Record<TemplateVariable, string>>;
+/** Lista do podpowiedzi pod polem edytora. Kolejność jak w słowniku. */
+export function templateVariables(d: Dictionary): TemplateVariable[] {
+  return Object.entries(d.emails.variables).map(([slot, variable]) => ({
+    slot: slot as VariableSlot,
+    ...variable,
+  }));
+}
 
-const VARIABLE_NAMES: ReadonlySet<string> = new Set(
-  TEMPLATE_VARIABLES.map((variable) => variable.name),
-);
+/** Wartości podstawiane w tekst, kluczowane nazwą znacznika danej wersji. */
+export type TemplateValues = Record<string, string>;
 
 /**
  * Wzorzec znacznika. Dopuszcza spacje w środku (`{{ kwota }}`), bo edytor
@@ -46,9 +52,26 @@ const VARIABLE_NAMES: ReadonlySet<string> = new Set(
 const PLACEHOLDER = /\{\{\s*([a-z_]+)\s*\}\}/g;
 
 /** Wartości do podglądu, gdy konto jest świeże i nie ma jeszcze żadnej faktury. */
-export const SAMPLE_VALUES: TemplateValues = Object.fromEntries(
-  TEMPLATE_VARIABLES.map((variable) => [variable.name, variable.example]),
-) as TemplateValues;
+export function sampleValues(d: Dictionary): TemplateValues {
+  return Object.fromEntries(
+    Object.values(d.emails.variables).map((variable) => [variable.name, variable.example]),
+  );
+}
+
+/** Wartości ze slotów na nazwy znaczników obowiązujące w tej wersji krajowej. */
+export function valuesForLocale(
+  d: Dictionary,
+  bySlot: Partial<Record<VariableSlot, string>>,
+): TemplateValues {
+  const values: TemplateValues = {};
+
+  for (const [slot, variable] of Object.entries(d.emails.variables)) {
+    const value = bySlot[slot as VariableSlot];
+    if (value !== undefined) values[variable.name] = value;
+  }
+
+  return values;
+}
 
 /**
  * Podstawia wartości w tekście.
@@ -60,10 +83,7 @@ export const SAMPLE_VALUES: TemplateValues = Object.fromEntries(
  * czyli wtedy, gdy jest jeszcze kogo zapytać.
  */
 export function renderTemplateText(template: string, values: TemplateValues): string {
-  return template.replace(PLACEHOLDER, (_match, name: string) => {
-    const value = values[name as TemplateVariable];
-    return value ?? "";
-  });
+  return template.replace(PLACEHOLDER, (_match, name: string) => values[name] ?? "");
 }
 
 /**
@@ -71,13 +91,18 @@ export function renderTemplateText(template: string, values: TemplateValues): st
  *
  * Służy walidacji formularza: literówka w `{{imie_najmcy}}` nie może wyjść na
  * jaw dopiero w skrzynce najemcy.
+ *
+ * Sprawdzamy wobec nazw z **wersji konta**: nazwa poprawna po polsku jest
+ * literówką w szablonie brytyjskim i odwrotnie, a wysłana wiadomość miałaby
+ * w tym miejscu dziurę.
  */
-export function unknownVariables(template: string): string[] {
+export function unknownVariables(template: string, d: Dictionary): string[] {
+  const known = new Set(Object.values(d.emails.variables).map((variable) => variable.name));
   const found = new Set<string>();
 
   for (const match of template.matchAll(PLACEHOLDER)) {
     const name = match[1];
-    if (name && !VARIABLE_NAMES.has(name)) found.add(name);
+    if (name && !known.has(name)) found.add(name);
   }
 
   return [...found];
@@ -130,3 +155,6 @@ export function renderField(
   const rendered = renderTemplateText(source, values).trim();
   return rendered || null;
 }
+
+/** Domyślna wersja krajowa dla wołających, którzy jej nie znają. */
+export const FALLBACK_EMAIL_LOCALE: Locale = DEFAULT_LOCALE;

@@ -8,6 +8,7 @@ import {
   unknownVariables,
 } from "@/lib/email/render";
 import { invoiceIssuedEmail } from "@/lib/email/templates";
+import { getDictionary } from "@/lib/i18n";
 
 const VALUES = {
   imie_najemcy: "Jan",
@@ -35,11 +36,11 @@ describe("podstawianie zmiennych", () => {
   });
 
   it("wskazuje literówkę w nazwie zmiennej", () => {
-    expect(unknownVariables("Witaj {{imie_najmcy}}, {{kwota}}")).toEqual(["imie_najmcy"]);
+    expect(unknownVariables("Witaj {{imie_najmcy}}, {{kwota}}", getDictionary("pl"))).toEqual(["imie_najmcy"]);
   });
 
   it("nie zgłasza nic, gdy wszystkie nazwy są znane", () => {
-    expect(unknownVariables("{{imie_najemcy}} {{termin}}")).toEqual([]);
+    expect(unknownVariables("{{imie_najemcy}} {{termin}}", getDictionary("pl"))).toEqual([]);
   });
 });
 
@@ -77,7 +78,8 @@ describe("pole szablonu", () => {
 
 describe("wiadomość z treścią wynajmującego", () => {
   const DATA = {
-    tenantFirstName: "Jan",
+    locale: "pl" as const,
+  tenantFirstName: "Jan",
     landlordName: "Miret sp. z o.o.",
     invoiceNumber: "R 6/08/2026",
     amountGrosze: 62903,

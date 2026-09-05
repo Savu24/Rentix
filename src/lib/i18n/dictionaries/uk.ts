@@ -204,6 +204,15 @@ export const uk: Dictionary = {
       settingsShort: "Account",
     },
 
+    dateInput: {
+      /*
+        Ten sam porządek co po polsku — dzień, miesiąc, rok — więc pomyłka
+        o 3 grudnia zamiast 12 marca tu nie grozi. Różni się separator: kropka
+        w brytyjskiej dacie wygląda na literówkę.
+      */
+      placeholder: "dd/mm/yyyy",
+      openCalendar: "Pick from calendar",
+    },
     shell: {
       navAria: "Dashboard navigation",
       mobileNavAria: "Mobile navigation",
@@ -649,6 +658,97 @@ export const uk: Dictionary = {
       PROFORMA: "PF",
       CHARGE: "CHG",
     },
+  },
+
+  emails: {
+    attachmentNote: "The PDF is attached to this message.",
+    attachmentPlain: "The PDF is attached to this message.",
+    automaticFooter: "sent automatically by Rentix",
+
+    rows: {
+      number: "Invoice number",
+      amount: "Amount",
+      amountDue: "Amount due",
+      dueDate: "Payment due",
+      due: "Due",
+      wasDue: "Was due",
+    },
+
+    days: ["day", "days"],
+
+    issued: {
+      subject: "{number}: {amount} due {due}",
+      heading: "New invoice",
+      intro: "Hello {name}. We have issued your rent invoice{period}.",
+      introPeriod: " for {period}",
+      outro: "If you have already paid, please treat this message as confirmation.",
+    },
+
+    reminder: {
+      subject: "Reminder: {number}, due {due}",
+      heading: "Payment due soon",
+      intro: "Hello {name}. A quick reminder that a payment is due shortly.",
+      outro: "If your payment is already on its way, please ignore this message.",
+    },
+
+    overdue: {
+      subject: "Overdue: {number}, {amount}",
+      heading: "Payment overdue",
+      intro:
+        "Hello {name}. The due date passed {days} {dayWord} ago and we have not recorded your payment yet.",
+      outro:
+        "If you paid in the last few days, please get in touch and we will check whether it has reached us.",
+    },
+
+    variables: {
+      tenantFirstName: { name: "tenant_first_name", description: "Tenant first name", example: "James" },
+      tenantLastName: {
+        name: "tenant_last_name",
+        description: "Tenant surname",
+        example: "Doyle",
+      },
+      landlordName: {
+        name: "landlord_name",
+        description: "Your name or business name",
+        example: "Harborne Lettings Ltd",
+      },
+      documentNumber: {
+        name: "invoice_number",
+        description: "Invoice number",
+        example: "INV 6/08/2026",
+      },
+      amount: { name: "amount", description: "Invoice amount", example: "£629.03" },
+      amountDue: {
+        name: "amount_due",
+        description: "Amount still outstanding",
+        example: "£629.03",
+      },
+      dueDate: { name: "due_date", description: "Payment due date", example: "22 August 2026" },
+      period: { name: "period", description: "Billing period", example: "August 2026" },
+      daysOverdue: {
+        name: "days_overdue",
+        description: "Days since the due date",
+        example: "5",
+      },
+      propertyAddress: {
+        name: "property_address",
+        description: "Address of the let property",
+        example: "14 Station Road, Birmingham B17 9LN",
+      },
+    },
+  },
+
+  billing: {
+    rentLine: "Rent for {period}",
+    rentLineProrated: "Rent for {period} ({covered}/{total} days)",
+    /*
+      „Zaliczka na media" to po brytyjsku utilities allowance doliczany do
+      czynszu — ta sama pozycja, inna nazwa.
+    */
+    utilitiesLine: "Utilities allowance for {period}",
+    utilitiesLineProrated: "Utilities allowance for {period} ({covered}/{total} days)",
+    unitMonth: "month",
+    invoiceNote: "Rent for {period}.",
   },
 
 };

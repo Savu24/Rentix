@@ -59,6 +59,7 @@ export async function sendInvoiceToTenant(
   */
   const content = invoiceIssuedEmail(
     {
+      locale: settings.locale,
       tenantFirstName: tenant.firstName,
       tenantLastName: tenant.lastName,
       propertyAddress: property ? formatPropertyAddress(property) : null,
@@ -68,7 +69,11 @@ export async function sendInvoiceToTenant(
       remainingGrosze: remainingGrosze(invoice),
       dueDate: invoice.dueDate,
       periodLabel: invoice.periodStart
-        ? periodLabel(invoice.periodStart.getUTCFullYear(), invoice.periodStart.getUTCMonth())
+        ? periodLabel(
+            invoice.periodStart.getUTCFullYear(),
+            invoice.periodStart.getUTCMonth(),
+            settings.locale,
+          )
         : null,
       attached: true,
     },

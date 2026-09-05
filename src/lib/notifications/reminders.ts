@@ -183,6 +183,7 @@ export async function sendPaymentNotifications({
     const remaining = remainingGrosze(invoice);
     const property = invoice.lease?.property;
     const emailData: InvoiceEmailData = {
+      locale: settings.locale,
       tenantFirstName: tenant.firstName,
       tenantLastName: tenant.lastName,
       propertyAddress: property ? formatPropertyAddress(property) : null,
@@ -194,7 +195,11 @@ export async function sendPaymentNotifications({
       remainingGrosze: remaining,
       dueDate: invoice.dueDate,
       periodLabel: invoice.periodStart
-        ? periodLabel(invoice.periodStart.getUTCFullYear(), invoice.periodStart.getUTCMonth())
+        ? periodLabel(
+            invoice.periodStart.getUTCFullYear(),
+            invoice.periodStart.getUTCMonth(),
+            settings.locale,
+          )
         : null,
       // PDF dokładamy tylko przy zawiadomieniu o wystawieniu. Przy
       // przypomnieniu i wezwaniu najemca ma dokument od tygodni — powtarzanie

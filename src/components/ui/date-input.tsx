@@ -4,12 +4,26 @@ import { CalendarDays } from "lucide-react";
 import * as React from "react";
 
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/lib/i18n/client";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 
-/** „2026-08-31" → „31.08.2026". Pusto albo nie-data → pusty tekst. */
-export function isoToDateText(iso: string): string {
+/**
+ * Separator dnia, miesiąca i roku.
+ *
+ * Kolejność członów jest w obu krajach ta sama — dzień, miesiąc, rok — więc
+ * pomyłka o 3 grudnia zamiast 12 marca tu nie grozi. Zmienia się sam znak:
+ * kropka w brytyjskiej dacie wygląda na literówkę, ukośnik w polskiej też.
+ */
+const SEPARATOR: Record<Locale, string> = { pl: ".", uk: "/" };
+
+/** „2026-08-31" → „31.08.2026" / „31/08/2026". Pusto albo nie-data → pusty tekst. */
+export function isoToDateText(iso: string, locale: Locale = DEFAULT_LOCALE): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
-  return match ? `${match[3]}.${match[2]}.${match[1]}` : "";
+  if (!match) return "";
+
+  const separator = SEPARATOR[locale];
+  return `${match[3]}${separator}${match[2]}${separator}${match[1]}`;
 }
 
 /**
@@ -20,14 +34,14 @@ export function isoToDateText(iso: string): string {
  * automatycznie po drugiej cyfrze nie dałaby się skasować backspace'em, bo
  * maska wstawiałaby ją z powrotem przy każdym naciśnięciu.
  */
-export function formatDateText(value: string): string {
+export function formatDateText(value: string, locale: Locale = DEFAULT_LOCALE): string {
   const digits = value.replace(/\D/g, "").slice(0, 8);
   const text = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)]
     .filter((part) => part.length > 0)
-    .join(".");
+    .join(SEPARATOR[locale]);
 
   const typedSeparator = /\D$/.test(value) && (digits.length === 2 || digits.length === 4);
-  return typedSeparator ? `${text}.` : text;
+  return typedSeparator ? `${text}${SEPARATOR[locale]}` : text;
 }
 
 /** „31.08.2026" → „2026-08-31". Data niepełna albo nieistniejąca → "". */
@@ -50,7 +64,7 @@ export function dateTextToIso(text: string): string {
 }
 
 /**
- * Pole daty pisane po polsku: dzień, miesiąc, rok.
+ * Pole daty pisane po ludzku: dzień, miesiąc, rok.
  *
  * Natywny `input[type="date"]` układa człony według ustawień przeglądarki, więc
  * ten sam formularz pokazywał raz „dd.mm.rrrr", a raz „mm/dd/rrrr" — przy
@@ -77,9 +91,10 @@ export function DateInput({
   ref,
   ...props
 }: Omit<React.ComponentProps<"input">, "value" | "type"> & { value?: string }) {
+  const { d, locale } = useI18n();
   const holderRef = React.useRef<HTMLInputElement | null>(null);
   const textRef = React.useRef<HTMLInputElement | null>(null);
-  const [text, setText] = React.useState(() => isoToDateText(value ?? ""));
+  const [text, setText] = React.useState(() => isoToDateText(value ?? "", locale));
   const emitted = React.useRef(value ?? "");
 
   /*
@@ -98,7 +113,7 @@ export function DateInput({
     if (document.activeElement === textRef.current) return;
 
     emitted.current = external;
-    setText(isoToDateText(external));
+    setText(isoToDateText(external, locale));
   });
 
   function emit(iso: string) {
@@ -142,12 +157,12 @@ export function DateInput({
         inputMode="numeric"
         autoComplete="off"
         maxLength={10}
-        placeholder="dd.mm.rrrr"
+        placeholder={d.panel.dateInput.placeholder}
         className="pr-10"
         value={text}
         disabled={disabled}
         onChange={(event) => {
-          const next = formatDateText(event.target.value);
+          const next = formatDateText(event.target.value, locale);
           setText(next);
 
           const iso = dateTextToIso(next);
@@ -171,7 +186,7 @@ export function DateInput({
         type="button"
         onClick={openPicker}
         disabled={disabled}
-        aria-label="Wybierz z kalendarza"
+        aria-label={d.panel.dateInput.openCalendar}
         className={cn(
           "absolute right-1 flex h-9 w-9 items-center justify-center rounded-control text-muted",
           "transition-colors hover:text-fg focus-visible:outline-none",
@@ -200,7 +215,7 @@ export function DateInput({
         aria-hidden
         className="pointer-events-none absolute right-4 bottom-0 h-px w-px opacity-0"
         onChange={(event) => {
-          setText(isoToDateText(event.target.value));
+          setText(isoToDateText(event.target.value, locale));
           emit(event.target.value);
         }}
       />

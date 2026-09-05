@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { invoiceIssuedEmail, paymentOverdueEmail } from "@/lib/email/templates";
 
 const DATA = {
+  locale: "pl" as const,
   tenantFirstName: "Jan",
   landlordName: "Miret sp. zoo",
   invoiceNumber: "R 6/08/2026",

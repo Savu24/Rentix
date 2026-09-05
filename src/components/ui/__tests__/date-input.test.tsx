@@ -4,6 +4,20 @@ import { useForm } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import { DateInput, dateTextToIso, formatDateText, isoToDateText } from "@/components/ui/date-input";
+import { getDictionary } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n/client";
+
+/**
+ * Pole czyta separator i podpowiedź z kontekstu, więc test podaje wersję
+ * polską — na niej opisane są oczekiwania niżej.
+ */
+function renderPl(ui: React.ReactElement) {
+  return render(
+    <I18nProvider locale="pl" dictionary={getDictionary("pl")}>
+      {ui}
+    </I18nProvider>,
+  );
+}
 
 describe("formatDateText", () => {
   it("wstawia kropki w trakcie pisania", () => {
@@ -48,7 +62,7 @@ describe("isoToDateText", () => {
 describe("DateInput", () => {
   it("oddaje wpisaną datę w formacie ISO", async () => {
     const onChange = vi.fn();
-    render(<DateInput aria-label="Data" onChange={onChange} />);
+    renderPl(<DateInput aria-label="Data" onChange={onChange} />);
 
     await userEvent.type(screen.getByRole("textbox", { name: "Data" }), "31082026");
 
@@ -59,7 +73,7 @@ describe("DateInput", () => {
 
   it("nie kasuje zapisanej daty w połowie poprawiania", async () => {
     const onChange = vi.fn();
-    render(<DateInput aria-label="Data" value="2026-08-31" onChange={onChange} />);
+    renderPl(<DateInput aria-label="Data" value="2026-08-31" onChange={onChange} />);
 
     const field = screen.getByRole("textbox", { name: "Data" });
     await userEvent.type(field, "{backspace}{backspace}");
@@ -74,7 +88,7 @@ describe("DateInput", () => {
 
   it("czyści datę urwaną w połowie po wyjściu z pola", async () => {
     const onChange = vi.fn();
-    render(
+    renderPl(
       <>
         <DateInput aria-label="Data" onChange={onChange} />
         <button type="button">obok</button>
@@ -101,7 +115,7 @@ describe("DateInput", () => {
 
   it("dogaduje się z react-hook-form: pokazuje wartość domyślną i oddaje ISO", async () => {
     const onValues = vi.fn();
-    render(<Harness onValues={onValues} />);
+    renderPl(<Harness onValues={onValues} />);
 
     const field = screen.getByRole("textbox", { name: "Data" });
     expect(field).toHaveValue("31.08.2026");

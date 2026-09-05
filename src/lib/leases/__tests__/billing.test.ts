@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { calculateInvoiceTotals } from "@/lib/invoices/totals";
+import { getDictionary } from "@/lib/i18n";
 import {
   buildBillingPeriod,
   buildRentInvoiceLines,
@@ -10,6 +11,9 @@ import {
   shouldBillPeriod,
   type BillingLease,
 } from "@/lib/leases/billing";
+
+// Opisy pozycji zależą od kraju — te przypadki sprawdzają wersję polską.
+const PL = getDictionary("pl");
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
@@ -122,7 +126,7 @@ describe("prorateRent", () => {
 describe("buildRentInvoiceLines", () => {
   it("czynsz plus zaliczka na media przy trybie FLAT_RATE", () => {
     const period = buildBillingPeriod(lease(), 2026, 7)!;
-    const lines = buildRentInvoiceLines(lease(), period, 2026, 7);
+    const lines = buildRentInvoiceLines(lease(), period, 2026, 7, PL, "pl");
 
     expect(lines).toHaveLength(2);
     expect(lines[0].description).toBe("Czynsz najmu za sierpień 2026");
@@ -134,25 +138,25 @@ describe("buildRentInvoiceLines", () => {
   it("tryb INCLUDED nie dokłada pozycji za media", () => {
     const l = lease({ utilitiesMode: "INCLUDED" });
     const period = buildBillingPeriod(l, 2026, 7)!;
-    expect(buildRentInvoiceLines(l, period, 2026, 7)).toHaveLength(1);
+    expect(buildRentInvoiceLines(l, period, 2026, 7, PL, "pl")).toHaveLength(1);
   });
 
   it("tryb METERED nie dokłada zaliczki — media wyjdą z odczytów liczników", () => {
     const l = lease({ utilitiesMode: "METERED" });
     const period = buildBillingPeriod(l, 2026, 7)!;
-    expect(buildRentInvoiceLines(l, period, 2026, 7)).toHaveLength(1);
+    expect(buildRentInvoiceLines(l, period, 2026, 7, PL, "pl")).toHaveLength(1);
   });
 
   it("pomija zaliczkę zerową, żeby nie generować pustej pozycji", () => {
     const l = lease({ utilitiesMode: "FLAT_RATE", utilitiesAdvanceGrosze: 0 });
     const period = buildBillingPeriod(l, 2026, 7)!;
-    expect(buildRentInvoiceLines(l, period, 2026, 7)).toHaveLength(1);
+    expect(buildRentInvoiceLines(l, period, 2026, 7, PL, "pl")).toHaveLength(1);
   });
 
   it("opisuje proporcjonalny okres wprost na pozycji", () => {
     const l = lease({ startDate: utc("2026-08-15") });
     const period = buildBillingPeriod(l, 2026, 7)!;
-    const lines = buildRentInvoiceLines(l, period, 2026, 7);
+    const lines = buildRentInvoiceLines(l, period, 2026, 7, PL, "pl");
 
     expect(lines[0].description).toBe("Czynsz najmu za sierpień 2026 (17/31 dni)");
     expect(lines[0].unitPriceNetGrosze).toBe(131613);
@@ -161,13 +165,13 @@ describe("buildRentInvoiceLines", () => {
 
   it("domyślnie stosuje zwolnienie z VAT — najem mieszkaniowy", () => {
     const period = buildBillingPeriod(lease(), 2026, 7)!;
-    const lines = buildRentInvoiceLines(lease(), period, 2026, 7);
+    const lines = buildRentInvoiceLines(lease(), period, 2026, 7, PL, "pl");
     expect(lines.every((line) => line.vatRate === "ZW")).toBe(true);
   });
 
   it("składa się z sumami faktury w pełną kwotę do zapłaty", () => {
     const period = buildBillingPeriod(lease(), 2026, 7)!;
-    const totals = calculateInvoiceTotals(buildRentInvoiceLines(lease(), period, 2026, 7));
+    const totals = calculateInvoiceTotals(buildRentInvoiceLines(lease(), period, 2026, 7, PL, "pl"));
 
     expect(totals.totalGrossGrosze).toBe(285000); // 2400 + 450 zł
     expect(totals.totalVatGrosze).toBe(0);

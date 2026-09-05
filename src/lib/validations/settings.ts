@@ -232,7 +232,7 @@ export type NotificationSettingsOutput = z.output<ReturnType<typeof notification
  */
 const templateField = (c: ValidationContext, max: number) =>
   optionalText(c, max).superRefine((value, ctx) => {
-    const unknown = value ? unknownVariables(value) : [];
+    const unknown = value ? unknownVariables(value, c.d) : [];
     if (unknown.length === 0) return;
 
     // Wypisujemy nazwy, a nie samo „nieznana zmienna": literówka bywa
