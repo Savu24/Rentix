@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { apiError, created, ok, validationError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
+import { leaseLimitMessage } from "@/lib/billing/message";
 import { createLease, listLeases } from "@/lib/leases/service";
 import { leaseFormSchema, leaseListQuerySchema } from "@/lib/validations/lease";
 
@@ -70,5 +71,7 @@ export async function POST(request: NextRequest) {
         auth.d.panel.api.roomOccupiedMessage,
         { fields: { roomId: [auth.d.panel.api.fields.roomOccupied] } },
       );
+    case "LEASE_LIMIT":
+      return apiError("CONFLICT", leaseLimitMessage(auth, result.plan, result.limit));
   }
 }

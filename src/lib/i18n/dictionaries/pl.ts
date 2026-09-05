@@ -77,31 +77,66 @@ export const pl = {
       ],
     },
 
+    /*
+      Cennik liczy umowy, nie najemców.
+
+      Najem pokojowy to pięciu najemców na jednym mieszkaniu — przy dawnej
+      metryce dokładnie ten scenariusz, który Rentix obsługuje najlepiej,
+      kosztował najwięcej. Umowę wynajmujący liczy też sam, więc rachunek da
+      się sprawdzić bez zaglądania w panel.
+
+      Plany różnią się wyłącznie progiem. Funkcje ma każdy te same, bo dzielenie
+      panelu na płatne kawałki wymagałoby obiecywania rzeczy, których nie
+      egzekwuje kod.
+    */
     pricing: {
       heading: "Prosty cennik, bez pułapek",
-      badge: "BEZ LIMITÓW",
-      free: {
-        name: "Free",
-        price: "0 zł",
-        period: "",
-        note: "do 20 najemców",
-        items: ["Umowy i dokumenty", "Rachunki i przypomnienia", "Koszty i zestawienie roczne"],
-        cta: "Zacznij za darmo",
-      },
-      pro: {
-        name: "Pro",
-        price: "149 zł",
-        period: "/mies.",
-        note: "bez limitu nieruchomości i najemców",
-        items: ["Wszystko z Free", "Raporty i eksport księgowy", "Wielu użytkowników zespołu"],
-        cta: "Przejdź na Pro",
-      },
+      badge: "NAJCZĘŚCIEJ WYBIERANY",
+      note: "Ceny netto, płatne miesięcznie. Przy rozliczeniu rocznym płacisz za dziesięć miesięcy.",
+      plans: [
+        {
+          name: "Free",
+          price: "0 zł",
+          period: "",
+          note: "2 umowy",
+          featured: false,
+          items: ["Cały panel, bez terminu", "Bez karty płatniczej"],
+          cta: "Zacznij za darmo",
+        },
+        {
+          name: "Start",
+          price: "39 zł",
+          period: "/mies.",
+          note: "do 10 umów",
+          featured: false,
+          items: ["Wszystko z Free", "Wsparcie mailem"],
+          cta: "Wybierz Start",
+        },
+        {
+          name: "Pro",
+          price: "99 zł",
+          period: "/mies.",
+          note: "do 30 umów",
+          featured: true,
+          items: ["Wszystko ze Start", "Wsparcie w 24 godziny"],
+          cta: "Wybierz Pro",
+        },
+        {
+          name: "Portfel",
+          price: "249 zł",
+          period: "/mies.",
+          note: "bez limitu umów",
+          featured: false,
+          items: ["Wszystko z Pro", "Próg ustalany indywidualnie"],
+          cta: "Wybierz Portfel",
+        },
+      ],
     },
 
     closing: {
       titleFirstLine: "Przenieś swój najem",
       titleSecondLine: "z Excela do Rentiksa",
-      lead: "Pierwsze 20 najemców za darmo, na zawsze.",
+      lead: "Dwie umowy za darmo, bez terminu.",
       cta: "Załóż darmowe konto →",
     },
 
@@ -127,7 +162,7 @@ export const pl = {
 
     register: {
       metaTitle: "Załóż konto",
-      metaDescription: "Załóż darmowe konto Rentix. Pierwsze 20 najemców za darmo.",
+      metaDescription: "Załóż darmowe konto Rentix. Dwie umowy za darmo, bez terminu.",
       heading: "Załóż darmowe konto",
       hasAccount: "Masz już konto?",
       loginLink: "Zaloguj się",
@@ -141,7 +176,7 @@ export const pl = {
       submit: "Załóż darmowe konto",
       submitting: "Zakładanie konta…",
       terms:
-        "Zakładając konto akceptujesz regulamin i politykę prywatności Rentix. Bez karty kredytowej. Pierwsze 20 najemców za darmo, na zawsze.",
+        "Zakładając konto akceptujesz regulamin i politykę prywatności Rentix. Bez karty kredytowej. Dwie umowy za darmo, bez terminu.",
       failed: "Nie udało się założyć konta. Spróbuj ponownie za chwilę.",
       emailTaken: "Konto z tym adresem e-mail już istnieje.",
       emailTakenField: "Ten adres jest już zajęty",
@@ -1176,8 +1211,13 @@ export const pl = {
       notifications: "Powiadomienia",
       signOut: "Wyloguj",
       fallbackAccountName: "Konto",
-      planFree: "Plan Free",
-      planPro: "Plan Pro",
+      /** Nazwy planów — klucze zgodne z enumem `SubscriptionPlan`. */
+      plans: {
+        FREE: "Plan Free",
+        START: "Plan Start",
+        PRO: "Plan Pro",
+        PORTFOLIO: "Plan Portfel",
+      },
     },
 
     validation: {
@@ -1280,6 +1320,20 @@ export const pl = {
         current: "Obecne hasło",
         new: "Nowe hasło",
         newHint: "Co najmniej 10 znaków, w tym wielka litera, mała litera i cyfra.",
+      },
+      plan: {
+        title: "Plan i limit",
+        /** Mianownik — „2 umowy z 10". Dopełniacz z `api.countable` czyta się tu źle. */
+        noun: ["umowa", "umowy", "umów"],
+        usage: "{used} z {limit} {noun}",
+        usageUnlimited: "{used} {noun}, bez limitu",
+        tiers: "Progi planów",
+        tierLimit: "{limit} {noun}",
+        tierUnlimited: "bez limitu",
+        current: "Twój plan",
+        /** Konta sprzed cennika mają próg wyższy niż plan — mówimy to wprost. */
+        grandfathered: "Twoje konto ma podwyższony próg z wcześniejszych warunków.",
+        note: "Zmianę planu włączymy razem z płatnościami.",
       },
       logo: {
         title: "Logo na dokumentach",
@@ -1414,6 +1468,8 @@ export const pl = {
         "Ten lokal ma już aktywną umowę. Zakończ ją najpierw. Dwie aktywne umowy na jednej jednostce rozjechałyby stan zajętości.",
       leaseStillActive:
         "Umowa jest aktywna. Zakończ ją najpierw, inaczej jednostka zostałaby zajęta przez umowę, której nie widać na liście.",
+      leaseLimitReached:
+        "{plan} obejmuje {limit} {noun}. Zarchiwizuj zakończoną umowę albo przejdź na wyższy plan.",
       leaseHasInvoices:
         "Nie można usunąć. Do umowy wystawiono {count} {noun}. Zostaw ją w archiwum, żeby historia rozliczeń została spójna.",
       ownerHasProperties:

@@ -168,52 +168,65 @@ export function Landing({ locale }: { locale: Locale }) {
           <div className="mx-auto max-w-6xl">
             <h2 className="r-display text-center text-[32px] text-fg">{t.pricing.heading}</h2>
 
-            <div className="mx-auto mt-7 grid max-w-[760px] gap-[18px] sm:grid-cols-2">
-              <Card>
-                <CardContent className="p-[26px]">
-                  <p className="text-[15px] font-semibold text-fg">{t.pricing.free.name}</p>
-                  <p className="r-display mt-1 text-[30px] text-fg">{t.pricing.free.price}</p>
-                  <p className="mt-1 text-[13.5px] text-muted">{t.pricing.free.note}</p>
-
-                  <ul className="mt-5 space-y-2 text-sm text-muted">
-                    {t.pricing.free.items.map((item) => (
-                      <PlanItem key={item}>{item}</PlanItem>
-                    ))}
-                  </ul>
-
-                  <Button asChild variant="secondary" block className="mt-5">
-                    <Link href={routes.register}>{t.pricing.free.cta}</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card className="relative border-transparent bg-mint">
-                <span className="absolute -top-[11px] right-5 rounded-full bg-accent2 px-2.5 py-1 font-mono text-[11px] font-medium text-white">
-                  {t.pricing.badge}
-                </span>
-
-                <CardContent className="p-[26px]">
-                  <p className="text-[15px] font-semibold text-fg">{t.pricing.pro.name}</p>
-                  <p className="r-display mt-1 text-[30px] text-fg">
-                    {t.pricing.pro.price}
-                    <span className="font-sans text-[15px] font-medium text-fg/60">
-                      {t.pricing.pro.period}
+            {/* Cztery progi w rzędzie dopiero od lg — poniżej idą po dwa, bo
+                cena i przypis nie mieszczą się w ćwiartce szerokości tabletu. */}
+            <div className="mx-auto mt-7 grid max-w-[1100px] gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+              {t.pricing.plans.map((plan) => (
+                <Card
+                  key={plan.name}
+                  /* `flex` na karcie, nie tylko w środku: bez definitywnej
+                     wysokości `h-full` na treści nie miałoby się do czego
+                     odnieść i przyciski rozjechałyby się w pionie. */
+                  className={`relative flex flex-col ${
+                    plan.featured ? "border-transparent bg-mint" : ""
+                  }`}
+                >
+                  {plan.featured ? (
+                    <span className="absolute -top-[11px] right-5 rounded-full bg-accent2 px-2.5 py-1 font-mono text-[11px] font-medium text-white">
+                      {t.pricing.badge}
                     </span>
-                  </p>
-                  <p className="mt-1 text-[13.5px] text-fg/70">{t.pricing.pro.note}</p>
+                  ) : null}
 
-                  <ul className="mt-5 space-y-2 text-sm text-fg/80">
-                    {t.pricing.pro.items.map((item) => (
-                      <PlanItem key={item}>{item}</PlanItem>
-                    ))}
-                  </ul>
+                  <CardContent className="flex flex-1 flex-col p-[26px]">
+                    <p className="text-[15px] font-semibold text-fg">{plan.name}</p>
+                    <p className="r-display mt-1 text-[30px] text-fg">
+                      {plan.price}
+                      <span className="font-sans text-[15px] font-medium text-fg/60">
+                        {plan.period}
+                      </span>
+                    </p>
+                    <p className={`mt-1 text-[13.5px] ${plan.featured ? "text-fg/70" : "text-muted"}`}>
+                      {plan.note}
+                    </p>
 
-                  <Button asChild block className="mt-5">
-                    <Link href={routes.register}>{t.pricing.pro.cta}</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+                    {/* `flex-1` na liście wyrównuje przyciski w rzędzie mimo
+                        różnej liczby pozycji na kartach. */}
+                    <ul
+                      className={`mt-5 flex-1 space-y-2 text-sm ${
+                        plan.featured ? "text-fg/80" : "text-muted"
+                      }`}
+                    >
+                      {plan.items.map((item) => (
+                        <PlanItem key={item}>{item}</PlanItem>
+                      ))}
+                    </ul>
+
+                    <Button
+                      asChild
+                      block
+                      variant={plan.featured ? "primary" : "secondary"}
+                      className="mt-5"
+                    >
+                      <Link href={routes.register}>{plan.cta}</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+
+            <p className="mx-auto mt-5 max-w-[560px] text-center text-[13px] text-muted">
+              {t.pricing.note}
+            </p>
           </div>
         </section>
 

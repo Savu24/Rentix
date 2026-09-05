@@ -85,35 +85,56 @@ export const uk: Dictionary = {
       ],
     },
 
+    /* Progi te same co w wersji polskiej, ceny lokalne — brytyjski rynek unosi
+       więcej: Landlord Studio £12 plus funt za lokal, Arthur od £70. */
     pricing: {
       heading: "Simple pricing, no traps",
-      badge: "NO LIMITS",
-      free: {
-        name: "Free",
-        price: "£0",
-        period: "",
-        note: "up to 20 tenants",
-        items: [
-          "Tenancies and records",
-          "Rent invoices and reminders",
-          "Costs and yearly summary",
-        ],
-        cta: "Start for free",
-      },
-      pro: {
-        name: "Pro",
-        price: "£29",
-        period: "/month",
-        note: "unlimited properties and tenants",
-        items: ["Everything in Free", "Reports and accountant export", "Multiple team members"],
-        cta: "Go Pro",
-      },
+      badge: "MOST POPULAR",
+      note: "Prices exclude VAT and are billed monthly. Pay yearly and you pay for ten months.",
+      plans: [
+        {
+          name: "Free",
+          price: "£0",
+          period: "",
+          note: "2 tenancies",
+          featured: false,
+          items: ["The whole app, no time limit", "No card needed"],
+          cta: "Start for free",
+        },
+        {
+          name: "Start",
+          price: "£9",
+          period: "/month",
+          note: "up to 10 tenancies",
+          featured: false,
+          items: ["Everything in Free", "Email support"],
+          cta: "Choose Start",
+        },
+        {
+          name: "Pro",
+          price: "£24",
+          period: "/month",
+          note: "up to 30 tenancies",
+          featured: true,
+          items: ["Everything in Start", "Support within 24 hours"],
+          cta: "Choose Pro",
+        },
+        {
+          name: "Portfolio",
+          price: "£59",
+          period: "/month",
+          note: "no tenancy limit",
+          featured: false,
+          items: ["Everything in Pro", "Limit agreed with you"],
+          cta: "Choose Portfolio",
+        },
+      ],
     },
 
     closing: {
       titleFirstLine: "Move your lettings",
       titleSecondLine: "off the spreadsheet",
-      lead: "First 20 tenants free, forever.",
+      lead: "Two tenancies free, no time limit.",
       cta: "Create a free account →",
     },
 
@@ -139,7 +160,7 @@ export const uk: Dictionary = {
 
     register: {
       metaTitle: "Create an account",
-      metaDescription: "Create a free Rentix account. First 20 tenants free.",
+      metaDescription: "Create a free Rentix account. Two tenancies free, no time limit.",
       heading: "Create a free account",
       hasAccount: "Already have an account?",
       loginLink: "Log in",
@@ -153,7 +174,7 @@ export const uk: Dictionary = {
       submit: "Create a free account",
       submitting: "Creating your account…",
       terms:
-        "By creating an account you accept the Rentix terms and privacy policy. No credit card. First 20 tenants free, forever.",
+        "By creating an account you accept the Rentix terms and privacy policy. No credit card. Two tenancies free, no time limit.",
       failed: "We couldn't create the account. Please try again in a moment.",
       emailTaken: "An account with this email address already exists.",
       emailTakenField: "This address is already taken",
@@ -1218,8 +1239,12 @@ export const uk: Dictionary = {
       notifications: "Notifications",
       signOut: "Sign out",
       fallbackAccountName: "Account",
-      planFree: "Free plan",
-      planPro: "Pro plan",
+      plans: {
+        FREE: "Free plan",
+        START: "Start plan",
+        PRO: "Pro plan",
+        PORTFOLIO: "Portfolio plan",
+      },
     },
 
     validation: {
@@ -1332,6 +1357,18 @@ export const uk: Dictionary = {
         current: "Current password",
         new: "New password",
         newHint: "At least 10 characters, with an upper-case letter, a lower-case letter and a digit.",
+      },
+      plan: {
+        title: "Plan and limit",
+        noun: ["tenancy", "tenancies"],
+        usage: "{used} of {limit} {noun}",
+        usageUnlimited: "{used} {noun}, no limit",
+        tiers: "What each plan covers",
+        tierLimit: "{limit} {noun}",
+        tierUnlimited: "no limit",
+        current: "Your plan",
+        grandfathered: "Your account keeps a higher limit from its earlier terms.",
+        note: "Changing plan goes live together with payments.",
       },
       logo: {
         title: "Logo on documents",
@@ -1469,6 +1506,8 @@ export const uk: Dictionary = {
         "This unit already has an active tenancy. End it first — two active tenancies on one unit would break the occupancy figures.",
       leaseStillActive:
         "The tenancy is active. End it first, or the unit would stay occupied by a tenancy nobody can see on the list.",
+      leaseLimitReached:
+        "The {plan} covers {limit} {noun}. Archive a finished tenancy or move up a plan.",
       leaseHasInvoices:
         "Cannot delete. {count} {noun} were issued against this tenancy. Leave it in the archive so the payment history stays consistent.",
       ownerHasProperties:

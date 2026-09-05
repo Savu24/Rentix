@@ -72,8 +72,8 @@ async function main() {
 
   await prisma.subscription.upsert({
     where: { organizationId },
-    create: { organizationId, plan: "PRO", status: "ACTIVE", tenantLimit: null },
-    update: { plan: "PRO", status: "ACTIVE", tenantLimit: null },
+    create: { organizationId, plan: "PORTFOLIO", status: "ACTIVE", leaseLimit: null },
+    update: { plan: "PORTFOLIO", status: "ACTIVE", leaseLimit: null },
   });
 
   // ── nieruchomości z pokojami ──────────────────────────────────────────────

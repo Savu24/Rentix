@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
-import type { LeaseStatus } from "@/generated/prisma/enums";
+import type { LeaseStatus, SubscriptionPlan } from "@/generated/prisma/enums";
+import { organizationPlan } from "@/lib/billing/server";
 import { remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -117,7 +118,8 @@ export type CreateLeaseResult =
   | { ok: false; reason: "ROOM_NOT_FOUND" }
   | { ok: false; reason: "TENANT_NOT_FOUND" }
   | { ok: false; reason: "PROPERTY_OCCUPIED"; conflictingLeaseId: string }
-  | { ok: false; reason: "ROOM_OCCUPIED"; conflictingLeaseId: string };
+  | { ok: false; reason: "ROOM_OCCUPIED"; conflictingLeaseId: string }
+  | { ok: false; reason: "LEASE_LIMIT"; plan: SubscriptionPlan; limit: number };
 
 /**
  * Zakłada umowę i wiąże z nią najemców.
@@ -131,6 +133,17 @@ export async function createLease(
   data: LeaseFormOutput,
 ): Promise<CreateLeaseResult> {
   const { tenantIds, ...leaseData } = data;
+
+  /*
+    Limit planu sprawdzamy przed czymkolwiek innym: odpowiedź „nie mieścisz
+    się w planie" jest prawdziwa niezależnie od tego, czy pozostałe pola są
+    poprawne, a kolejność odwrotna kazałaby najpierw poprawiać formularz,
+    którego i tak nie da się zapisać.
+  */
+  const plan = await organizationPlan(organizationId);
+  if (!plan.hasCapacity) {
+    return { ok: false, reason: "LEASE_LIMIT", plan: plan.plan, limit: plan.limit ?? 0 };
+  }
 
   const property = await prisma.property.findFirst({
     where: { id: leaseData.propertyId, organizationId },
@@ -408,12 +421,33 @@ export async function archiveLease(
   return { ok: true };
 }
 
-export async function restoreLease(organizationId: string, leaseId: string) {
+export type RestoreLeaseResult =
+  | { ok: true }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "LEASE_LIMIT"; plan: SubscriptionPlan; limit: number };
+
+/**
+ * Wyjęcie umowy z archiwum.
+ *
+ * Podlega limitowi planu tak samo jak zakładanie nowej, bo z punktu widzenia
+ * licznika to jest to samo: umowa wraca na listę. Bez tego archiwum byłoby
+ * obejściem progu — wystarczyłoby chować i przywracać umowy naprzemiennie.
+ */
+export async function restoreLease(
+  organizationId: string,
+  leaseId: string,
+): Promise<RestoreLeaseResult> {
+  const plan = await organizationPlan(organizationId);
+  if (!plan.hasCapacity) {
+    return { ok: false, reason: "LEASE_LIMIT", plan: plan.plan, limit: plan.limit ?? 0 };
+  }
+
   const { count } = await prisma.lease.updateMany({
     where: { id: leaseId, organizationId, archivedAt: { not: null } },
     data: { archivedAt: null },
   });
-  return count > 0;
+
+  return count > 0 ? { ok: true } : { ok: false, reason: "NOT_FOUND" };
 }
 
 export type DeleteLeaseResult =

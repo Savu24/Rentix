@@ -3,10 +3,10 @@ import { PanelLocaleSync } from "@/components/panel/panel-locale";
 import { Sidebar } from "@/components/panel/sidebar";
 import { Topbar } from "@/components/panel/topbar";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { organizationPlan } from "@/lib/billing/server";
 import { clientDictionary, getDictionary } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
 import { organizationLocale } from "@/lib/i18n/server";
-import { prisma } from "@/lib/prisma";
 import { initials } from "@/lib/utils";
 
 /**
@@ -24,17 +24,13 @@ import { initials } from "@/lib/utils";
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = await requireOwnerSession("/panel");
 
-  const [subscription, locale] = await Promise.all([
-    prisma.subscription.findUnique({
-      where: { organizationId: session.user.organizationId },
-      select: { plan: true },
-    }),
+  const [plan, locale] = await Promise.all([
+    organizationPlan(session.user.organizationId),
     organizationLocale(session.user.organizationId),
   ]);
 
   const dictionary = getDictionary(locale);
-  const planLabel =
-    subscription?.plan === "PRO" ? dictionary.panel.shell.planPro : dictionary.panel.shell.planFree;
+  const planLabel = dictionary.panel.shell.plans[plan.plan];
 
   const userInitials = initials(session.user.name);
   const userName = session.user.name ?? dictionary.panel.shell.fallbackAccountName;

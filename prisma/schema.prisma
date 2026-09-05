@@ -1395,8 +1395,10 @@ model EmailTemplate {
 // ═══════════════════════════════════════════════════════════════════════════
 
 enum SubscriptionPlan {
-  FREE // do 20 najemców
-  PRO // bez limitu
+  FREE // 2 umowy
+  START // 10 umów
+  PRO // 30 umów
+  PORTFOLIO // bez limitu
 }
 
 enum SubscriptionStatus {
@@ -1412,10 +1414,16 @@ model Subscription {
   plan           SubscriptionPlan   @default(FREE)
   status         SubscriptionStatus @default(ACTIVE)
 
-  /// Limity zapisane wprost, a nie wyprowadzane z `plan`. Dzięki temu da się
-  /// podnieść limit pojedynczemu klientowi bez dokładania nowego planu.
-  tenantLimit   Int? @default(20)
-  propertyLimit Int?
+  /// Ile umów najmu obejmuje konto. `null` = bez limitu (plan Portfel).
+  ///
+  /// Liczymy umowy, a nie najemców: najem pokojowy to pięciu najemców na jednym
+  /// mieszkaniu, a więc pięć razy droższe konto przy tej samej pracy panelu.
+  /// Umowa jest też jednostką, którą wynajmujący liczy sam.
+  ///
+  /// Limit zapisany wprost, a nie wyprowadzany z `plan`. Dzięki temu da się
+  /// podnieść próg pojedynczemu klientowi bez dokładania nowego planu — i tędy
+  /// właśnie idą konta sprzed cennika, którym obiecano dwadzieścia umów.
+  leaseLimit Int?
 
   /// Konto zwolnione z opłat: korzysta z planu, ale nie jest obciążane.
   ///

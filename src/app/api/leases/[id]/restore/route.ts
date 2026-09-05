@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 
 import { apiError, ok } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
+import { leaseLimitMessage } from "@/lib/billing/message";
 import { restoreLease } from "@/lib/leases/service";
 
 export const runtime = "nodejs";
@@ -14,6 +15,11 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
   const restored = await restoreLease(auth.organizationId, id);
 
-  if (!restored) return apiError("NOT_FOUND", auth.d.panel.api.notFound.archivedLease);
+  if (!restored.ok) {
+    return restored.reason === "LEASE_LIMIT"
+      ? apiError("CONFLICT", leaseLimitMessage(auth, restored.plan, restored.limit))
+      : apiError("NOT_FOUND", auth.d.panel.api.notFound.archivedLease);
+  }
+
   return ok({ id, archivedAt: null });
 }

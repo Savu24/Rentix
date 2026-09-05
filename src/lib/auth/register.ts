@@ -85,7 +85,9 @@ export async function ensureOwnerOrganization(userId: string): Promise<void> {
 
   await prisma.$transaction(async (tx) => {
     const organization = await tx.organization.create({
-      data: { name, slug },
+      // Subskrypcja od razu z organizacją: plan i próg umów wchodzą wtedy
+      // z wartości domyślnych schematu, a panel nie zgaduje ich z braku wiersza.
+      data: { name, slug, subscription: { create: {} } },
       select: { id: true },
     });
 
@@ -131,6 +133,7 @@ export async function registerOwner(
           name: input.organizationName,
           slug,
           locale,
+          subscription: { create: {} },
           // Kraj wystawcy na dokumencie — startowo ten sam, co wersja serwisu.
           // Właściciel może go zmienić w ustawieniach, gdy firma stoi gdzie indziej.
           countryCode: LOCALE_META[locale].countryCode,
