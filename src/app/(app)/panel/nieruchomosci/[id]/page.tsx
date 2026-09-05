@@ -23,7 +23,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { propertyExpenses } from "@/lib/expenses/service";
-import { formatPLN } from "@/lib/money";
+import type { Locale } from "@/lib/i18n/config";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { formatDistance, mapsUrl } from "@/lib/properties/details";
 import { getProperty } from "@/lib/properties/service";
@@ -33,10 +35,9 @@ import {
   rentalStatusLabels,
   RENTAL_STATUS_TONE,
 } from "@/lib/validations/property";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const session = await requireOwnerSession();
@@ -47,7 +48,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 export default async function PropertyDetailPage({ params }: Params) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.propertiesPage.detail;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -141,13 +143,13 @@ export default async function PropertyDetailPage({ params }: Params) {
               <Badge tone={RENTAL_STATUS_TONE[property.status]}>
                 {rentalStatusLabels(d)[property.status]}
               </Badge>
-              {property.archivedAt ? <Badge tone="warning">Zarchiwizowana</Badge> : null}
+              {property.archivedAt ? <Badge tone="warning">{t.archived}</Badge> : null}
               {/* Oznaczenie do przyszłej strony ofert — sama strona jest poza
                   zakresem, więc badge tylko odnotowuje ustawienie. */}
-              {property.publiclyListed ? <Badge tone="good">Oznaczona publicznie</Badge> : null}
+              {property.publiclyListed ? <Badge tone="good">{t.publiclyListed}</Badge> : null}
               {/* Podnajem widać na pierwszy rzut oka — przy cudzym lokalu
                   inaczej wygląda rozliczenie i inaczej kończy się umowa. */}
-              {property.owner ? <Badge tone="accent">Podnajem</Badge> : null}
+              {property.owner ? <Badge tone="accent">{t.sublet}</Badge> : null}
             </div>
 
             <p className="flex items-center gap-1.5 text-sm text-muted">
@@ -158,7 +160,7 @@ export default async function PropertyDetailPage({ params }: Params) {
 
             {property.owner ? (
               <p className="text-xs text-muted">
-                Właściciel:{" "}
+                {t.ownerPrefix}
                 <Link
                   href={`/panel/wlasciciele/${property.owner.id}`}
                   className="font-medium text-accent hover:underline"
@@ -170,12 +172,19 @@ export default async function PropertyDetailPage({ params }: Params) {
 
             <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
               {property.areaM2 ? (
-                <span className="tabular">{property.areaM2.toFixed(2).replace(".", ",")} m²</span>
+                <span className="tabular">
+                  {locale === "pl"
+                    ? property.areaM2.toFixed(2).replace(".", ",")
+                    : property.areaM2.toFixed(2)}{" "}
+                  m²
+                </span>
               ) : null}
-              {property.floor !== null ? <span>piętro {property.floor}</span> : null}
+              {property.floor !== null ? <span>{fill(t.floor, { floor: property.floor })}</span> : null}
               {property.askingRentGrosze ? (
                 <span className="tabular">
-                  za całość {formatPLN(property.askingRentGrosze)}
+                  {fill(t.wholeRent, {
+                    amount: formatMoney(property.askingRentGrosze, locale),
+                  })}
                 </span>
               ) : null}
             </p>
@@ -185,7 +194,7 @@ export default async function PropertyDetailPage({ params }: Params) {
             <Button asChild size="sm" variant="secondary">
               <Link href={`/panel/nieruchomosci/${property.id}/edytuj`}>
                 <Pencil className="h-4 w-4" aria-hidden />
-                Edytuj
+                {d.panel.common.edit}
               </Link>
             </Button>
 
@@ -229,16 +238,16 @@ export default async function PropertyDetailPage({ params }: Params) {
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
               <p className="text-[13px] font-semibold text-fg">
-                Chcesz wynająć całą nieruchomość jednej osobie?
+                {t.wholeLetTitle}
               </p>
               <p className="mt-0.5 text-xs text-muted">
-                Umowa na całość zamiast osobnych umów na pokoje.
+                {t.wholeLetLead}
               </p>
             </div>
             <Button asChild size="sm" variant="secondary">
               <Link href={`/panel/umowy/nowa?propertyId=${property.id}`}>
                 <UserPlus className="h-4 w-4" aria-hidden />
-                Wynajmij w całości
+                {t.wholeLetButton}
               </Link>
             </Button>
           </CardContent>
@@ -254,87 +263,108 @@ export default async function PropertyDetailPage({ params }: Params) {
 
       {hasAccess ? (
         <DetailSection
-          title="Dostęp do lokalu"
+          title={t.access}
           icon={<KeyRound className="h-4 w-4 text-muted" aria-hidden />}
         >
-          <DetailItem label="Kod do domofonu" value={property.intercomCode} />
-          <DetailItem label="Godzina zdania lokalu" value={property.checkoutTime} />
-          <DetailItem label="Komórka lokatorska" value={property.storageUnit} />
-          <DetailItem label="Miejsce na rowery" value={property.bikeStorage} />
-          <DetailItem label="Śmietnik" value={property.wasteDisposal} />
+          <DetailItem label={t.intercom} value={property.intercomCode} />
+          <DetailItem label={t.checkoutTime} value={property.checkoutTime} />
+          <DetailItem label={t.storage} value={property.storageUnit} />
+          <DetailItem label={t.bikeStorage} value={property.bikeStorage} />
+          <DetailItem label={t.waste} value={property.wasteDisposal} />
         </DetailSection>
       ) : null}
 
       {hasManager ? (
         <DetailSection
-          title="Administracja budynku"
+          title={t.buildingManager}
           icon={<Building2 className="h-4 w-4 text-muted" aria-hidden />}
         >
-          <DetailItem label="Nazwa" value={property.buildingManagerName} />
-          <DetailItem label="Adres" value={property.buildingManagerAddress} />
-          <DetailItem label="Telefon" value={property.buildingManagerPhone} />
-          <DetailItem label="E-mail" value={property.buildingManagerEmail} />
+          <DetailItem label={t.name} value={property.buildingManagerName} />
+          <DetailItem label={t.address} value={property.buildingManagerAddress} />
+          <DetailItem label={t.phone} value={property.buildingManagerPhone} />
+          <DetailItem label={t.email} value={property.buildingManagerEmail} />
         </DetailSection>
       ) : null}
 
       {hasUtilities ? (
         <DetailSection
-          title="Ogrzewanie i internet"
+          title={t.utilities}
           icon={<Wifi className="h-4 w-4 text-muted" aria-hidden />}
         >
           <DetailItem
-            label="Ogrzewanie"
+            label={t.heating}
             value={property.heatingType ? heatingTypeLabels(d)[property.heatingType] : null}
           />
           <DetailItem
-            label="Prędkość łącza"
+            label={t.internetSpeed}
             value={property.internetSpeedMbps ? `${property.internetSpeedMbps} Mbit/s` : null}
           />
-          <DetailItem label="Dostawca internetu" value={property.internetProvider} />
-          <DetailItem label="Telefon do dostawcy" value={property.internetProviderPhone} />
-          <DetailItem label="Sieć Wi-Fi" value={property.wifiSsid} />
-          <DetailItem label="Hasło do Wi-Fi" value={property.wifiPassword} />
+          <DetailItem label={t.internetProvider} value={property.internetProvider} />
+          <DetailItem label={t.internetProviderPhone} value={property.internetProviderPhone} />
+          <DetailItem label={t.wifiSsid} value={property.wifiSsid} />
+          <DetailItem label={t.wifiPassword} value={property.wifiPassword} />
           <DateItem
-            label="Koniec umowy na internet"
+            label={t.internetContractEnd}
             date={property.internetContractEndsAt}
             now={now}
+            locale={locale}
+            overdueSuffix={t.overdue}
           />
         </DetailSection>
       ) : null}
 
       {hasPapers ? (
         <DetailSection
-          title="Przeglądy i dokumenty"
+          title={t.inspections}
           icon={<ClipboardCheck className="h-4 w-4 text-muted" aria-hidden />}
         >
-          <DetailItem label="Księga wieczysta" value={property.landRegistryNumber} />
+          <DetailItem label={t.landRegistry} value={property.landRegistryNumber} />
           <DetailItem
-            label="Wskaźnik EP"
+            label={t.energyIndex}
             value={
               property.energyCertificateEp
-                ? `${property.energyCertificateEp.toFixed(2).replace(".", ",")} kWh/(m²·rok)`
+                ? fill(t.energyUnit, {
+                    value:
+                      locale === "pl"
+                        ? property.energyCertificateEp.toFixed(2).replace(".", ",")
+                        : property.energyCertificateEp.toFixed(2),
+                  })
                 : null
             }
           />
           <DateItem
-            label="Ważność świadectwa"
+            label={t.certificateValidUntil}
             date={property.energyCertificateExpiresAt}
             now={now}
+            locale={locale}
+            overdueSuffix={t.overdue}
           />
-          <DetailItem label="Model pieca" value={property.boilerModel} />
-          <DateItem label="Przegląd pieca" date={property.boilerInspectionAt} now={now} />
-          <DateItem label="Przegląd techniczny" date={property.technicalInspectionAt} now={now} />
+          <DetailItem label={t.boilerModel} value={property.boilerModel} />
+          <DateItem
+            label={t.boilerInspection}
+            date={property.boilerInspectionAt}
+            now={now}
+            locale={locale}
+            overdueSuffix={t.overdue}
+          />
+          <DateItem
+            label={t.technicalInspection}
+            date={property.technicalInspectionAt}
+            now={now}
+            locale={locale}
+            overdueSuffix={t.overdue}
+          />
         </DetailSection>
       ) : null}
 
       {hasNeighbourhood ? (
         <DetailSection
-          title="Okolica i dojazd"
+          title={t.area}
           icon={<TreePine className="h-4 w-4 text-muted" aria-hidden />}
         >
           {property.gpsCoordinates ? (
             <div className="flex min-w-0 flex-col gap-0.5">
-              <p className="text-xs text-muted">Współrzędne GPS</p>
+              <p className="text-xs text-muted">{t.gps}</p>
               {/* Link do map, bo same liczby są tu bezużyteczne — z karty
                   wychodzi się prosto do nawigacji. */}
               <a
@@ -347,9 +377,9 @@ export default async function PropertyDetailPage({ params }: Params) {
               </a>
             </div>
           ) : null}
-          <DetailItem label="Linie komunikacji" value={property.transitLines} />
+          <DetailItem label={t.transitLines} value={property.transitLines} />
           <DetailItem
-            label="Do przystanku"
+            label={t.toTransit}
             value={
               property.transitStopDistanceM !== null
                 ? formatDistance(property.transitStopDistanceM)
@@ -357,21 +387,21 @@ export default async function PropertyDetailPage({ params }: Params) {
             }
           />
           <DetailItem
-            label="Do uczelni"
+            label={t.toUniversity}
             value={
               property.universityDistanceM !== null
                 ? formatDistance(property.universityDistanceM)
                 : null
             }
           />
-          <DetailItem label="Ważne punkty" value={property.nearbyPlaces} />
+          <DetailItem label={t.nearbyPlaces} value={property.nearbyPlaces} />
         </DetailSection>
       ) : null}
 
       {property.notes ? (
         <Card className="bg-surface-alt">
           <CardContent className="flex flex-col gap-1.5 p-4">
-            <p className="text-[13px] font-semibold text-fg">Notatki wewnętrzne</p>
+            <p className="text-[13px] font-semibold text-fg">{t.notes}</p>
             <p className="text-sm leading-relaxed whitespace-pre-line text-muted">
               {property.notes}
             </p>
@@ -424,7 +454,19 @@ function DetailItem({ label, value }: { label: string; value: string | null }) {
  * a z samej daty w tabeli nikt tego nie wyłapie. Dlatego minione terminy
  * dostają kolor i podpis, a nie tylko inny format.
  */
-function DateItem({ label, date, now }: { label: string; date: Date | null; now: Date }) {
+function DateItem({
+  label,
+  date,
+  now,
+  locale,
+  overdueSuffix,
+}: {
+  label: string;
+  date: Date | null;
+  now: Date;
+  locale: Locale;
+  overdueSuffix: string;
+}) {
   if (!date) return null;
   const overdue = date < now;
 
@@ -432,8 +474,8 @@ function DateItem({ label, date, now }: { label: string; date: Date | null; now:
     <div className="flex min-w-0 flex-col gap-0.5">
       <p className="text-xs text-muted">{label}</p>
       <p className={`text-sm ${overdue ? "font-medium text-bad" : "text-fg"}`}>
-        {dateFormat.format(date)}
-        {overdue ? " · termin minął" : ""}
+        {formatDateIn(date, locale, "short")}
+        {overdue ? overdueSuffix : ""}
       </p>
     </div>
   );

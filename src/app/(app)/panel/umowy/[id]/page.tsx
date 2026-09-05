@@ -17,7 +17,8 @@ import { getLease } from "@/lib/leases/service";
 import { INVOICE_STATUS_META, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { BillingStartField } from "@/components/panel/leases/billing-start-field";
 import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
-import { formatPLN } from "@/lib/money";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { formatDate } from "@/lib/utils";
@@ -27,7 +28,7 @@ import {
   utilitiesModeIncomplete,
   utilitiesModeLabels,
 } from "@/lib/validations/lease";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -38,10 +39,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: lease?.number ? `Umowa ${lease.number}` : "Umowa" };
 }
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
 
 export default async function LeaseDetailPage({ params }: Params) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.leasesPage.detail;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -66,14 +67,14 @@ export default async function LeaseDetailPage({ params }: Params) {
           className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Umowy
+          {d.panel.leasesPage.title}
         </Link>
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="r-display text-[26px] leading-tight text-fg">
-                {lease.number ? `Umowa ${lease.number}` : "Umowa najmu"}
+                {lease.number ? fill(t.numbered, { number: lease.number }) : t.untitled}
               </h1>
               <Badge tone={LEASE_STATUS_TONE[lease.status]}>
                 {leaseStatusLabels(d)[lease.status]}
@@ -82,8 +83,8 @@ export default async function LeaseDetailPage({ params }: Params) {
 
             <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
               <span>
-                {dateFormat.format(lease.startDate)} –{" "}
-                {lease.endDate ? dateFormat.format(lease.endDate) : "czas nieokreślony"}
+                {formatDateIn(lease.startDate, locale, "short")} –{" "}
+                {lease.endDate ? formatDateIn(lease.endDate, locale, "short") : t.openEnded}
               </span>
               {/* Odliczanie na karcie umowy, nie tylko przy najemcy: to tutaj
                   właściciel trafia, gdy ma zdecydować o przedłużeniu. */}
@@ -130,7 +131,7 @@ export default async function LeaseDetailPage({ params }: Params) {
           <CardContent className="flex flex-col gap-2 p-4">
             <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
               <Home className="h-3.5 w-3.5 text-muted" aria-hidden />
-              Przedmiot najmu
+              {t.subject}
             </p>
             <Link
               href={`/panel/nieruchomosci/${lease.property.id}`}
@@ -141,7 +142,7 @@ export default async function LeaseDetailPage({ params }: Params) {
             </Link>
             {lease.room ? (
               <Badge tone="accent" className="w-fit">
-                Najem pojedynczego pokoju
+                {t.singleRoom}
               </Badge>
             ) : null}
             <p className="text-xs text-muted">
@@ -160,7 +161,7 @@ export default async function LeaseDetailPage({ params }: Params) {
           <CardContent className="flex flex-col gap-2 p-4">
             <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
               <User className="h-3.5 w-3.5 text-muted" aria-hidden />
-              {lease.tenants.length > 1 ? "Najemcy" : "Najemca"}
+              {lease.tenants.length > 1 ? t.tenants : t.tenant}
             </p>
             {lease.tenants.map(({ tenant, isPrimary }) => (
               <div key={tenant.id} className="flex items-center gap-2">
@@ -171,7 +172,7 @@ export default async function LeaseDetailPage({ params }: Params) {
                   {tenant.firstName} {tenant.lastName}
                 </Link>
                 {isPrimary && lease.tenants.length > 1 ? (
-                  <Badge tone="accent">główny</Badge>
+                  <Badge tone="accent">{t.primary}</Badge>
                 ) : null}
               </div>
             ))}
@@ -181,21 +182,31 @@ export default async function LeaseDetailPage({ params }: Params) {
 
       <Card>
         <CardContent className="flex flex-col gap-3 p-4">
-          <p className="text-[13px] font-semibold text-fg">Warunki finansowe</p>
+          <p className="text-[13px] font-semibold text-fg">{t.terms}</p>
 
           <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">
-            <Term label="Czynsz miesięczny" value={formatPLN(lease.rentGrosze)} />
-            <Term label="Słownie" value={groszeToPolishWords(lease.rentGrosze)} />
-            <Term label="Kaucja" value={formatPLN(lease.depositGrosze)} />
-            <Term label="Rozliczenie mediów" value={utilitiesModeLabels(d)[lease.utilitiesMode]} />
+            <Term label={t.rent} value={formatMoney(lease.rentGrosze, locale)} />
+            {/* Kwota słownie jest wymogiem polskiej umowy; w wersji, która jej
+                nie zna, słownik zostawia pusty tekst i wiersz nie powstaje. */}
+            {t.inWords ? (
+              <Term label={t.inWords} value={groszeToPolishWords(lease.rentGrosze)} />
+            ) : null}
+            <Term label={t.deposit} value={formatMoney(lease.depositGrosze, locale)} />
+            <Term label={t.utilities} value={utilitiesModeLabels(d)[lease.utilitiesMode]} />
             {lease.utilitiesAdvanceGrosze > 0 ? (
               <Term
-                label="Zaliczka na media"
-                value={`${formatPLN(lease.utilitiesAdvanceGrosze)} / mies.`}
+                label={t.utilitiesAdvance}
+                value={`${formatMoney(lease.utilitiesAdvanceGrosze)} / mies.`}
               />
             ) : null}
-            <Term label="Dzień naliczania" value={`${lease.billingDay}. dzień miesiąca`} />
-            <Term label="Termin płatności" value={`${lease.paymentTermDays} dni`} />
+            <Term
+              label={t.billingDay}
+              value={fill(t.billingDayValue, { day: lease.billingDay })}
+            />
+            <Term
+              label={t.paymentTerm}
+              value={fill(t.paymentTermValue, { days: lease.paymentTermDays })}
+            />
           </dl>
 
           <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4">
@@ -270,7 +281,7 @@ export default async function LeaseDetailPage({ params }: Params) {
                     </div>
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                     <p className="tabular w-24 text-right font-mono text-sm text-fg">
-                      {formatPLN(invoice.totalGrossGrosze)}
+                      {formatMoney(invoice.totalGrossGrosze)}
                     </p>
                   </Link>
                 );
@@ -283,7 +294,7 @@ export default async function LeaseDetailPage({ params }: Params) {
       {lease.notes ? (
         <Card className="bg-surface-alt">
           <CardContent className="flex flex-col gap-1.5 p-4">
-            <p className="text-[13px] font-semibold text-fg">Ustalenia dodatkowe</p>
+            <p className="text-[13px] font-semibold text-fg">{t.extras}</p>
             <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{lease.notes}</p>
           </CardContent>
         </Card>
@@ -297,7 +308,7 @@ export default async function LeaseDetailPage({ params }: Params) {
         <Card className="bg-bad-soft">
           <CardContent className="flex flex-col gap-1 p-4">
             <p className="text-[13px] font-semibold text-fg">
-              Umowa zakończona {dateFormat.format(lease.terminatedAt)}
+              Umowa zakończona {formatDateIn(lease.terminatedAt, locale, "short")}
             </p>
             {lease.terminationNote ? (
               <p className="text-sm text-fg/80">{lease.terminationNote}</p>
@@ -315,8 +326,8 @@ export default async function LeaseDetailPage({ params }: Params) {
           endpoint="/api/leases"
           id={lease.id}
           archived={lease.archivedAt !== null}
-          label="umowę"
-          hint="Zniknie z listy umów. Faktury, wpłaty i cała historia rozliczeń zostaną nietknięte."
+          label={t.archiveLabel}
+          hint={t.archiveHint}
         />
       ) : null}
     </div>
