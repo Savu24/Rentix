@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { fill } from "@/lib/i18n/format";
 import type { Locale } from "@/lib/i18n/config";
-import type { Dictionary } from "@/lib/i18n/types";
+import type { ClientDictionary } from "@/lib/i18n/types";
 import { parseMoney } from "@/lib/money";
 
 import { emailSchema } from "./auth";
@@ -24,8 +24,8 @@ import { emailSchema } from "./auth";
  */
 export type ValidationContext = {
   locale: Locale;
-  /** Cały słownik aktywnej wersji — schematy sięgają po sekcje, których potrzebują. */
-  d: Dictionary;
+  /** Słownik aktywnej wersji — schematy sięgają po sekcje, których potrzebują. */
+  d: ClientDictionary;
 };
 
 /** Skrót do komunikatów walidacji, żeby nie powtarzać ścieżki w każdym bloku. */

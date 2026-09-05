@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo } from "react";
 
 import { DEFAULT_LOCALE, type Locale } from "./config";
 import { formatDateIn, pluralize } from "./format";
-import type { Dictionary } from "./types";
+import type { ClientDictionary } from "./types";
 
 /**
  * Teksty dla komponentów klienckich.
@@ -17,7 +17,7 @@ import type { Dictionary } from "./types";
 
 type I18nValue = {
   locale: Locale;
-  d: Dictionary;
+  d: ClientDictionary;
   /** Odmiana przez liczbę w bieżącym języku. */
   plural: (count: number, forms: readonly string[]) => string;
   /** Data w zapisie bieżącego kraju. */
@@ -32,7 +32,7 @@ export function I18nProvider({
   children,
 }: {
   locale: Locale;
-  dictionary: Dictionary;
+  dictionary: ClientDictionary;
   children: React.ReactNode;
 }) {
   const value = useMemo<I18nValue>(
@@ -74,7 +74,7 @@ export function useLocale(): Locale {
  * `useMemo`, bo trafia do `zodResolver` — nowy obiekt przy każdym renderze
  * przebudowywałby resolver formularza i gubił stan pól.
  */
-export function useValidationContext(): { locale: Locale; d: Dictionary } {
+export function useValidationContext(): { locale: Locale; d: ClientDictionary } {
   const { locale, d } = useI18n();
   return useMemo(() => ({ locale, d }), [locale, d]);
 }

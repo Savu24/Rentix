@@ -34,7 +34,7 @@ export type TemplateVariable = {
 };
 
 /** Lista do podpowiedzi pod polem edytora. Kolejność jak w słowniku. */
-export function templateVariables(d: Dictionary): TemplateVariable[] {
+export function templateVariables(d: Pick<Dictionary, "emails">): TemplateVariable[] {
   return Object.entries(d.emails.variables).map(([slot, variable]) => ({
     slot: slot as VariableSlot,
     ...variable,
@@ -52,7 +52,7 @@ export type TemplateValues = Record<string, string>;
 const PLACEHOLDER = /\{\{\s*([a-z_]+)\s*\}\}/g;
 
 /** Wartości do podglądu, gdy konto jest świeże i nie ma jeszcze żadnej faktury. */
-export function sampleValues(d: Dictionary): TemplateValues {
+export function sampleValues(d: Pick<Dictionary, "emails">): TemplateValues {
   return Object.fromEntries(
     Object.values(d.emails.variables).map((variable) => [variable.name, variable.example]),
   );
@@ -60,7 +60,7 @@ export function sampleValues(d: Dictionary): TemplateValues {
 
 /** Wartości ze slotów na nazwy znaczników obowiązujące w tej wersji krajowej. */
 export function valuesForLocale(
-  d: Dictionary,
+  d: Pick<Dictionary, "emails">,
   bySlot: Partial<Record<VariableSlot, string>>,
 ): TemplateValues {
   const values: TemplateValues = {};
@@ -96,7 +96,7 @@ export function renderTemplateText(template: string, values: TemplateValues): st
  * literówką w szablonie brytyjskim i odwrotnie, a wysłana wiadomość miałaby
  * w tym miejscu dziurę.
  */
-export function unknownVariables(template: string, d: Dictionary): string[] {
+export function unknownVariables(template: string, d: Pick<Dictionary, "emails">): string[] {
   const known = new Set(Object.values(d.emails.variables).map((variable) => variable.name));
   const found = new Set<string>();
 

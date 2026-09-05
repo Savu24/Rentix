@@ -22,11 +22,11 @@ const propertyTypes = Object.values(PropertyType) as [PropertyType, ...PropertyT
 const rentalStatuses = Object.values(RentalStatus) as [RentalStatus, ...RentalStatus[]];
 const heatingTypes = Object.values(HeatingType) as [HeatingType, ...HeatingType[]];
 
-export function propertyTypeLabels(d: Dictionary): Record<PropertyType, string> {
+export function propertyTypeLabels(d: Pick<Dictionary, "panel">): Record<PropertyType, string> {
   return d.panel.properties.type;
 }
 
-export function rentalStatusLabels(d: Dictionary): Record<RentalStatus, string> {
+export function rentalStatusLabels(d: Pick<Dictionary, "panel">): Record<RentalStatus, string> {
   return d.panel.properties.rentalStatus;
 }
 
@@ -45,7 +45,7 @@ export const RENTAL_STATUS_TONE: Record<RentalStatus, "good" | "warning" | "neut
   UNAVAILABLE: "neutral",
 };
 
-export function heatingTypeLabels(d: Dictionary): Record<HeatingType, string> {
+export function heatingTypeLabels(d: Pick<Dictionary, "panel">): Record<HeatingType, string> {
   return d.panel.properties.heating;
 }
 
@@ -299,6 +299,6 @@ export const propertyListQuerySchema = z.object({
 export type PropertyListQuery = z.output<typeof propertyListQuerySchema>;
 
 /** Domyślne nazwy pokoi przy zakładaniu: „Pokój 1" / „Room 1"… */
-export function defaultRoomName(index: number, d: Dictionary): string {
+export function defaultRoomName(index: number, d: Pick<Dictionary, "panel">): string {
   return fill(d.panel.properties.defaultRoomName, { number: index + 1 });
 }

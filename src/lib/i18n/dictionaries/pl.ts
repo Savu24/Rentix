@@ -384,6 +384,14 @@ export const pl = {
         PROFORMA: "Proforma",
         CHARGE: "Naliczenie",
       },
+      vat: {
+        ZW: "zw.",
+        NP: "np.",
+        RATE_0: "0%",
+        RATE_5: "5%",
+        RATE_8: "8%",
+        RATE_23: "23%",
+      },
       method: {
         TRANSFER: "Przelew",
         CASH: "Gotówka",
@@ -576,14 +584,6 @@ export const pl = {
         "Naliczenie ma charakter informacyjny. Wskazuje kwotę i termin płatności. Nie jest fakturą ani rachunkiem w rozumieniu przepisów o rachunkowości i nie stanowi podstawy do księgowania ani odliczenia podatku. Dokument księgowy wystawiamy na życzenie.",
       signedBy: "Wystawił",
       receivedBy: "Odebrał",
-    },
-    vat: {
-      ZW: "zw.",
-      NP: "np.",
-      RATE_0: "0%",
-      RATE_5: "5%",
-      RATE_8: "8%",
-      RATE_23: "23%",
     },
     numberPrefix: {
       BILL: "R",

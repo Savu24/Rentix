@@ -20,7 +20,7 @@ const invoiceStatuses = Object.values(InvoiceStatus) as [InvoiceStatus, ...Invoi
 const paymentMethods = Object.values(PaymentMethod) as [PaymentMethod, ...PaymentMethod[]];
 const vatRates = Object.values(VatRate) as [VatRate, ...VatRate[]];
 
-export function invoiceKindLabels(d: Dictionary): Record<InvoiceKind, string> {
+export function invoiceKindLabels(d: Pick<Dictionary, "panel">): Record<InvoiceKind, string> {
   return d.panel.invoices.kind;
 }
 
@@ -35,7 +35,7 @@ export function isAccountingDocument(kind: InvoiceKind): boolean {
   return kind !== "CHARGE";
 }
 
-export function paymentMethodLabels(d: Dictionary): Record<PaymentMethod, string> {
+export function paymentMethodLabels(d: Pick<Dictionary, "panel">): Record<PaymentMethod, string> {
   return d.panel.invoices.method;
 }
 

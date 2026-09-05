@@ -25,7 +25,7 @@ const expenseCategories = Object.values(ExpenseCategory) as [
  * „czynsz do wspólnoty" odpowiada brytyjskiemu service charge przy leasehold,
  * a „podatek od nieruchomości" — council tax, który płaci zwykle najemca.
  */
-export function expenseCategoryLabels(d: Dictionary): Record<ExpenseCategory, string> {
+export function expenseCategoryLabels(d: Pick<Dictionary, "panel">): Record<ExpenseCategory, string> {
   return d.panel.expenses.category;
 }
 
@@ -59,7 +59,7 @@ const expenseRecurrences = Object.values(ExpenseRecurrence) as [
 ];
 
 /** Etykieta odpowiada na pytanie „co ile ponoszę ten koszt?". */
-export function expenseRecurrenceLabels(d: Dictionary): Record<ExpenseRecurrence, string> {
+export function expenseRecurrenceLabels(d: Pick<Dictionary, "panel">): Record<ExpenseRecurrence, string> {
   return d.panel.expenses.recurrence;
 }
 
@@ -79,7 +79,7 @@ export const EXPENSE_RECURRENCE_MAX_DAYS = 3650;
 export function describeRecurrence(
   recurrence: ExpenseRecurrence,
   everyDays: number | null,
-  d: Dictionary,
+  d: Pick<Dictionary, "panel">,
 ): string {
   const labels = expenseRecurrenceLabels(d);
   if (recurrence !== "CUSTOM") return labels[recurrence].toLowerCase();

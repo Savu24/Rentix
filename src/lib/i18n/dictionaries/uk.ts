@@ -422,6 +422,18 @@ export const uk: Dictionary = {
         PROFORMA: "Pro forma",
         CHARGE: "Charge",
       },
+      vat: {
+        /*
+          Najem mieszkaniowy jest w Wielkiej Brytanii zwolniony z VAT, więc
+          „Exempt" to stan domyślny. „Outside scope" odpowiada polskiemu „np.".
+        */
+        ZW: "Exempt",
+        NP: "Outside scope",
+        RATE_0: "0%",
+        RATE_5: "5%",
+        RATE_8: "8%",
+        RATE_23: "23%",
+      },
       method: {
         TRANSFER: "Bank transfer",
         CASH: "Cash",
@@ -662,18 +674,6 @@ export const uk: Dictionary = {
       /* Rubryki podpisu to polska konwencja papierowa — na brytyjskim rachunku ich nie ma. */
       signedBy: "",
       receivedBy: "",
-    },
-    vat: {
-      /*
-        Najem mieszkaniowy jest w Wielkiej Brytanii zwolniony z VAT, więc
-        „Exempt" to stan domyślny. „Outside scope" odpowiada polskiemu „np.".
-      */
-      ZW: "Exempt",
-      NP: "Outside scope",
-      RATE_0: "0%",
-      RATE_5: "5%",
-      RATE_8: "8%",
-      RATE_23: "23%",
     },
     numberPrefix: {
       BILL: "INV",

@@ -17,7 +17,7 @@ import {
 const leaseStatuses = Object.values(LeaseStatus) as [LeaseStatus, ...LeaseStatus[]];
 const utilitiesModes = Object.values(UtilitiesMode) as [UtilitiesMode, ...UtilitiesMode[]];
 
-export function leaseStatusLabels(d: Dictionary): Record<LeaseStatus, string> {
+export function leaseStatusLabels(d: Pick<Dictionary, "panel">): Record<LeaseStatus, string> {
   return d.panel.leases.status;
 }
 
@@ -41,11 +41,11 @@ export const LEASE_SETTABLE_STATUSES = ["DRAFT", "RESERVED", "ACTIVE"] as const;
 
 export type LeaseSettableStatus = (typeof LEASE_SETTABLE_STATUSES)[number];
 
-export function utilitiesModeLabels(d: Dictionary): Record<UtilitiesMode, string> {
+export function utilitiesModeLabels(d: Pick<Dictionary, "panel">): Record<UtilitiesMode, string> {
   return d.panel.leases.utilitiesMode;
 }
 
-export function utilitiesModeHints(d: Dictionary): Record<UtilitiesMode, string> {
+export function utilitiesModeHints(d: Pick<Dictionary, "panel">): Record<UtilitiesMode, string> {
   return d.panel.leases.utilitiesHint;
 }
 
@@ -57,7 +57,7 @@ export function utilitiesModeHints(d: Dictionary): Record<UtilitiesMode, string>
  * ostrzeżenia przechodzi niezauważone. Zamiast ukrywać tryb przed użytkownikiem
  * (są umowy, które faktycznie tak działają), mówimy wprost, czego zabraknie.
  */
-export function utilitiesModeIncomplete(d: Dictionary): Partial<Record<UtilitiesMode, string>> {
+export function utilitiesModeIncomplete(d: Pick<Dictionary, "panel">): Partial<Record<UtilitiesMode, string>> {
   return d.panel.leases.utilitiesIncomplete;
 }
 

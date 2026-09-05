@@ -2,7 +2,13 @@ import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
 
 import { apiError } from "@/lib/api/response";
-import { getDictionary, localeContext, type Dictionary, type Locale } from "@/lib/i18n";
+import {
+  getDictionary,
+  localeContext,
+  type ClientDictionary,
+  type Dictionary,
+  type Locale,
+} from "@/lib/i18n";
 import { organizationLocale, requestLocale } from "@/lib/i18n/server";
 
 import { auth } from "./index";
@@ -102,8 +108,8 @@ export type ApiOwnerContext = {
   /** Kraj konta — decyduje o języku odpowiedzi i o regułach walidacji. */
   locale: Locale;
   d: Dictionary;
-  /** Gotowy kontekst do schematów walidacji. */
-  v: { locale: Locale; d: Dictionary };
+  /** Gotowy kontekst do schematów walidacji — sekcje, po które sięgają schematy. */
+  v: { locale: Locale; d: ClientDictionary };
 };
 
 export async function requireApiOwner(): Promise<

@@ -111,7 +111,7 @@ describe("teksty dokumentu", () => {
     expect(t.seller).toBe("From");
     expect(t.buyer).toBe("Bill to");
     expect(t.taxIdLabel).not.toContain("NIP");
-    expect(getDictionary("uk").documents.vat.ZW).toBe("Exempt");
+    expect(getDictionary("uk").panel.invoices.vat.ZW).toBe("Exempt");
   });
 });
 

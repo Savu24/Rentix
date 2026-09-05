@@ -17,7 +17,7 @@ import { formatPLN } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getTenantPortal } from "@/lib/tenants/portal";
 import { leaseStatusLabels, utilitiesModeLabels } from "@/lib/validations/lease";
-import { getDictionary } from "@/lib/i18n";
+import { clientDictionary, getDictionary } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
 import { tenantPortalLocale } from "@/lib/panel/dictionary";
 
@@ -54,7 +54,7 @@ export default async function TenantPortalPage() {
   const d = getDictionary(locale);
 
   return (
-    <I18nProvider locale={locale} dictionary={d}>
+    <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
     <div className="min-h-dvh bg-bg">
       <header className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
         <Logo size="sm" />

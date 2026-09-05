@@ -20,11 +20,11 @@ const tenantStatuses = Object.values(TenantStatus) as [TenantStatus, ...TenantSt
 const legalForms = Object.values(TenantLegalForm) as [TenantLegalForm, ...TenantLegalForm[]];
 const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind[]];
 
-export function tenantDocumentKindHints(d: Dictionary): Partial<Record<InvoiceKind, string>> {
+export function tenantDocumentKindHints(d: Pick<Dictionary, "panel">): Partial<Record<InvoiceKind, string>> {
   return d.panel.tenants.documentKindHint;
 }
 
-export function tenantStatusLabels(d: Dictionary): Record<TenantStatus, string> {
+export function tenantStatusLabels(d: Pick<Dictionary, "panel">): Record<TenantStatus, string> {
   return d.panel.tenants.status;
 }
 
@@ -34,7 +34,7 @@ export const TENANT_STATUS_TONE: Record<TenantStatus, "neutral" | "good" | "warn
   FORMER: "neutral",
 };
 
-export function tenantLegalFormLabels(d: Dictionary): Record<TenantLegalForm, string> {
+export function tenantLegalFormLabels(d: Pick<Dictionary, "panel">): Record<TenantLegalForm, string> {
   return d.panel.tenants.legalForm;
 }
 
@@ -204,7 +204,7 @@ export const tenantUpdateSchema = (c: ValidationContext) => tenantFormSchema(c).
  * na pytania zadawane całej liście naraz: kto gdzie mieszka (adres), kto zalega
  * (saldo) i na jakim etapie jest jego umowa.
  */
-export function tenantSortLabels(d: Dictionary) {
+export function tenantSortLabels(d: Pick<Dictionary, "panel">) {
   return d.panel.tenants.sort;
 }
 

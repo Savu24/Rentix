@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { env } from "@/lib/env";
-import { getDictionary, LOCALE_META } from "@/lib/i18n";
+import { clientDictionary, getDictionary, LOCALE_META } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
 import { requestLocale } from "@/lib/i18n/server";
 import { isTheme, THEME_COOKIE, themeInitScript, type Theme } from "@/lib/theme";
@@ -119,7 +119,7 @@ export default async function RootLayout({
       <body
         className={`${inter.variable} ${bricolage.variable} ${robotoMono.variable} font-sans antialiased`}
       >
-        <I18nProvider locale={locale} dictionary={getDictionary(locale)}>
+        <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
           <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>
         </I18nProvider>
       </body>

@@ -3,7 +3,7 @@ import { PanelLocaleSync } from "@/components/panel/panel-locale";
 import { Sidebar } from "@/components/panel/sidebar";
 import { Topbar } from "@/components/panel/topbar";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { getDictionary } from "@/lib/i18n";
+import { clientDictionary, getDictionary } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
 import { organizationLocale } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +40,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const userName = session.user.name ?? dictionary.panel.shell.fallbackAccountName;
 
   return (
-    <I18nProvider locale={locale} dictionary={dictionary}>
+    <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
       <PanelLocaleSync locale={locale} />
 
       <div className="flex min-h-dvh bg-bg">

@@ -174,7 +174,7 @@ export function buildRentInvoiceLines(
    * Teksty pozycji. Trafiają na dokument i zostają w bazie na zawsze, więc
    * muszą powstać w języku wynajmującego, a nie tego, kto uruchomił naliczanie.
    */
-  d: Dictionary,
+  d: Pick<Dictionary, "billing">,
   locale: Locale = DEFAULT_LOCALE,
   options: BillingLinesOptions = {},
 ): InvoiceLineInput[] {

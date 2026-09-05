@@ -450,7 +450,7 @@ function PaymentBlock({
 function InvoicePage({ data }: { data: InvoicePdfData }) {
   const dictionary = getDictionary(data.locale);
   const t = dictionary.documents.invoice;
-  const vatLabels = dictionary.documents.vat;
+  const vatLabels = dictionary.panel.invoices.vat;
 
   const money = (grosze: number) => formatMoney(grosze, data.locale);
   const date = (value: Date | null | undefined) =>

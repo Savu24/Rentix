@@ -25,8 +25,8 @@ export const VAT_PERCENT: Record<VatRate, number> = {
  * stany nazywają się „Exempt" i „Outside scope" — skrótu z polskiej ustawy
  * nikt tam nie odczyta.
  */
-export function vatLabels(d: Dictionary): Record<VatRate, string> {
-  return d.documents.vat;
+export function vatLabels(d: Pick<Dictionary, "panel">): Record<VatRate, string> {
+  return d.panel.invoices.vat;
 }
 
 /**
