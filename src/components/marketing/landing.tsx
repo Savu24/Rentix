@@ -2,7 +2,6 @@ import { BarChart3, FileText, Wallet, Wrench } from "lucide-react";
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
-import { LocaleSwitcher } from "@/components/i18n/locale-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,7 +58,6 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <LocaleSwitcher className="hidden sm:inline-flex" />
             <ThemeToggle />
             <Button asChild size="sm">
               <Link href={routes.login}>{t.nav.login}</Link>
@@ -237,12 +235,7 @@ export function Landing({ locale }: { locale: Locale }) {
       <footer className="border-t border-border px-5 py-8 sm:px-12">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
           <Logo size="sm" />
-          <div className="flex items-center gap-4">
-            {/* Na telefonie przełącznik jest tylko tutaj — w pasku na górze
-                zjadłby miejsce przyciskowi logowania. */}
-            <LocaleSwitcher className="sm:hidden" />
-            <p className="text-[13px] text-muted">{t.footer.rights}</p>
-          </div>
+          <p className="text-[13px] text-muted">{t.footer.rights}</p>
         </div>
       </footer>
     </div>

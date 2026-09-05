@@ -33,7 +33,8 @@ import {
  * `src/lib/auth/session.ts`.
  *
  * Druga rola: wybór wersji krajowej. Kolejność jest stała i celowa —
- * ciasteczko, kraj z IP, `Accept-Language`, na końcu polski. Przekierowujemy
+ * kraj z IP, ostatnio oglądana wersja, `Accept-Language`, na końcu polski.
+ * Przekierowujemy
  * wyłącznie z gołego `rentixon.com` i z aliasów bez prefiksu; adres, który już
  * niesie kraj, zostaje nietknięty, żeby link wysłany komuś otwierał tę wersję,
  * którą nadawca widział.
@@ -41,19 +42,20 @@ import {
 const { auth } = NextAuth(authConfig);
 
 function preferredLocale(request: NextRequest): Locale {
-  // Własny wybór przed wszystkim: kto raz wszedł na `/uk`, wraca na `/uk`.
-  const stored = request.cookies.get(LOCALE_COOKIE)?.value;
-  if (isLocale(stored)) return stored;
-
   /*
-    Kraj przed językiem przeglądarki. Rozstrzyga przypadek, w którym oba
-    źródła mówią co innego: polski telefon w Wielkiej Brytanii dostaje wersję
-    brytyjską, bo najem, waluta i prawo idą za miejscem, a nie za językiem
-    systemu. Preferencję i tak da się zmienić jednym kliknięciem w
-    przełączniku — a ten zapisuje ciasteczko, czyli warstwę wyżej.
+    Kraj rozstrzyga jako pierwszy — także przed ciasteczkiem. Przełącznika nie
+    ma, więc ciasteczko nie zapisuje już niczyjego wyboru, tylko to, co ktoś
+    ostatnio oglądał: otwarcie przysłanego linku do `/uk` wystarczy, żeby je
+    ustawić. Gdyby biło kraj, Polak po jednym takim kliknięciu siedziałby
+    w wersji angielskiej przez rok i nie miałby czym wrócić.
   */
   const fromCountry = localeFromCountry(request.headers.get(COUNTRY_HEADER));
   if (fromCountry) return fromCountry;
+
+  // Kraju nie znamy (lokalnie, przez proxy, państwo bez własnej wersji) —
+  // wtedy ostatnio oglądana wersja mówi więcej niż język systemu.
+  const stored = request.cookies.get(LOCALE_COOKIE)?.value;
+  if (isLocale(stored)) return stored;
 
   return localeFromAcceptLanguage(request.headers.get("accept-language")) ?? DEFAULT_LOCALE;
 }
@@ -118,10 +120,9 @@ export default auth((req) => {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
 
   /*
-    Wersję zapamiętujemy dopiero, gdy odwiedzający naprawdę ogląda jej stronę —
-    nie przy zgadywaniu z nagłówka. Dzięki temu wejście z linku na `/uk`
-    przestawia preferencję, a samo wykrycie po języku przeglądarki nie zamyka
-    nikogo w wersji, której nie wybrał.
+    Zapamiętujemy wyłącznie wersję, której stronę ktoś naprawdę otworzył —
+    nie tę zgadniętą z nagłówka. Zapis służy już tylko za podpowiedź na
+    wypadek, gdy sieć brzegowa nie poda kraju; samego kraju nie przebije.
   */
   if (fromPath && req.cookies.get(LOCALE_COOKIE)?.value !== fromPath) {
     response.cookies.set(LOCALE_COOKIE, fromPath, {

@@ -17,8 +17,6 @@ import type { Dictionary } from "../types";
  */
 export const uk: Dictionary = {
   common: {
-    localeName: "United Kingdom",
-    switchLocaleLabel: "Country",
     homeAriaLabel: "RentixON, home",
     themeToLight: "Switch to light mode",
     themeToDark: "Switch to dark mode",

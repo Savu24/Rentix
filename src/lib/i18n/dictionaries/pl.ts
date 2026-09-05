@@ -8,9 +8,6 @@
  */
 export const pl = {
   common: {
-    /** Nazwa wersji w przełączniku — zawsze we własnym języku. */
-    localeName: "Polska",
-    switchLocaleLabel: "Wersja krajowa",
     homeAriaLabel: "RentixON, strona główna",
     themeToLight: "Włącz tryb jasny",
     themeToDark: "Włącz tryb ciemny",

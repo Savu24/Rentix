@@ -34,12 +34,12 @@ export async function requestLocale(): Promise<Locale> {
   if (isLocale(fromMiddleware)) return fromMiddleware;
 
   // Zapasowo, gdy middleware nie objął trasy (np. wywołanie z testu).
-  const stored = (await cookies()).get(LOCALE_COOKIE)?.value;
-  if (isLocale(stored)) return stored;
-
-  // Ta sama kolejność co w middlewarze: kraj przed językiem przeglądarki.
+  // Kolejność ta sama co tam: kraj, potem ostatnio oglądana wersja.
   const fromCountry = localeFromCountry((await headers()).get(COUNTRY_HEADER));
   if (fromCountry) return fromCountry;
+
+  const stored = (await cookies()).get(LOCALE_COOKIE)?.value;
+  if (isLocale(stored)) return stored;
 
   const acceptLanguage = (await headers()).get("accept-language");
   return localeFromAcceptLanguage(acceptLanguage) ?? DEFAULT_LOCALE;

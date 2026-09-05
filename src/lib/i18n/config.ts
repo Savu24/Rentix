@@ -18,7 +18,7 @@ export type Locale = (typeof LOCALES)[number];
 /** Wersja pokazywana, gdy nie da się rozpoznać kraju odwiedzającego. */
 export const DEFAULT_LOCALE: Locale = "pl";
 
-/** Ciasteczko z ostatnio oglądaną wersją — ma pierwszeństwo przed nagłówkiem. */
+/** Ciasteczko z ostatnio oglądaną wersją — używane, gdy nie znamy kraju. */
 export const LOCALE_COOKIE = "rentix_kraj";
 
 /**
@@ -80,10 +80,11 @@ export const LOCALE_META: Record<Locale, LocaleMeta> = {
 /**
  * Wybiera wersję po kraju, z którego przyszło żądanie.
  *
- * Kraj wyprzedza język przeglądarki: Polak z brytyjskim numerem telefonu
- * i brytyjskim najmem ma zobaczyć funty i tamtejsze prawo, choć jego telefon
- * mówi po polsku. Zwraca `null` dla krajów, których nie obsługujemy — wtedy
- * pytanie wraca do `Accept-Language`.
+ * Kraj wyprzedza i ciasteczko, i język przeglądarki: Polak z brytyjskim
+ * najmem ma zobaczyć funty i tamtejsze prawo, choć jego telefon mówi po
+ * polsku. Wersji nie wybiera się już ręcznie, więc to jedyny sygnał, który
+ * naprawdę mówi, gdzie ktoś jest. Zwraca `null` dla krajów, których nie
+ * obsługujemy — wtedy pytanie idzie dalej.
  */
 export function localeFromCountry(country: string | null | undefined): Locale | null {
   if (!country) return null;
