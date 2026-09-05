@@ -6,9 +6,9 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { plural } from "@/lib/utils";
 import { expenseCategoryLabels, EXPENSE_CATEGORY_ORDER } from "@/lib/validations/expense";
 import { useI18n } from "@/lib/i18n/client";
+import { fill, pluralize } from "@/lib/i18n/format";
 /** Filtry listy kosztów. Stan w URL-u, jak przy pozostałych listach. */
 export function ExpenseFilters({
   total,
@@ -19,7 +19,8 @@ export function ExpenseFilters({
   years: number[];
   properties: Array<{ id: string; name: string }>;
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
+  const t = d.panel.financePage.expenseFilters;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -79,20 +80,20 @@ export function ExpenseFilters({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Szukaj po opisie, dostawcy lub numerze dokumentu…"
-            aria-label="Szukaj kosztów"
+            placeholder={t.searchPlaceholder}
+            aria-label={t.searchLabel}
             className="pl-10"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:flex sm:w-auto">
           <Select
-            aria-label="Rok"
+            aria-label={t.year}
             value={searchParams.get("year") ?? "all"}
             onChange={(event) => setParam("year", event.target.value)}
             className="sm:w-32"
           >
-            <option value="all">Wszystkie lata</option>
+            <option value="all">{t.allYears}</option>
             {years.map((year) => (
               <option key={year} value={year}>
                 {year}
@@ -101,12 +102,12 @@ export function ExpenseFilters({
           </Select>
 
           <Select
-            aria-label="Kategoria"
+            aria-label={t.category}
             value={searchParams.get("category") ?? "all"}
             onChange={(event) => setParam("category", event.target.value)}
             className="sm:w-52"
           >
-            <option value="all">Wszystkie kategorie</option>
+            <option value="all">{t.allCategories}</option>
             {EXPENSE_CATEGORY_ORDER.map((value) => (
               <option key={value} value={value}>
                 {expenseCategoryLabels(d)[value]}
@@ -116,12 +117,12 @@ export function ExpenseFilters({
 
           {properties.length > 0 ? (
             <Select
-              aria-label="Nieruchomość"
+              aria-label={t.property}
               value={searchParams.get("propertyId") ?? "all"}
               onChange={(event) => setParam("propertyId", event.target.value)}
               className="sm:w-52"
             >
-              <option value="all">Wszystkie nieruchomości</option>
+              <option value="all">{t.allProperties}</option>
               {properties.map((property) => (
                 <option key={property.id} value={property.id}>
                   {property.name}
@@ -134,7 +135,7 @@ export function ExpenseFilters({
 
       <div className="flex min-h-5 items-center gap-3 text-xs text-muted">
         <span aria-live="polite">
-          {isPending ? "Filtrowanie…" : `${total} ${plural(total, ["koszt", "koszty", "kosztów"])}`}
+          {isPending ? t.filtering : fill(pluralize(locale, total, t.counted), { count: total })}
         </span>
 
         {hasFilters ? (
@@ -147,7 +148,7 @@ export function ExpenseFilters({
             className="inline-flex items-center gap-1 rounded-btn font-medium text-accent hover:underline"
           >
             <X className="h-3 w-3" aria-hidden />
-            Wyczyść filtry
+            {t.clear}
           </button>
         ) : null}
       </div>

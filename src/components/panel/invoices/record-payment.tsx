@@ -30,6 +30,7 @@ export function RecordPayment({
   remainingGrosze: number;
 }) {
   const { d } = useI18n();
+  const t = d.panel.financePage.payment;
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -67,7 +68,7 @@ export function RecordPayment({
     return (
       <Button size="sm" onClick={() => setOpen(true)}>
         <Banknote className="h-4 w-4" aria-hidden />
-        Zapisz wpłatę
+        {t.add}
       </Button>
     );
   }
@@ -75,12 +76,12 @@ export function RecordPayment({
   return (
     <Card className="border-accent/40">
       <CardContent className="flex flex-col gap-4 p-4">
-        <p className="text-sm font-semibold text-fg">Nowa wpłata</p>
+        <p className="text-sm font-semibold text-fg">{t.title}</p>
 
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <FormField id="payment-amount" label="Kwota">
+          <FormField id="payment-amount" label={t.amount}>
             <Input
               id="payment-amount"
               inputMode="decimal"
@@ -90,7 +91,7 @@ export function RecordPayment({
             />
           </FormField>
 
-          <FormField id="payment-date" label="Data wpłaty">
+          <FormField id="payment-date" label={t.paidAt}>
             <DateInput
               id="payment-date"
               value={paidAt}
@@ -99,7 +100,7 @@ export function RecordPayment({
             />
           </FormField>
 
-          <FormField id="payment-method" label="Forma">
+          <FormField id="payment-method" label={t.method}>
             <Select
               id="payment-method"
               value={method}
@@ -117,8 +118,8 @@ export function RecordPayment({
 
         <FormField
           id="payment-reference"
-          label="Tytuł przelewu"
-          hint="Opcjonalny. Ułatwia uzgodnienie z wyciągiem bankowym."
+          label={t.reference}
+          hint={t.referenceHint}
         >
           <Input
             id="payment-reference"
@@ -131,7 +132,7 @@ export function RecordPayment({
         <div className="flex flex-wrap gap-2.5">
           <Button size="sm" onClick={submit} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            Zapisz wpłatę
+            {t.add}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
             Anuluj
@@ -150,6 +151,8 @@ export function RecordPayment({
  * przycisk zmienia się w parę „na pewno / anuluj".
  */
 export function DeletePayment({ paymentId }: { paymentId: string }) {
+  const { d } = useI18n();
+  const t = d.panel.financePage.payment;
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -170,7 +173,7 @@ export function DeletePayment({ paymentId }: { paymentId: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        aria-label="Usuń wpłatę"
+        aria-label={t.remove}
         className="rounded-btn p-1.5 text-muted transition-colors hover:bg-surface-alt hover:text-bad"
       >
         <Trash2 className="h-3.5 w-3.5" aria-hidden />

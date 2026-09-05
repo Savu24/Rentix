@@ -7,6 +7,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 
 /**
  * Wysłanie dokumentu najemcy na żądanie.
@@ -26,6 +28,8 @@ export function SendInvoice({
   /** Odbiorca wisi na umowie — dokument jednorazowy nie ma go w ogole. */
   hasLease: boolean;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.financePage.send;
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -65,8 +69,7 @@ export function SendInvoice({
   if (!hasLease) {
     return (
       <Alert tone="warning">
-        Dokument nie jest powiązany z umową, więc nie wiadomo, komu go wysłać. Odbiorcę bierzemy
-        z umowy. Żeby wysyłać go najemcy, wystaw dokument na jego umowie.
+        {t.noLease}
       </Alert>
     );
   }
@@ -74,8 +77,7 @@ export function SendInvoice({
   if (!tenantEmail) {
     return (
       <Alert tone="warning">
-        Najemca nie ma adresu e-mail, więc dokument nie ma dokąd pójść, ani teraz, ani nocnym
-        przebiegiem. Uzupełnij adres w kartotece najemcy.
+        {t.noEmail}
       </Alert>
     );
   }
@@ -87,8 +89,7 @@ export function SendInvoice({
       {confirming ? (
         <>
           <p className="text-xs text-muted">
-            Wiadomość pójdzie na <strong>{tenantEmail}</strong>, z dokumentem PDF w załączniku.
-            Wysłanego e-maila nie da się cofnąć.
+            {fill(t.confirm, { email: tenantEmail })}
           </p>
           <div className="flex flex-wrap gap-2.5">
             <Button size="sm" onClick={send} disabled={busy}>
@@ -104,7 +105,7 @@ export function SendInvoice({
         <div>
           <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
             <Send className="h-4 w-4" aria-hidden />
-            Wyślij najemcy
+            {t.button}
           </Button>
         </div>
       )}

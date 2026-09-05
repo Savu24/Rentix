@@ -9,9 +9,10 @@ import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { plural } from "@/lib/utils";
 import { invoiceKindLabels } from "@/lib/validations/invoice";
 import { useI18n } from "@/lib/i18n/client";
+import { LOCALE_META } from "@/lib/i18n/config";
+import { fill, pluralize } from "@/lib/i18n/format";
 /**
  * Filtry listy dokumentów.
  *
@@ -39,7 +40,8 @@ const DETAILED_KEYS = [
 ] as const;
 
 export function InvoiceFilters({ total }: { total: number }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
+  const t = d.panel.financePage.invoiceFilters;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -108,14 +110,14 @@ export function InvoiceFilters({ total }: { total: number }) {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Szukaj po numerze, najemcy lub nieruchomości…"
-            aria-label="Szukaj dokumentów"
+            placeholder={t.searchPlaceholder}
+            aria-label={t.searchLabel}
             className="pl-10"
           />
         </div>
 
         <Select
-          aria-label="Status rozliczenia"
+          aria-label={t.statusLabel}
           value={searchParams.get("status") ?? "all"}
           onChange={(event) => setParam("status", event.target.value)}
           className="sm:w-48"
@@ -148,13 +150,13 @@ export function InvoiceFilters({ total }: { total: number }) {
 
       {detailed ? (
         <div className="grid gap-4 rounded-control border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <FormField id="f-kind" label="Rodzaj dokumentu">
+          <FormField id="f-kind" label={t.kind}>
             <Select
               id="f-kind"
               value={searchParams.get("kind") ?? "all"}
               onChange={(event) => setParam("kind", event.target.value)}
             >
-              <option value="all">Wszystkie</option>
+              <option value="all">{t.all}</option>
               {Object.entries(invoiceKindLabels(d)).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -163,7 +165,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             </Select>
           </FormField>
 
-          <FormField id="f-issuedFrom" label="Wystawiono od">
+          <FormField id="f-issuedFrom" label={t.issuedFrom}>
             <DateInput
               id="f-issuedFrom"
               value={searchParams.get("issuedFrom") ?? ""}
@@ -171,7 +173,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             />
           </FormField>
 
-          <FormField id="f-issuedTo" label="Wystawiono do">
+          <FormField id="f-issuedTo" label={t.issuedTo}>
             <DateInput
               id="f-issuedTo"
               value={searchParams.get("issuedTo") ?? ""}
@@ -179,7 +181,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             />
           </FormField>
 
-          <FormField id="f-dueFrom" label="Termin od">
+          <FormField id="f-dueFrom" label={t.dueFrom}>
             <DateInput
               id="f-dueFrom"
               value={searchParams.get("dueFrom") ?? ""}
@@ -187,7 +189,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             />
           </FormField>
 
-          <FormField id="f-dueTo" label="Termin do">
+          <FormField id="f-dueTo" label={t.dueTo}>
             <DateInput
               id="f-dueTo"
               value={searchParams.get("dueTo") ?? ""}
@@ -195,7 +197,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             />
           </FormField>
 
-          <FormField id="f-minAmount" label="Kwota od (zł)">
+          <FormField id="f-minAmount" label={fill(t.amountFrom, { currency: LOCALE_META[locale].currency })}>
             <Input
               id="f-minAmount"
               inputMode="decimal"
@@ -204,7 +206,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             />
           </FormField>
 
-          <FormField id="f-maxAmount" label="Kwota do (zł)">
+          <FormField id="f-maxAmount" label={fill(t.amountTo, { currency: LOCALE_META[locale].currency })}>
             <Input
               id="f-maxAmount"
               inputMode="decimal"
@@ -218,8 +220,10 @@ export function InvoiceFilters({ total }: { total: number }) {
       <div className="flex min-h-5 items-center gap-3 text-xs text-muted">
         <span aria-live="polite">
           {isPending
-            ? "Filtrowanie…"
-            : `${total} ${plural(total, ["dokument", "dokumenty", "dokumentów"])}`}
+            ? t.filtering
+            : fill(pluralize(locale, total, d.panel.financePage.documentNoun), {
+                count: total,
+              })}
         </span>
 
         {hasFilters ? (
@@ -232,7 +236,7 @@ export function InvoiceFilters({ total }: { total: number }) {
             className="inline-flex items-center gap-1 rounded-btn font-medium text-accent hover:underline"
           >
             <X className="h-3 w-3" aria-hidden />
-            Wyczyść filtry
+            {t.clear}
           </button>
         ) : null}
       </div>

@@ -72,6 +72,7 @@ export function ExpenseForm({
   onClose?: () => void;
 }) {
   const { d } = useI18n();
+  const t = d.panel.financePage.expenseForm;
   const v = useValidationContext();
   const router = useRouter();
   const isEdit = Boolean(expenseId);
@@ -150,7 +151,7 @@ export function ExpenseForm({
     return (
       <Button size="sm" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" aria-hidden />
-        Dodaj koszt
+        {t.add}
       </Button>
     );
   }
@@ -167,13 +168,13 @@ export function ExpenseForm({
   return (
     <Card className="w-full border-accent/40">
       <CardContent className="flex flex-col gap-4 p-4">
-        <p className="text-sm font-semibold text-fg">{isEdit ? "Edycja kosztu" : "Nowy koszt"}</p>
+        <p className="text-sm font-semibold text-fg">{isEdit ? t.editTitle : t.newTitle}</p>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id={fieldId("category")} label="Kategoria" error={errors.category?.message}>
+            <FormField id={fieldId("category")} label={t.category} error={errors.category?.message}>
               <Select
                 {...fieldAria(fieldId("category"), { error: errors.category?.message })}
                 disabled={isSubmitting}
@@ -187,7 +188,7 @@ export function ExpenseForm({
               </Select>
             </FormField>
 
-            <FormField id={fieldId("amount")} label="Kwota" error={errors.amountGrosze?.message}>
+            <FormField id={fieldId("amount")} label={t.amount} error={errors.amountGrosze?.message}>
               <Input
                 {...fieldAria(fieldId("amount"), { error: errors.amountGrosze?.message })}
                 inputMode="decimal"
@@ -198,7 +199,7 @@ export function ExpenseForm({
 
             <FormField
               id={fieldId("paidAt")}
-              label="Data poniesienia"
+              label={t.paidAt}
               error={errors.paidAt?.message}
             >
               <DateInput
@@ -211,9 +212,9 @@ export function ExpenseForm({
 
           <FormField
             id={fieldId("description")}
-            label="Opis"
+            label={t.description}
             error={errors.description?.message}
-            hint="Co to był za wydatek. Trafi na zestawienie."
+            hint={t.descriptionHint}
           >
             <Input
               {...fieldAria(fieldId("description"), { error: errors.description?.message })}
@@ -230,16 +231,16 @@ export function ExpenseForm({
             ) : (
               <FormField
                 id={fieldId("propertyId")}
-                label="Nieruchomość"
+                label={t.property}
                 error={errors.propertyId?.message}
-                hint="Puste = koszt ogólny konta."
+                hint={t.propertyHint}
               >
                 <Select
                   {...fieldAria(fieldId("propertyId"), { error: errors.propertyId?.message })}
                   disabled={isSubmitting}
                   {...register("propertyId")}
                 >
-                  <option value="">Koszt ogólny</option>
+                  <option value="">{t.generalCost}</option>
                   {properties.map((property) => (
                     <option key={property.id} value={property.id}>
                       {property.name}
@@ -249,7 +250,7 @@ export function ExpenseForm({
               </FormField>
             )}
 
-            <FormField id={fieldId("vendor")} label="Dostawca" error={errors.vendor?.message}>
+            <FormField id={fieldId("vendor")} label={t.vendor} error={errors.vendor?.message}>
               <Input
                 {...fieldAria(fieldId("vendor"), { error: errors.vendor?.message })}
                 disabled={isSubmitting}
@@ -259,7 +260,7 @@ export function ExpenseForm({
 
             <FormField
               id={fieldId("documentRef")}
-              label="Nr dokumentu"
+              label={t.documentRef}
               error={errors.documentRef?.message}
             >
               <Input
@@ -275,8 +276,8 @@ export function ExpenseForm({
               większości kosztów odpowiedź brzmi „nie”. */}
           <div className="flex flex-col gap-3 rounded-card border border-border bg-surface-alt p-3.5">
             <CheckboxField
-              label="Koszt cykliczny"
-              hint="Rentix sam dopisze kolejne pozycje, gdy minie ich termin."
+              label={t.recurring}
+              hint={t.recurringHint}
               disabled={isSubmitting}
               {...register("recurring")}
             />
@@ -285,7 +286,7 @@ export function ExpenseForm({
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormField
                   id={fieldId("recurrence")}
-                  label="Co ile ponosisz ten koszt"
+                  label={t.recurrence}
                   error={errors.recurrence?.message}
                 >
                   <Select
@@ -304,9 +305,9 @@ export function ExpenseForm({
                 {recurrence === "CUSTOM" ? (
                   <FormField
                     id={fieldId("recurrenceEveryDays")}
-                    label="Co ile dni"
+                    label={t.everyDays}
                     error={errors.recurrenceEveryDays?.message}
-                    hint="Np. 90 przy przeglądzie kwartalnym."
+                    hint={t.everyDaysHint}
                   >
                     <Input
                       {...fieldAria(fieldId("recurrenceEveryDays"), {
@@ -322,7 +323,7 @@ export function ExpenseForm({
             ) : null}
           </div>
 
-          <FormField id={fieldId("notes")} label="Notatka" error={errors.notes?.message}>
+          <FormField id={fieldId("notes")} label={t.notes} error={errors.notes?.message}>
             <Textarea
               {...fieldAria(fieldId("notes"), { error: errors.notes?.message })}
               disabled={isSubmitting}
@@ -333,7 +334,7 @@ export function ExpenseForm({
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {isEdit ? "Zapisz zmiany" : "Zapisz koszt"}
+              {isEdit ? d.panel.common.saveChanges : t.save}
             </Button>
             <Button
               type="button"
@@ -345,7 +346,7 @@ export function ExpenseForm({
               }}
               disabled={isSubmitting}
             >
-              {isEdit ? "Anuluj" : "Zamknij"}
+              {isEdit ? d.panel.common.cancel : t.close}
             </Button>
           </div>
         </form>
