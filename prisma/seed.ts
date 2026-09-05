@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../src/generated/prisma/client";
 import { calculateInvoiceTotals } from "../src/lib/invoices/totals";
+import { getDictionary } from "../src/lib/i18n";
 import {
   buildBillingPeriod,
   buildRentInvoiceLines,
@@ -241,7 +242,7 @@ async function main() {
       const period = buildBillingPeriod(spec.lease, year, month);
       if (!period) continue;
 
-      const lines = buildRentInvoiceLines(spec.lease, period, year, month);
+      const lines = buildRentInvoiceLines(spec.lease, period, year, month, getDictionary("pl"), "pl");
       const totals = calculateInvoiceTotals(lines);
 
       const issuedIndex = spec.months - 1 - back;

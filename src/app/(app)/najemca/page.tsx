@@ -17,7 +17,10 @@ import { formatPLN } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getTenantPortal } from "@/lib/tenants/portal";
 import { leaseStatusLabels, utilitiesModeLabels } from "@/lib/validations/lease";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { getDictionary } from "@/lib/i18n";
+import { I18nProvider } from "@/lib/i18n/client";
+import { tenantPortalLocale } from "@/lib/panel/dictionary";
+
 export const metadata: Metadata = { title: "Twój najem" };
 
 const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
@@ -35,7 +38,6 @@ const shortDate = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
  * zobaczyć.
  */
 export default async function TenantPortalPage() {
-  const d = await panelDictionary();
   const session = await requireSession(ROUTES.tenantDashboard);
 
   // Właściciel, który trafił tu z zakładki, wraca do swojego panelu.
@@ -43,7 +45,16 @@ export default async function TenantPortalPage() {
 
   const portal = await getTenantPortal(session.user.id);
 
+  /*
+    Język bierze się z organizacji wynajmującego, a nie z ciasteczka najemcy:
+    to jego najem, jego dokumenty i jego kwoty najemca tu ogląda, a wersję
+    krajową konta wybrał wynajmujący, nie odwiedzający.
+  */
+  const locale = tenantPortalLocale(portal?.landlord.locale);
+  const d = getDictionary(locale);
+
   return (
+    <I18nProvider locale={locale} dictionary={d}>
     <div className="min-h-dvh bg-bg">
       <header className="flex items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-6">
         <Logo size="sm" />
@@ -197,6 +208,7 @@ export default async function TenantPortalPage() {
         )}
       </main>
     </div>
+    </I18nProvider>
   );
 }
 

@@ -18,7 +18,15 @@ export async function getTenantPortal(userId: string) {
       lastName: true,
       email: true,
       organization: {
-        select: { name: true, street: true, postalCode: true, city: true, taxId: true },
+        select: {
+          name: true,
+          // Kraj wynajmującego — w jego języku najemca ogląda swój portal.
+          locale: true,
+          street: true,
+          postalCode: true,
+          city: true,
+          taxId: true,
+        },
       },
       leases: {
         orderBy: { lease: { startDate: "desc" } },
