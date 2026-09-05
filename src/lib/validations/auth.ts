@@ -1,18 +1,30 @@
 import { z } from "zod";
 
+import type { Dictionary } from "@/lib/i18n/types";
+
 /**
  * Schematy współdzielone przez formularz (React Hook Form) i API route.
  * Ta sama definicja po obu stronach = komunikaty błędów nie rozjeżdżają się
  * między walidacją w przeglądarce a walidacją na serwerze.
+ *
+ * Schematy są funkcjami przyjmującymi **teksty**, a nie kod języka — i to jest
+ * różnica praktyczna, nie estetyczna. Gdyby brały `locale` i same sięgały po
+ * słownik, ten plik importowałby wszystkie słowniki; a że korzysta z niego
+ * komponent kliencki, przeglądarka pobierałaby teksty każdej wersji krajowej,
+ * żeby wyświetlić jedną. Teksty wchodzą więc z zewnątrz: na serwerze ze
+ * `getDictionary(locale)`, w przeglądarce z `useI18n()`.
  */
+type Messages = Dictionary["auth"]["validation"];
 
-export const passwordSchema = z
-  .string()
-  .min(10, "Hasło musi mieć co najmniej 10 znaków")
-  .max(128, "Hasło może mieć najwyżej 128 znaków")
-  .regex(/[a-ząćęłńóśźż]/, "Hasło musi zawierać małą literę")
-  .regex(/[A-ZĄĆĘŁŃÓŚŹŻ]/, "Hasło musi zawierać wielką literę")
-  .regex(/[0-9]/, "Hasło musi zawierać cyfrę");
+export function passwordSchema(t: Messages) {
+  return z
+    .string()
+    .min(10, t.passwordTooShort)
+    .max(128, t.passwordTooLong)
+    .regex(/[a-ząćęłńóśźż]/, t.passwordNeedsLower)
+    .regex(/[A-ZĄĆĘŁŃÓŚŹŻ]/, t.passwordNeedsUpper)
+    .regex(/[0-9]/, t.passwordNeedsDigit);
+}
 
 /**
  * Kolejność jest istotna: najpierw normalizacja (trim + małe litery), dopiero
@@ -20,40 +32,39 @@ export const passwordSchema = z
  * przez spacje, które i tak zaraz usuwamy — a użytkownicy wklejają adresy
  * z e-maili razem ze spacją.
  */
-export const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .pipe(
-    z
+export function emailSchema(t: Messages) {
+  return z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(
+      z.string().min(1, t.emailRequired).max(254, t.emailTooLong).pipe(z.email(t.emailInvalid)),
+    );
+}
+
+export function registerSchema(t: Messages) {
+  return z.object({
+    name: z.string().trim().min(2, t.nameRequired).max(120, t.nameTooLong),
+    organizationName: z
       .string()
-      .min(1, "Podaj adres e-mail")
-      .max(254, "Adres e-mail jest za długi")
-      .pipe(z.email("Nieprawidłowy adres e-mail")),
-  );
+      .trim()
+      .min(2, t.organizationRequired)
+      .max(120, t.organizationTooLong),
+    email: emailSchema(t),
+    password: passwordSchema(t),
+  });
+}
 
-export const registerSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Podaj imię i nazwisko")
-    .max(120, "Imię i nazwisko jest za długie"),
-  organizationName: z
-    .string()
-    .trim()
-    .min(2, "Podaj nazwę firmy lub swoje imię i nazwisko")
-    .max(120, "Nazwa jest za długa"),
-  email: emailSchema,
-  password: passwordSchema,
-});
+export type RegisterInput = z.input<ReturnType<typeof registerSchema>>;
+export type RegisterOutput = z.output<ReturnType<typeof registerSchema>>;
 
-export type RegisterInput = z.infer<typeof registerSchema>;
+export function loginSchema(t: Messages) {
+  return z.object({
+    email: emailSchema(t),
+    // Przy logowaniu nie sprawdzamy siły hasła — tylko czy w ogóle je podano.
+    // Reguły złożoności mogły się zmienić od czasu założenia konta.
+    password: z.string().min(1, t.passwordRequired),
+  });
+}
 
-export const loginSchema = z.object({
-  email: emailSchema,
-  // Przy logowaniu nie sprawdzamy siły hasła — tylko czy w ogóle je podano.
-  // Reguły złożoności mogły się zmienić od czasu założenia konta.
-  password: z.string().min(1, "Podaj hasło"),
-});
-
-export type LoginInput = z.infer<typeof loginSchema>;
+export type LoginInput = z.input<ReturnType<typeof loginSchema>>;

@@ -4,6 +4,7 @@ import {
   isGuestOnlyPath,
   isProtectedPath,
   landingPathForRole,
+  publicRoutes,
   ROUTES,
 } from "@/lib/auth/routes";
 
@@ -17,7 +18,8 @@ describe("isProtectedPath", () => {
 
   it("nie chroni części publicznej", () => {
     expect(isProtectedPath("/")).toBe(false);
-    expect(isProtectedPath("/logowanie")).toBe(false);
+    expect(isProtectedPath("/pl/logowanie")).toBe(false);
+    expect(isProtectedPath("/uk/login")).toBe(false);
     expect(isProtectedPath("/cennik")).toBe(false);
   });
 
@@ -31,8 +33,10 @@ describe("isProtectedPath", () => {
 
 describe("isGuestOnlyPath", () => {
   it("rozpoznaje logowanie i rejestrację", () => {
-    expect(isGuestOnlyPath(ROUTES.login)).toBe(true);
-    expect(isGuestOnlyPath(ROUTES.register)).toBe(true);
+    expect(isGuestOnlyPath(publicRoutes("pl").login)).toBe(true);
+    expect(isGuestOnlyPath(publicRoutes("pl").register)).toBe(true);
+    expect(isGuestOnlyPath(publicRoutes("uk").login)).toBe(true);
+    expect(isGuestOnlyPath(publicRoutes("uk").register)).toBe(true);
   });
 
   it("nie obejmuje strony głównej", () => {

@@ -1,6 +1,7 @@
+import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "@/lib/i18n/config";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
-import type { RegisterInput } from "@/lib/validations/auth";
+import type { RegisterOutput } from "@/lib/validations/auth";
 
 import { hashPassword } from "./password";
 
@@ -101,7 +102,16 @@ export async function ensureOwnerOrganization(userId: string): Promise<void> {
  * (panel właściciela wymaga `organizationId`), a organizacja bez właściciela
  * zostałaby sierotą blokującą slug.
  */
-export async function registerOwner(input: RegisterInput): Promise<RegisterResult> {
+export async function registerOwner(
+  input: RegisterOutput,
+  /**
+   * Wersja krajowa, z której przyszła rejestracja. Zapisujemy ją na
+   * organizacji, bo rozstrzyga i o języku panelu, i o rodzaju dokumentów —
+   * konto założone na `/uk` ma od pierwszej sekundy widzieć funty i brytyjski
+   * rachunek, a nie polską fakturę VAT.
+   */
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<RegisterResult> {
   const existing = await prisma.user.findUnique({
     where: { email: input.email },
     select: { id: true },
@@ -117,7 +127,14 @@ export async function registerOwner(input: RegisterInput): Promise<RegisterResul
   try {
     const user = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
-        data: { name: input.organizationName, slug },
+        data: {
+          name: input.organizationName,
+          slug,
+          locale,
+          // Kraj wystawcy na dokumencie — startowo ten sam, co wersja serwisu.
+          // Właściciel może go zmienić w ustawieniach, gdy firma stoi gdzie indziej.
+          countryCode: LOCALE_META[locale].countryCode,
+        },
         select: { id: true },
       });
 

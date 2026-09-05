@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   multiplyByQuantity,
+  formatMoney,
+  formatPLN,
+  parseMoney,
   parsePLN,
   roundHalf,
   splitGrosze,
@@ -126,5 +129,39 @@ describe("splitGrosze", () => {
     expect(() => splitGrosze(100, 0)).toThrow();
     expect(() => splitGrosze(100, -2)).toThrow();
     expect(() => splitGrosze(100, 1.5)).toThrow();
+  });
+});
+
+describe("kwoty w wersji brytyjskiej", () => {
+  it("formatuje funty z przecinkiem jako separatorem tysięcy", () => {
+    expect(formatMoney(1_840_000, "uk")).toBe("£18,400.00");
+    expect(formatMoney(240_000, "uk")).toBe("£2,400.00");
+  });
+
+  it("polska wersja zostaje bez zmian", () => {
+    expect(formatMoney(1_840_000, "pl")).toBe(formatPLN(1_840_000));
+  });
+
+  /*
+    Sedno sprawy: separatory są w obu krajach odwrotne. „1,234.56" to po
+    brytyjsku tysiąc dwieście, a po polsku tego zapisu nie ma w ogóle —
+    pomyłka tutaj to trzy rzędy wielkości na dokumencie.
+  */
+  it("czyta brytyjski zapis kwoty", () => {
+    expect(parseMoney("1,234.56", "uk")).toBe(123456);
+    expect(parseMoney("£2,400.50", "uk")).toBe(240050);
+    expect(parseMoney("2400.5", "uk")).toBe(240050);
+  });
+
+  it("czyta polski zapis kwoty", () => {
+    expect(parseMoney("2 400,50", "pl")).toBe(240050);
+    expect(parseMoney("1.234,56", "pl")).toBe(123456);
+    // Bez przecinka kropka jest przecinkiem dziesiętnym — tak wkleja arkusz.
+    expect(parseMoney("2400.50", "pl")).toBe(240050);
+  });
+
+  it("nie przyjmuje kwoty z więcej niż dwoma miejscami po przecinku", () => {
+    expect(parseMoney("12.345", "uk")).toBeNull();
+    expect(parseMoney("12,345", "pl")).toBeNull();
   });
 });

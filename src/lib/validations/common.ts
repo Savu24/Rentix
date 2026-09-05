@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { parsePLN } from "@/lib/money";
 
+import { getDictionary } from "@/lib/i18n";
+
 import { emailSchema } from "./auth";
+
+const t = getDictionary("pl").auth.validation;
 
 /**
  * Bloki wspólne dla formularzy i API routes. Ta sama definicja po obu stronach —
@@ -69,7 +73,7 @@ export const optionalPhone = z
 
 /** E-mail opcjonalny — puste pole daje NULL, nie błąd formatu. */
 export const optionalEmail = z
-  .union([z.literal(""), emailSchema])
+  .union([z.literal(""), emailSchema(t)])
   .transform((value) => (value === "" ? null : value))
   .nullable()
   .optional();

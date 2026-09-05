@@ -1,60 +1,123 @@
+import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "@/lib/i18n/config";
+
 /**
- * Arytmetyka pieniędzy w groszach.
+ * Arytmetyka pieniędzy w najmniejszej jednostce waluty.
  *
  * Wszystkie kwoty w Rentiksie to liczby całkowite groszy — nigdy Float.
  * Powód jest prozaiczny: 0.1 + 0.2 !== 0.3 w IEEE 754, a po tysiącu faktur
  * saldo rozjeżdża się o grosze, których nikt potem nie znajdzie.
  *
+ * Wersja brytyjska liczy w pensach. Nazwa „grosze" w kodzie zostaje, bo tak
+ * nazywają się kolumny w bazie, a i złoty, i funt dzielą się na sto — arytmetyka
+ * jest ta sama, zmienia się wyłącznie formatowanie.
+ *
  * Ten moduł jest jedynym miejscem, w którym wolno zaokrąglać.
  */
 
-const currencyFormatter = new Intl.NumberFormat("pl-PL", {
-  style: "currency",
-  currency: "PLN",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  // CLDR dla polskiego nie grupuje liczb czterocyfrowych ("2400,00 zł", ale
-  // "18 400,00 zł"). W kolumnie faktur wygląda to na literówkę, więc grupujemy
-  // zawsze — kwoty mają się czytać jednakowo w każdym wierszu.
-  useGrouping: "always",
-});
+/*
+  Formatery są drogie w tworzeniu, a wołamy je w pętli po każdym wierszu listy
+  faktur — stąd jeden komplet na wersję krajową, budowany raz.
 
-/** 240000 → "2 400,00 zł" */
-export function formatPLN(grosze: number): string {
-  return currencyFormatter.format(grosze / 100);
+  `useGrouping: "always"`, bo CLDR dla polskiego nie grupuje liczb
+  czterocyfrowych („2400,00 zł", ale „18 400,00 zł"). W kolumnie faktur wygląda
+  to na literówkę; kwoty mają się czytać jednakowo w każdym wierszu.
+*/
+const currencyFormatters = new Map<Locale, Intl.NumberFormat>();
+const amountFormatters = new Map<Locale, Intl.NumberFormat>();
+
+function currencyFormatter(locale: Locale): Intl.NumberFormat {
+  let formatter = currencyFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE_META[locale].intl, {
+      style: "currency",
+      currency: LOCALE_META[locale].currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: "always",
+    });
+    currencyFormatters.set(locale, formatter);
+  }
+  return formatter;
 }
 
-/** 240000 → "2 400,00" (bez symbolu waluty — do pól formularza i eksportu CSV). */
-export function formatAmount(grosze: number): string {
-  return new Intl.NumberFormat("pl-PL", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    useGrouping: "always",
-  }).format(grosze / 100);
+function amountFormatter(locale: Locale): Intl.NumberFormat {
+  let formatter = amountFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE_META[locale].intl, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: "always",
+    });
+    amountFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
+/** 240000 → „2 400,00 zł" (pl) albo „£2,400.00" (uk). */
+export function formatMoney(grosze: number, locale: Locale = DEFAULT_LOCALE): string {
+  return currencyFormatter(locale).format(grosze / 100);
+}
+
+/** 240000 → „2 400,00" / „2,400.00" — bez symbolu, do pól formularza i CSV. */
+export function formatAmount(grosze: number, locale: Locale = DEFAULT_LOCALE): string {
+  return amountFormatter(locale).format(grosze / 100);
+}
+
+/**
+ * Zapis kwoty bez symbolu waluty, ale z jej nazwą — do dokumentów, gdzie
+ * „£" po lewej wygląda źle w kolumnie, a sama liczba nie mówi, w czym jest.
+ */
+export function formatAmountWithCode(
+  grosze: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return `${formatAmount(grosze, locale)} ${LOCALE_META[locale].currency}`;
+}
+
+/** 240000 → „2 400,00 zł". Zostaje pod starą nazwą dla polskich wywołań. */
+export function formatPLN(grosze: number): string {
+  return formatMoney(grosze, "pl");
 }
 
 /**
  * Parsuje kwotę wpisaną przez człowieka na grosze.
  *
- * Przyjmuje polski zapis ("2 400,50", "2400,5"), zapis z kropką ("2400.50"),
- * spacje nierozdzielające wklejone z arkusza i symbol waluty.
- * Zwraca `null`, gdy wejście nie jest kwotą — wołający decyduje, co z tym zrobić.
+ * ⚠️ Separatory są w obu krajach **odwrotne**: „1.234,56" to po polsku tysiąc
+ * dwieście, a po brytyjsku jeden i dwie dziesiąte. Dlatego parser dostaje
+ * wersję krajową, zamiast zgadywać po znaku — pomyłka tutaj to trzy rzędy
+ * wielkości na fakturze.
+ *
+ * Przyjmuje zapis lokalny („2 400,50" / „2,400.50"), spacje nierozdzielające
+ * wklejone z arkusza i symbol waluty. Zwraca `null`, gdy wejście nie jest
+ * kwotą — wołający decyduje, co z tym zrobić.
  */
-export function parsePLN(input: string): number | null {
+export function parseMoney(input: string, locale: Locale = DEFAULT_LOCALE): number | null {
   if (typeof input !== "string") return null;
 
-  const cleaned = input
+  let cleaned = input
     .replace(/\s/g, "") // spacje, w tym nierozdzielające z arkuszy
-    .replace(/z[łl]$/i, "") // "zł" na końcu
+    .replace(/^[£€$]/, "")
+    .replace(/z[łl]$/i, "")
     .replace(/PLN$/i, "")
-    .replace(",", "."); // polski przecinek dziesiętny
+    .replace(/GBP$/i, "");
+
+  if (locale === "pl") {
+    // Kropka w polskim zapisie bywa separatorem tysięcy („1.234,56"), ale bywa
+    // też przecinkiem dziesiętnym wklejonym z arkusza po angielsku („1234.56").
+    // Rozstrzyga obecność przecinka: gdy jest, kropka jest tysiącami.
+    if (cleaned.includes(",")) cleaned = cleaned.replace(/\./g, "");
+    cleaned = cleaned.replace(",", ".");
+  } else {
+    // Po brytyjsku przecinek jest wyłącznie separatorem tysięcy.
+    cleaned = cleaned.replace(/,/g, "");
+  }
 
   if (cleaned === "" || !/^-?\d*\.?\d*$/.test(cleaned)) return null;
   if (!/\d/.test(cleaned)) return null;
 
   const parts = cleaned.split(".");
   if (parts.length > 2) return null;
-  // Więcej niż dwa miejsca po przecinku to nie kwota w złotych, tylko pomyłka.
+  // Więcej niż dwa miejsca po przecinku to nie kwota, tylko pomyłka.
   if (parts[1] !== undefined && parts[1].length > 2) return null;
 
   const negative = cleaned.startsWith("-");
@@ -63,6 +126,11 @@ export function parsePLN(input: string): number | null {
 
   if (!Number.isFinite(grosze)) return null;
   return negative ? -grosze : grosze;
+}
+
+/** Parsowanie polskiego zapisu. Zostaje pod starą nazwą dla polskich wywołań. */
+export function parsePLN(input: string): number | null {
+  return parseMoney(input, "pl");
 }
 
 /**

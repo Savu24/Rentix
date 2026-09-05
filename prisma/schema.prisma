@@ -77,6 +77,17 @@ model Organization {
   /// pilnowana walidacją, a nie tylko wartością domyślną.
   overdueRepeatDays Int @default(7)
 
+  /// Wersja krajowa Rentiksa, w której założono konto: „pl" albo „uk".
+  ///
+  /// Rozstrzyga dwie rzeczy naraz i celowo jedną wartością, bo w praktyce
+  /// zawsze idą razem: język panelu oraz rodzaj dokumentów rozliczeniowych.
+  /// „pl" to polska faktura VAT (NIP, stawki, kwota słownie), „uk" to
+  /// brytyjski rachunek za czynsz w funtach — dokumenty jednego kraju nie mają
+  /// sensu w drugim, więc nie da się ich rozjechać osobnymi przełącznikami.
+  ///
+  /// `countryCode` niżej to co innego: kraj w adresie wystawcy na dokumencie.
+  locale String @default("pl")
+
   // Dane wystawcy faktur — sprzedawca w rozumieniu FA(2).
   taxId       String? // NIP
   street      String?

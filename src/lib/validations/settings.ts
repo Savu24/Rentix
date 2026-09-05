@@ -3,7 +3,11 @@ import { z } from "zod";
 import { unknownVariables } from "@/lib/email/render";
 import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
+import { getDictionary } from "@/lib/i18n";
+
 import { emailSchema, passwordSchema } from "./auth";
+
+const t = getDictionary("pl").auth.validation;
 import {
   optionalBankAccount,
   optionalPostalCode,
@@ -35,7 +39,7 @@ export const organizationSettingsSchema = z.object({
    * idzie do wynajmującego, a nie do platformy.
    */
   contactEmail: z
-    .union([z.literal(""), emailSchema])
+    .union([z.literal(""), emailSchema(t)])
     .transform((value) => (value === "" ? null : value))
     .nullable()
     .optional(),
@@ -145,7 +149,7 @@ export type ProfileSettingsOutput = z.output<typeof profileSettingsSchema>;
 export const passwordChangeSchema = z
   .object({
     currentPassword: z.string().min(1, "Podaj obecne hasło"),
-    newPassword: passwordSchema,
+    newPassword: passwordSchema(t),
   })
   .refine((data) => data.newPassword !== data.currentPassword, {
     message: "Nowe hasło musi różnić się od obecnego",

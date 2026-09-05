@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/lib/auth/routes";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Logo Google rysowane wprost w SVG.
@@ -47,11 +48,13 @@ function GoogleMark() {
  */
 export function GoogleButton({
   returnTo,
-  label = "Zaloguj się przez Google",
+  label,
 }: {
   returnTo?: string;
+  /** Rejestracja podaje własny napis; bez niego bierzemy „zaloguj się". */
   label?: string;
 }) {
+  const { d } = useI18n();
   const [pending, setPending] = useState(false);
 
   return (
@@ -71,17 +74,19 @@ export function GoogleButton({
       ) : (
         <GoogleMark />
       )}
-      {label}
+      {label ?? d.auth.login.google}
     </Button>
   );
 }
 
 /** Poziomy separator „albo" między logowaniem Google a formularzem. */
 export function AuthDivider() {
+  const { d } = useI18n();
+
   return (
     <div className="flex items-center gap-3">
       <span className="h-px flex-1 bg-border" aria-hidden />
-      <span className="text-xs uppercase tracking-[0.08em] text-muted">albo</span>
+      <span className="text-xs uppercase tracking-[0.08em] text-muted">{d.auth.login.divider}</span>
       <span className="h-px flex-1 bg-border" aria-hidden />
     </div>
   );

@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 
 import { apiError, created, rateLimited, validationError } from "@/lib/api/response";
 import { registerOwner } from "@/lib/auth/register";
+import { getDictionary } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
 import { clientIp, consume, LIMITS } from "@/lib/rate-limit";
 import { registerSchema } from "@/lib/validations/auth";
 
@@ -30,14 +32,26 @@ export async function POST(request: NextRequest) {
     return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
   }
 
-  const parsed = registerSchema.safeParse(body);
+  /*
+    Wersję krajową podaje formularz — to ta strona, którą użytkownik naprawdę
+    miał przed sobą. Nierozpoznana wartość (żądanie spoza formularza, klient
+    mobilny) schodzi do domyślnej zamiast wywracać rejestrację.
+  */
+  const locale =
+    typeof body === "object" && body !== null && "locale" in body && isLocale(body.locale)
+      ? body.locale
+      : DEFAULT_LOCALE;
+
+  const d = getDictionary(locale).auth;
+
+  const parsed = registerSchema(d.validation).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
-  const result = await registerOwner(parsed.data);
+  const result = await registerOwner(parsed.data, locale);
 
   if (!result.ok) {
-    return apiError("CONFLICT", "Konto z tym adresem e-mail już istnieje.", {
-      fields: { email: ["Ten adres jest już zajęty"] },
+    return apiError("CONFLICT", d.register.emailTaken, {
+      fields: { email: [d.register.emailTakenField] },
     });
   }
 

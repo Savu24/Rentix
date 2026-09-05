@@ -25,10 +25,15 @@ export const authConfig = {
   */
   trustHost: true,
 
+  /*
+    Ścieżki bez prefiksu kraju — NextAuth przyjmuje tu jeden stały adres, a nie
+    funkcję zależną od żądania. Middleware odsyła z nich na wersję krajową
+    odwiedzającego, więc błąd logowania przez Google wraca tam, skąd wyszedł.
+  */
   pages: {
-    signIn: ROUTES.login,
-    newUser: ROUTES.register,
-    error: ROUTES.login,
+    signIn: ROUTES.loginAlias,
+    newUser: ROUTES.registerAlias,
+    error: ROUTES.loginAlias,
   },
 
   session: {

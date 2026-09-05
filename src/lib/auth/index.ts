@@ -6,6 +6,8 @@ import Google from "next-auth/providers/google";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { consume, LIMITS, reset } from "@/lib/rate-limit";
+import { getDictionary } from "@/lib/i18n";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { loginSchema } from "@/lib/validations/auth";
 
 import { authConfig } from "./config";
@@ -107,7 +109,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
 
       async authorize(rawCredentials) {
-        const parsed = loginSchema.safeParse(rawCredentials);
+        /*
+          Komunikaty walidacji nie opuszczają tej funkcji — przy złych danych
+          i tak lecimy `InvalidCredentialsError`, którego tekst formularz
+          dobiera sam. Język jest tu więc obojętny.
+        */
+        const parsed = loginSchema(
+          getDictionary(DEFAULT_LOCALE).auth.validation,
+        ).safeParse(rawCredentials);
         if (!parsed.success) throw new InvalidCredentialsError();
 
         const { email, password } = parsed.data;

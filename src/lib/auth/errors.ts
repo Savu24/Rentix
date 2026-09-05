@@ -1,5 +1,7 @@
 import { CredentialsSignin } from "next-auth";
 
+import type { Dictionary } from "@/lib/i18n/types";
+
 /**
  * Kody błędów logowania przekazywane do formularza.
  *
@@ -23,26 +25,35 @@ export class InvalidCredentialsError extends CredentialsSignin {
   code = AUTH_ERROR_CODES.invalidCredentials;
 }
 
-/** Komunikaty pokazywane w formularzu logowania. */
-export function loginErrorMessage(code: string | undefined | null): string {
+/**
+ * Komunikat do pokazania w formularzu logowania.
+ *
+ * Teksty wchodzą parametrem, a nie przez kod języka — plik importuje komponent
+ * kliencki, więc sięgnięcie po słownik wciągnęłoby do przeglądarki wszystkie
+ * wersje krajowe naraz.
+ */
+export function loginErrorMessage(
+  code: string | undefined | null,
+  t: Dictionary["auth"]["errors"],
+): string {
   switch (code) {
     case AUTH_ERROR_CODES.rateLimited:
-      return "Zbyt wiele prób logowania. Odczekaj 15 minut i spróbuj ponownie.";
+      return t.rateLimited;
     case AUTH_ERROR_CODES.invalidCredentials:
-      return "Nieprawidłowy e-mail lub hasło.";
+      return t.invalidCredentials;
     /*
       Kody z przepływu OAuth. NextAuth przekierowuje na stronę wskazaną
       w `pages.error` (czyli tutaj) z parametrem `?error=`, więc trafiają
       do tej samej funkcji co błędy formularza.
     */
     case "OAuthAccountNotLinked":
-      return "Ten adres jest już przypisany do konta z hasłem. Zaloguj się hasłem, a Google podepniesz później.";
+      return t.oauthAccountNotLinked;
     case "OAuthCallbackError":
     case "OAuthSignInError":
-      return "Logowanie przez Google nie doszło do skutku. Spróbuj ponownie albo użyj hasła.";
+      return t.oauthFailed;
     case "AccessDenied":
-      return "Nie udzieliłeś Google zgody na przekazanie danych, więc logowanie zostało przerwane.";
+      return t.accessDenied;
     default:
-      return "Nie udało się zalogować. Sprawdź dane i spróbuj ponownie.";
+      return t.unknown;
   }
 }

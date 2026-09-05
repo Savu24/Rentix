@@ -2,9 +2,10 @@ import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
 
 import { apiError } from "@/lib/api/response";
+import { requestLocale } from "@/lib/i18n/server";
 
 import { auth } from "./index";
-import { ROUTES } from "./routes";
+import { loginPathWithReturn, publicRoutes, ROUTES } from "./routes";
 
 export type AppSession = Session & {
   user: NonNullable<Session["user"]>;
@@ -23,10 +24,10 @@ export async function requireSession(returnTo?: string): Promise<AppSession> {
   const session = await auth();
 
   if (!session?.user) {
-    const target = returnTo
-      ? `${ROUTES.login}?powrot=${encodeURIComponent(returnTo)}`
-      : ROUTES.login;
-    redirect(target);
+    // Adres logowania niesie kraj, więc niezalogowany trafia na formularz
+    // w swoim języku, a nie na polski z angielskiej strony.
+    const locale = await requestLocale();
+    redirect(returnTo ? loginPathWithReturn(locale, returnTo) : publicRoutes(locale).login);
   }
 
   return session as AppSession;

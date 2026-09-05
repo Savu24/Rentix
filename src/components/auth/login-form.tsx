@@ -13,8 +13,13 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { loginErrorMessage } from "@/lib/auth/errors";
 import { ROUTES } from "@/lib/auth/routes";
+import { useI18n } from "@/lib/i18n/client";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
+/**
+ * Teksty bierzemy z `useI18n()`, a nie z importu słownika — do przeglądarki ma
+ * trafić jedna wersja krajowa, ta renderowana, a nie wszystkie na zapas.
+ */
 export function LoginForm({
   returnTo,
   initialErrorCode,
@@ -23,8 +28,11 @@ export function LoginForm({
   initialErrorCode?: string;
 }) {
   const router = useRouter();
+  const { d } = useI18n();
+  const t = d.auth.login;
+
   const [formError, setFormError] = useState<string | null>(
-    initialErrorCode ? loginErrorMessage(initialErrorCode) : null,
+    initialErrorCode ? loginErrorMessage(initialErrorCode, d.auth.errors) : null,
   );
 
   const {
@@ -32,7 +40,7 @@ export function LoginForm({
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginSchema(d.auth.validation)),
     defaultValues: { email: "", password: "" },
   });
 
@@ -48,7 +56,7 @@ export function LoginForm({
     });
 
     if (!result || result.error) {
-      setFormError(loginErrorMessage(result?.code ?? result?.error));
+      setFormError(loginErrorMessage(result?.code ?? result?.error, d.auth.errors));
       return;
     }
 
@@ -61,7 +69,7 @@ export function LoginForm({
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <FormField id="email" label="Adres e-mail" error={errors.email?.message}>
+      <FormField id="email" label={t.email} error={errors.email?.message}>
         <Input
           {...fieldAria("email", { error: errors.email?.message })}
           type="email"
@@ -71,7 +79,7 @@ export function LoginForm({
         />
       </FormField>
 
-      <FormField id="password" label="Hasło" error={errors.password?.message}>
+      <FormField id="password" label={t.password} error={errors.password?.message}>
         <Input
           {...fieldAria("password", { error: errors.password?.message })}
           type="password"
@@ -85,10 +93,10 @@ export function LoginForm({
         {isSubmitting ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            Logowanie…
+            {t.submitting}
           </>
         ) : (
-          "Zaloguj się"
+          t.submit
         )}
       </Button>
     </form>
