@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Usunięcie kosztu.
@@ -15,6 +16,7 @@ import { api } from "@/lib/api/client";
  */
 export function DeleteExpense({ expenseId }: { expenseId: string }) {
   const router = useRouter();
+  const { d } = useI18n();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -34,7 +36,7 @@ export function DeleteExpense({ expenseId }: { expenseId: string }) {
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        aria-label="Usuń koszt"
+        aria-label={d.panel.financePage.deleteExpense}
         className="rounded-btn p-1.5 text-muted transition-colors hover:bg-surface-alt hover:text-bad"
       >
         <Trash2 className="h-3.5 w-3.5" aria-hidden />

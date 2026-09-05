@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Wypowiedzenie umowy.
@@ -20,6 +21,8 @@ import { api } from "@/lib/api/client";
  */
 export function TerminateLease({ leaseId }: { leaseId: string }) {
   const router = useRouter();
+  const { d } = useI18n();
+  const t = d.panel.leasesPage.terminate;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +71,7 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="terminatedAt" label="Data zakończenia">
+          <FormField id="terminatedAt" label={t.endDate}>
             <DateInput
               id="terminatedAt"
               value={terminatedAt}
@@ -78,7 +81,7 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
           </FormField>
         </div>
 
-        <FormField id="terminationNote" label="Powód / uwagi" hint="Opcjonalne.">
+        <FormField id="terminationNote" label={t.note} hint={t.noteHint}>
           <Textarea
             id="terminationNote"
             value={note}
@@ -90,10 +93,10 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
         <div className="flex flex-wrap gap-2.5">
           <Button size="sm" variant="danger" onClick={submit} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            Zakończ umowę
+            {t.button}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
-            Anuluj
+            {d.panel.common.cancel}
           </Button>
         </div>
       </CardContent>

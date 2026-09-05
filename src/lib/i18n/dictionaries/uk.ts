@@ -401,6 +401,110 @@ export const uk: Dictionary = {
       archive: "Archive",
     },
 
+    leasesPage: {
+      title: "Tenancies",
+      count: ["{count} tenancy", "{count} tenancies"],
+      activeSuffix: " · {count} active",
+      archived: "Archived",
+      add: "New tenancy",
+      addFirst: "Create your first tenancy",
+      emptyTitle: "No tenancies yet",
+      emptyLead: "A tenancy links a unit to a tenant and is what the rent is invoiced from.",
+      roomLet: "Room let",
+      arrears: ["{count} arrear", "{count} arrears"],
+      openEnded: "no end date",
+      numberPrefix: "no. {number}",
+      perMonth: "per month",
+      newTitle: "New tenancy",
+      /*
+        Polska wersja obiecuje tu gotowy PDF do podpisu. Brytyjska nie —
+        umowa (AST) jest pisana pod inne prawo i Rentix jej nie wystawia.
+      */
+      newLead: "",
+      newLeadNoDocument: "The letting terms in one place, ready to invoice from.",
+      missingPrefix: "Before you create a tenancy, add {what}.",
+      missingProperty: "a property",
+      missingTenant: "a tenant",
+      missingJoin: " and ",
+      needProperty: "Add a property",
+      needTenant: "Add a tenant",
+      archiveTitle: "Archived tenancies",
+      archiveNote:
+        "A tenancy with issued documents cannot be deleted for good. Invoices and payments stay, because that is the payment history.",
+      archiveItemNumber: ", no. {number}",
+      archiveItemFrom: "{status} · from {date}",
+      noun: ["tenancy", "tenancies"],
+      terminate: {
+        button: "End tenancy",
+        title: "Ending the tenancy",
+        lead: "The unit returns to the available pool and the tenants become former tenants.",
+        endDate: "End date",
+        note: "Reason / notes",
+        noteHint: "Optional.",
+      },
+      extend: {
+        button: "Extend tenancy",
+        title: "Extending the tenancy",
+        presets: { months3: "by 3 months", months6: "by 6 months", months12: "by a year" },
+        current: "Currently until {date}. Only the end date changes — the rent and the other terms stay as they are.",
+        presetUntil: "{label} · until {date}",
+        customDate: "Or a date of your own",
+      },
+      activate: {
+        reserved: "Reserved, waiting to start",
+        draft: "Draft tenancy",
+      },
+      activateButton: "Activate tenancy",
+      activateLead:
+        "A tenancy marked {status} does not occupy the unit and is not invoiced. Once active, the unit is let and the tenants become current.",
+      emailToggle: {
+        label: "Email invoices to the tenant",
+        off: "Off: documents will not go out in the nightly run. Sending one by hand from the invoice view still works.",
+      },
+      billingStart: {
+        label: "Do not invoice before",
+        hint: "Months already settled in your previous system. Blank means invoice from the start of the tenancy.",
+      },
+    },
+
+    financePage: {
+      title: "Finance",
+      lead: "Rent documents and tenant payments.",
+      expensesLead: "What the letting costs you. Without these the report shows income, not profit.",
+      unpaid: "Outstanding",
+      unpaidDocs: ["{count} document", "{count} documents"],
+      arrears: "Arrears",
+      overdueCount: "{count} overdue",
+      paidThisMonth: "Received this month",
+      paidHint: "total payments recorded",
+      noMatchTitle: "No document matches these filters",
+      noMatchLead: "Change the criteria, or clear the filters to see every document.",
+      emptyTitle: "No documents yet",
+      emptyLead:
+        "Rent is invoiced automatically on the day set in the tenancy. You can also invoice a chosen month by hand.",
+      expensesTitle: "Costs",
+      expensesTotal: "Total costs in view",
+      expensesNoMatchTitle: "No cost matches these filters",
+      expensesNoMatchLead: "Change the criteria, or clear the filters.",
+      expensesEmptyTitle: "No costs yet",
+      expensesEmptyLead:
+        "Add the service charge, mortgage, repairs and insurance. Only then does the report show profit rather than income.",
+      editExpense: "Edit cost",
+      deleteExpense: "Delete cost",
+      dueOn: "due {date}",
+      remainingAmount: "{amount} left",
+      markPaid: "Mark as paid: {amount}",
+      downloadSelected: "Download selected",
+      documentNoun: ["document", "documents"],
+      downloadCount: "Download {count} {noun}",
+      download: "Download",
+      selectForDownload: "Select to download",
+      finishSelecting: "Done selecting",
+      selectAll: "Select all",
+      deselectAll: "Deselect all",
+      nothingSelected: "Nothing selected",
+    },
+
     dateInput: {
       /*
         Ten sam porządek co po polsku — dzień, miesiąc, rok — więc pomyłka

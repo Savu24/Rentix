@@ -10,16 +10,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
+import { fill, formatDateIn } from "@/lib/i18n/format";
 import { addMonthsUtc } from "@/lib/leases/expiry";
 
 /** Okresy, na które przedłuża się umowę najmu w praktyce. */
 const PRESETS = [
-  { months: 3, label: "o 3 miesiące" },
-  { months: 6, label: "o pół roku" },
-  { months: 12, label: "o rok" },
+  { months: 3, key: "months3" as const },
+  { months: 6, key: "months6" as const },
+  { months: 12, key: "months12" as const },
 ] as const;
-
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 const toInputValue = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -44,6 +44,8 @@ export function ExtendLease({
   endDate: string;
 }) {
   const router = useRouter();
+  const { d, locale } = useI18n();
+  const t = d.panel.leasesPage.extend;
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -83,15 +85,14 @@ export function ExtendLease({
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-semibold text-fg">Przedłużenie umowy</p>
           <p className="text-xs text-muted">
-            Obecnie do {dateFormat.format(current)}. Zmienia się wyłącznie data zakończenia.
-            czynsz i pozostałe warunki zostają.
+            {fill(t.current, { date: formatDateIn(current, locale, "short") })}
           </p>
         </div>
 
         {error ? <Alert tone="error">{error}</Alert> : null}
 
         <div className="flex flex-wrap gap-2.5">
-          {PRESETS.map(({ months, label }) => {
+          {PRESETS.map(({ months, key: presetKey }) => {
             const next = addMonthsUtc(current, months);
             const key = `p${months}`;
 
@@ -104,14 +105,17 @@ export function ExtendLease({
                 onClick={() => extend(toInputValue(next), key)}
               >
                 {busy === key ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                {label} · do {dateFormat.format(next)}
+                {fill(t.presetUntil, {
+                  label: t.presets[presetKey],
+                  date: formatDateIn(next, locale, "short"),
+                })}
               </Button>
             );
           })}
         </div>
 
         <div className="flex flex-wrap items-end gap-2.5 border-t border-border pt-4">
-          <FormField id="extend-endDate" label="Albo własna data" className="min-w-[12rem]">
+          <FormField id="extend-endDate" label={t.customDate} className="min-w-[12rem]">
             <DateInput
               id="extend-endDate"
               min={endDate}
@@ -127,7 +131,7 @@ export function ExtendLease({
             onClick={() => extend(custom, "custom")}
           >
             {busy === "custom" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            Zapisz
+            {d.panel.common.save}
           </Button>
 
           <Button
@@ -139,7 +143,7 @@ export function ExtendLease({
               setError(null);
             }}
           >
-            Anuluj
+            {d.panel.common.cancel}
           </Button>
         </div>
       </CardContent>

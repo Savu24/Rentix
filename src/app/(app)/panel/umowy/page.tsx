@@ -8,23 +8,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listLeases } from "@/lib/leases/service";
-import { formatPLN } from "@/lib/money";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import {
   leaseStatusLabels,
   LEASE_STATUS_TONE,
   leaseListQuerySchema,
 } from "@/lib/validations/lease";
-import { panelDictionary } from "@/lib/panel/dictionary";
-export const metadata: Metadata = { title: "Umowy" };
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.leasesPage.title };
+}
 
 export default async function LeasesPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.leasesPage;
   const session = await requireOwnerSession("/panel/umowy");
   const params = await searchParams;
 
@@ -38,10 +41,10 @@ export default async function LeasesPage({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">Umowy</h1>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
           <p className="text-sm text-muted">
-            {leases.length} {leases.length === 1 ? "umowa" : "umów"}
-            {active > 0 ? ` · ${active} aktywnych` : ""}
+            {fill(pluralize(locale, leases.length, t.count), { count: leases.length })}
+            {active > 0 ? fill(t.activeSuffix, { count: active }) : ""}
           </p>
         </div>
 
@@ -49,14 +52,14 @@ export default async function LeasesPage({
           <Button asChild size="sm" variant="secondary">
             <Link href="/panel/umowy/archiwum">
               <Archive className="h-4 w-4" aria-hidden />
-              Zarchiwizowane
+              {t.archived}
             </Link>
           </Button>
 
           <Button asChild size="sm">
             <Link href="/panel/umowy/nowa">
               <Plus className="h-4 w-4" aria-hidden />
-              Nowa umowa
+              {t.add}
             </Link>
           </Button>
         </div>
@@ -65,13 +68,13 @@ export default async function LeasesPage({
       {leases.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="Nie masz jeszcze żadnej umowy"
-          description="Umowa łączy jednostkę najmu z najemcą i jest podstawą do naliczania czynszu."
+          title={t.emptyTitle}
+          description={t.emptyLead}
           action={
             <Button asChild>
               <Link href="/panel/umowy/nowa">
                 <Plus className="h-4 w-4" aria-hidden />
-                Utwórz pierwszą umowę
+                {t.addFirst}
               </Link>
             </Button>
           }
@@ -91,14 +94,15 @@ export default async function LeasesPage({
                           {lease.property.name}
                           {lease.room ? ` · ${lease.room.name}` : ""}
                         </p>
-                        {lease.room ? <Badge tone="accent">Najem pokoju</Badge> : null}
+                        {lease.room ? <Badge tone="accent">{t.roomLet}</Badge> : null}
                         <Badge tone={LEASE_STATUS_TONE[lease.status]}>
                           {leaseStatusLabels(d)[lease.status]}
                         </Badge>
                         {lease.overdueCount > 0 ? (
                           <Badge tone="critical">
-                            {lease.overdueCount}{" "}
-                            {lease.overdueCount === 1 ? "zaległość" : "zaległości"}
+                            {fill(pluralize(locale, lease.overdueCount, t.arrears), {
+                              count: lease.overdueCount,
+                            })}
                           </Badge>
                         ) : null}
                       </div>
@@ -111,18 +115,20 @@ export default async function LeasesPage({
                           </span>
                         ) : null}
                         <span>
-                          {dateFormat.format(lease.startDate)} –{" "}
-                          {lease.endDate ? dateFormat.format(lease.endDate) : "bezterminowo"}
+                          {formatDateIn(lease.startDate, locale, "short")} –{" "}
+                          {lease.endDate
+                            ? formatDateIn(lease.endDate, locale, "short")
+                            : t.openEnded}
                         </span>
-                        {lease.number ? <span>nr {lease.number}</span> : null}
+                        {lease.number ? <span>{fill(t.numberPrefix, { number: lease.number })}</span> : null}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <p className="tabular font-mono text-sm font-medium text-fg">
-                        {formatPLN(lease.rentGrosze)}
+                        {formatMoney(lease.rentGrosze, locale)}
                       </p>
-                      <p className="text-xs text-muted">miesięcznie</p>
+                      <p className="text-xs text-muted">{t.perMonth}</p>
                     </div>
                   </CardContent>
                 </Link>

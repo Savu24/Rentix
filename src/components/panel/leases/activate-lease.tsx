@@ -12,6 +12,7 @@ import { leaseStatusLabels } from "@/lib/validations/lease";
 
 import type { LeaseStatus } from "@/generated/prisma/enums";
 import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 /**
  * Uruchomienie umowy ze szkicu albo rezerwacji.
  *
@@ -30,6 +31,7 @@ export function ActivateLease({
   status: Extract<LeaseStatus, "DRAFT" | "RESERVED">;
 }) {
   const { d } = useI18n();
+  const t = d.panel.leasesPage;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,11 +56,12 @@ export function ActivateLease({
       <CardContent className="flex flex-col gap-3 p-4">
         <div>
           <p className="text-sm font-semibold text-fg">
-            {status === "RESERVED" ? "Rezerwacja czeka na start" : "Szkic umowy"}
+            {status === "RESERVED" ? t.activate.reserved : t.activate.draft}
           </p>
           <p className="mt-0.5 text-xs text-muted">
-            Umowa ze statusem {leaseStatusLabels(d)[status].toLowerCase()} nie zajmuje lokalu i nie
-            jest naliczana. Po aktywacji jednostka staje się zajęta, a najemcy czynni.
+            {fill(t.activateLead, {
+              status: leaseStatusLabels(d)[status].toLowerCase(),
+            })}
           </p>
         </div>
 
@@ -71,7 +74,7 @@ export function ActivateLease({
             ) : (
               <CheckCircle2 className="h-4 w-4" aria-hidden />
             )}
-            Aktywuj umowę
+            {t.activateButton}
           </Button>
         </div>
       </CardContent>

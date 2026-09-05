@@ -9,17 +9,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { financeSummary, listInvoices } from "@/lib/invoices/service";
-import { formatPLN } from "@/lib/money";
-import { plural } from "@/lib/utils";
+import { fill, pluralize } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { invoiceListQuerySchema } from "@/lib/validations/invoice";
 
-export const metadata: Metadata = { title: "Finanse" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.financePage.title };
+}
 
 export default async function FinancePage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.financePage;
   const session = await requireOwnerSession("/panel/finanse");
   const params = await searchParams;
 
@@ -37,8 +42,8 @@ export default async function FinancePage({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">Finanse</h1>
-          <p className="text-sm text-muted">Dokumenty rozliczeniowe i wpłaty najemców.</p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
+          <p className="text-sm text-muted">{t.lead}</p>
         </div>
 
         <GenerateInvoices />
@@ -48,20 +53,22 @@ export default async function FinancePage({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryTile
-          label="Do zapłaty"
-          value={formatPLN(summary.unpaidGrosze)}
-          hint={`${summary.unpaidCount} ${plural(summary.unpaidCount, ["dokument", "dokumenty", "dokumentów"])}`}
+          label={t.unpaid}
+          value={formatMoney(summary.unpaidGrosze, locale)}
+          hint={fill(pluralize(locale, summary.unpaidCount, t.unpaidDocs), {
+            count: summary.unpaidCount,
+          })}
         />
         <SummaryTile
-          label="Zaległości"
-          value={formatPLN(summary.overdueGrosze)}
-          hint={`${summary.overdueCount} po terminie`}
+          label={t.arrears}
+          value={formatMoney(summary.overdueGrosze, locale)}
+          hint={fill(t.overdueCount, { count: summary.overdueCount })}
           tone={summary.overdueGrosze > 0 ? "critical" : "neutral"}
         />
         <SummaryTile
-          label="Wpłaty w tym miesiącu"
-          value={formatPLN(summary.paidThisMonthGrosze)}
-          hint="suma zaksięgowanych wpłat"
+          label={t.paidThisMonth}
+          value={formatMoney(summary.paidThisMonthGrosze, locale)}
+          hint={t.paidHint}
           tone="good"
         />
       </div>
@@ -71,11 +78,11 @@ export default async function FinancePage({
       {invoices.length === 0 ? (
         <EmptyState
           icon={Receipt}
-          title={filtered ? "Żaden dokument nie pasuje do filtrów" : "Nie ma jeszcze dokumentów"}
+          title={filtered ? t.noMatchTitle : t.emptyTitle}
           description={
             filtered
-              ? "Zmień kryteria albo wyczyść filtry, żeby zobaczyć wszystkie dokumenty."
-              : "Czynsz nalicza się automatycznie w dniu wskazanym w umowie. Możesz też naliczyć wybrany miesiąc ręcznie."
+              ? t.noMatchLead
+              : t.emptyLead
           }
         />
       ) : (

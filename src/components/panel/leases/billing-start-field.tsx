@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Data, przed którą umowa nie jest naliczana — edytowalna na widoku umowy.
@@ -30,6 +31,8 @@ export function BillingStartField({
   billingStartsAt: string;
 }) {
   const router = useRouter();
+  const { d } = useI18n();
+  const t = d.panel.leasesPage.billingStart;
   const [value, setValue] = useState(billingStartsAt);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +64,8 @@ export function BillingStartField({
 
       <FormField
         id="billingStartsAt"
-        label="Nie naliczaj przed"
-        hint="Miesiące rozliczone w poprzednim programie. Puste = naliczaj od początku umowy."
+        label={t.label}
+        hint={t.hint}
       >
         <div className="flex items-center gap-2">
           <DateInput

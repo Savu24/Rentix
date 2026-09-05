@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 import { INVOICE_STATUS_META, type DisplayInvoiceStatus } from "@/lib/invoices/status";
-import { formatAmount, formatPLN } from "@/lib/money";
-import { plural } from "@/lib/utils";
+import { formatAmount, formatMoney } from "@/lib/money";
 
 export type InvoiceRow = {
   id: string;
@@ -25,8 +26,6 @@ export type InvoiceRow = {
   roomName: string | null;
 };
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
-
 /**
  * Lista dokumentów z trybem zaznaczania.
  *
@@ -39,6 +38,8 @@ const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
  * kompletowania paczki.
  */
 export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
+  const { d, locale } = useI18n();
+  const t = d.panel.financePage;
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -68,7 +69,7 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
         <div>
           <Button size="sm" variant="secondary" onClick={() => setSelecting(true)}>
             <CheckSquare className="h-4 w-4" aria-hidden />
-            Zaznacz do pobrania
+            {t.selectForDownload}
           </Button>
         </div>
       ) : (
@@ -81,13 +82,15 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
             ) : (
               <CheckSquare className="h-4 w-4" aria-hidden />
             )}
-            {allSelected ? "Odznacz wszystkie" : "Zaznacz wszystkie"}
+            {allSelected ? t.deselectAll : t.selectAll}
           </Button>
 
           <span className="text-xs text-muted" aria-live="polite">
             {selected.size === 0
-              ? "Nic nie zaznaczono"
-              : `${selected.size} ${plural(selected.size, ["dokument", "dokumenty", "dokumentów"])}`}
+              ? t.nothingSelected
+              : fill(pluralize(locale, selected.size, t.unpaidDocs), {
+                  count: selected.size,
+                })}
           </span>
 
           <div className="ml-auto flex items-center gap-2">
@@ -95,18 +98,20 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
               <Button asChild size="sm">
                 <a href={`/api/invoices/pdf?ids=${[...selected].join(",")}`}>
                   <Download className="h-4 w-4" aria-hidden />
-                  Pobierz {selected.size}{" "}
-                  {plural(selected.size, ["dokument", "dokumenty", "dokumentów"])}
+                  {fill(t.downloadCount, {
+                    count: selected.size,
+                    noun: pluralize(locale, selected.size, t.documentNoun),
+                  })}
                 </a>
               </Button>
             ) : (
               <Button size="sm" disabled>
                 <Download className="h-4 w-4" aria-hidden />
-                Pobierz
+                {t.download}
               </Button>
             )}
 
-            <Button size="sm" variant="ghost" onClick={exitSelecting} aria-label="Zakończ zaznaczanie">
+            <Button size="sm" variant="ghost" onClick={exitSelecting} aria-label={t.finishSelecting}>
               <X className="h-4 w-4" aria-hidden />
             </Button>
           </div>
@@ -146,17 +151,21 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
                       {invoice.roomName ? ` · ${invoice.roomName}` : ""}
                     </span>
                   ) : null}
-                  <span>termin {dateFormat.format(invoice.dueDate)}</span>
+                  <span>{fill(t.dueOn, { date: formatDateIn(invoice.dueDate, locale, "short") })}</span>
                 </p>
               </div>
 
               <div className="text-right">
                 <p className="tabular font-mono text-sm font-medium text-fg">
-                  {formatPLN(invoice.totalGrossGrosze)}
+                  {formatMoney(invoice.totalGrossGrosze, locale)}
                 </p>
                 {invoice.remainingGrosze > 0 &&
                 invoice.remainingGrosze !== invoice.totalGrossGrosze ? (
-                  <p className="text-xs text-muted">zostało {formatPLN(invoice.remainingGrosze)}</p>
+                  <p className="text-xs text-muted">
+                    {fill(t.remainingAmount, {
+                      amount: formatMoney(invoice.remainingGrosze, locale),
+                    })}
+                  </p>
                 ) : null}
               </div>
             </CardContent>
@@ -223,6 +232,7 @@ function isPayable(invoice: InvoiceRow): boolean {
  */
 function MarkPaid({ invoiceId, remainingGrosze }: { invoiceId: string; remainingGrosze: number }) {
   const router = useRouter();
+  const { d, locale } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -247,13 +257,17 @@ function MarkPaid({ invoiceId, remainingGrosze }: { invoiceId: string; remaining
     router.refresh();
   }
 
+  const label = fill(d.panel.financePage.markPaid, {
+    amount: formatMoney(remainingGrosze, locale),
+  });
+
   return (
     <button
       type="button"
       onClick={pay}
       disabled={busy}
-      title={error ?? `Oznacz jako opłaconą: ${formatPLN(remainingGrosze)}`}
-      aria-label={`Oznacz jako opłaconą: ${formatPLN(remainingGrosze)}`}
+      title={error ?? label}
+      aria-label={label}
       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors disabled:opacity-60 ${
         error
           ? "border-bad text-bad"

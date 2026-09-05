@@ -15,7 +15,9 @@ import { formatPLN } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { expenseCategoryLabels, expenseListQuerySchema } from "@/lib/validations/expense";
 import { panelDictionary } from "@/lib/panel/dictionary";
-export const metadata: Metadata = { title: "Koszty" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.financePage.expensesTitle };
+}
 
 export default async function ExpensesPage({
   searchParams,
@@ -23,6 +25,7 @@ export default async function ExpensesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const d = await panelDictionary();
+  const t = d.panel.financePage;
   const session = await requireOwnerSession("/panel/finanse/koszty");
   const organizationId = session.user.organizationId;
   const params = await searchParams;
@@ -52,10 +55,8 @@ export default async function ExpensesPage({
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">Finanse</h1>
-          <p className="text-sm text-muted">
-            Wydatki właściciela. Bez nich raport pokaże przychód, ale nie zysk.
-          </p>
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
+          <p className="text-sm text-muted">{t.expensesLead}</p>
         </div>
 
         <ExpenseForm properties={properties} />
@@ -68,7 +69,7 @@ export default async function ExpensesPage({
           <Card>
             <CardContent className="flex flex-wrap items-baseline justify-between gap-3 p-4">
               <div>
-                <p className="text-xs text-muted">Suma kosztów w widoku</p>
+                <p className="text-xs text-muted">{t.expensesTotal}</p>
                 <p className="tabular font-mono text-[19px] font-semibold text-fg">
                   {formatPLN(summary.totalGrosze)}
                 </p>
@@ -93,11 +94,11 @@ export default async function ExpensesPage({
       {expenses.length === 0 ? (
         <EmptyState
           icon={Wallet}
-          title={filtered ? "Żaden koszt nie pasuje do filtrów" : "Nie ma jeszcze kosztów"}
+          title={filtered ? t.expensesNoMatchTitle : t.expensesEmptyTitle}
           description={
             filtered
-              ? "Zmień kryteria albo wyczyść filtry."
-              : "Wpisz czynsz do wspólnoty, ratę kredytu, remonty i ubezpieczenie. Dopiero wtedy raport policzy zysk, a nie sam przychód."
+              ? t.expensesNoMatchLead
+              : t.expensesEmptyLead
           }
         />
       ) : (

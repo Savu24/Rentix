@@ -114,7 +114,7 @@ export function ExpenseRow({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          aria-label="Edytuj koszt"
+          aria-label={d.panel.financePage.editExpense}
           className="rounded-btn p-1.5 text-muted transition-colors hover:bg-surface-alt hover:text-fg"
         >
           <Pencil className="h-3.5 w-3.5" aria-hidden />

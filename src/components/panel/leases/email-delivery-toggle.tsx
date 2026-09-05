@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { CheckboxField } from "@/components/ui/checkbox-field";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Wysyłka rachunków mailem — przełącznik na widoku umowy.
@@ -28,6 +29,8 @@ export function EmailDeliveryToggle({
   enabled: boolean;
 }) {
   const router = useRouter();
+  const { d } = useI18n();
+  const t = d.panel.leasesPage.emailToggle;
   const [checked, setChecked] = useState(enabled);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +59,8 @@ export function EmailDeliveryToggle({
 
       <div className="flex items-center gap-2">
         <CheckboxField
-          label="Wysyłaj rachunki mailem"
-          hint="Wyłączone: dokumenty nie pójdą nocnym przebiegiem. Ręczna wysyłka z widoku rachunku działa dalej."
+          label={t.label}
+          hint={t.off}
           checked={checked}
           disabled={busy}
           onChange={(event) => toggle(event.target.checked)}
