@@ -14,12 +14,13 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { getInvoice } from "@/lib/invoices/service";
 import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { vatLabels } from "@/lib/invoices/vat";
-import { formatPLN } from "@/lib/money";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { isSellerComplete } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
 import { invoiceKindLabels, paymentMethodLabels } from "@/lib/validations/invoice";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -30,11 +31,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: invoice ? invoice.number : "Dokument" };
 }
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
-const shortDate = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function InvoiceDetailPage({ params }: Params) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.financePage.detail;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -60,7 +60,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
           className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Finanse
+          {d.panel.financePage.title}
         </Link>
 
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -72,8 +72,10 @@ export default async function InvoiceDetailPage({ params }: Params) {
             </div>
 
             <p className="text-sm text-muted">
-              Wystawiono {dateFormat.format(invoice.issueDate)} · termin płatności{" "}
-              {dateFormat.format(invoice.dueDate)}
+              {fill(t.issuedOn, {
+                issued: formatDateIn(invoice.issueDate, locale, "long"),
+                due: formatDateIn(invoice.dueDate, locale, "long"),
+              })}
             </p>
           </div>
 
@@ -81,7 +83,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
             {/* target="_blank": PDF otwiera się w podglądzie, a widok dokumentu zostaje. */}
             <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener noreferrer">
               <Download className="h-4 w-4" aria-hidden />
-              Pobierz PDF
+              {t.downloadPdf}
             </a>
           </Button>
         </div>
@@ -91,9 +93,9 @@ export default async function InvoiceDetailPage({ params }: Params) {
           w którym za chwilę pobierzesz PDF i wyślesz go najemcy. */}
       {!isSellerComplete(invoice.organization) ? (
         <Alert tone="warning">
-          Dane wystawcy są niepełne. Dokument wyjdzie bez adresu sprzedawcy.{" "}
+          {t.sellerIncomplete}{" "}
           <Link href="/panel/ustawienia" className="font-medium underline">
-            Uzupełnij w ustawieniach
+            {t.completeInSettings}
           </Link>
           .
         </Alert>
@@ -102,7 +104,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
       <div className="grid gap-3 sm:grid-cols-2">
         <Card>
           <CardContent className="flex flex-col gap-1 p-4">
-            <p className="text-[13px] font-semibold text-fg">Nabywca</p>
+            <p className="text-[13px] font-semibold text-fg">{t.buyer}</p>
             <p className="text-sm text-fg">{invoice.buyerName}</p>
             {invoice.buyerStreet ? (
               <p className="text-xs text-muted">{invoice.buyerStreet}</p>
@@ -116,14 +118,14 @@ export default async function InvoiceDetailPage({ params }: Params) {
               <p className="text-xs text-muted">NIP: {invoice.buyerTaxId}</p>
             ) : null}
             <p className="mt-1 text-xs text-muted">
-              Dane skopiowane w chwili wystawienia. Dokument pokazuje stan z tamtego dnia.
+              {t.snapshotNote}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="flex flex-col gap-1 p-4">
-            <p className="text-[13px] font-semibold text-fg">Czego dotyczy</p>
+            <p className="text-[13px] font-semibold text-fg">{t.subject}</p>
             {property ? (
               <Link
                 href={`/panel/nieruchomosci/${property.id}`}
@@ -133,13 +135,17 @@ export default async function InvoiceDetailPage({ params }: Params) {
                 {invoice.lease?.room ? ` · ${invoice.lease.room.name}` : ""}
               </Link>
             ) : (
-              <p className="text-sm text-muted">Dokument jednorazowy, bez umowy.</p>
+              <p className="text-sm text-muted">{t.oneOff}</p>
             )}
 
             {invoice.periodStart ? (
               <p className="text-xs text-muted">
-                Okres: {shortDate.format(invoice.periodStart)}
-                {invoice.periodEnd ? ` – ${shortDate.format(invoice.periodEnd)}` : ""}
+                {fill(t.period, {
+                  from: formatDateIn(invoice.periodStart, locale, "short"),
+                  to: invoice.periodEnd
+                    ? ` – ${formatDateIn(invoice.periodEnd, locale, "short")}`
+                    : "",
+                })}
               </p>
             ) : null}
 
@@ -148,7 +154,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
                 href={`/panel/umowy/${invoice.lease.id}`}
                 className="mt-1 w-fit text-xs text-accent hover:underline"
               >
-                Zobacz umowę
+                {t.viewLease}
               </Link>
             ) : null}
           </CardContent>
@@ -158,11 +164,11 @@ export default async function InvoiceDetailPage({ params }: Params) {
       <Card>
         <CardContent className="flex flex-col p-0">
           <div className="flex items-center gap-3 border-b border-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-            <span className="flex-1">Pozycja</span>
-            <span className="w-20 text-right">Ilość</span>
-            <span className="w-14 text-right">VAT</span>
-            <span className="w-24 text-right">Netto</span>
-            <span className="w-24 text-right">Brutto</span>
+            <span className="flex-1">{t.lineHeader}</span>
+            <span className="w-20 text-right">{t.quantity}</span>
+            <span className="w-14 text-right">{t.vat}</span>
+            <span className="w-24 text-right">{t.net}</span>
+            <span className="w-24 text-right">{t.gross}</span>
           </div>
 
           {invoice.lines.map((line) => (
@@ -172,29 +178,33 @@ export default async function InvoiceDetailPage({ params }: Params) {
             >
               <span className="min-w-0 flex-1 text-fg">{line.description}</span>
               <span className="tabular w-20 text-right font-mono text-xs text-muted">
-                {Number(line.quantity)
-                  .toString()
-                  .replace(".", ",")}{" "}
+                {locale === "pl"
+                  ? Number(line.quantity).toString().replace(".", ",")
+                  : Number(line.quantity).toString()}{" "}
                 {line.unit}
               </span>
               <span className="w-14 text-right text-xs text-muted">{vatLabels(d)[line.vatRate]}</span>
               <span className="tabular w-24 text-right font-mono text-xs text-muted">
-                {formatPLN(line.netGrosze)}
+                {formatMoney(line.netGrosze)}
               </span>
               <span className="tabular w-24 text-right font-mono text-fg">
-                {formatPLN(line.grossGrosze)}
+                {formatMoney(line.grossGrosze)}
               </span>
             </div>
           ))}
 
           <div className="flex flex-col gap-1 border-t border-border bg-surface-alt px-4 py-3">
-            <SummaryRow label="Razem netto" value={formatPLN(invoice.totalNetGrosze)} />
-            <SummaryRow label="Razem VAT" value={formatPLN(invoice.totalVatGrosze)} />
-            <SummaryRow label="Do zapłaty" value={formatPLN(invoice.totalGrossGrosze)} strong />
+            <SummaryRow label={t.totalNet} value={formatMoney(invoice.totalNetGrosze, locale)} />
+            <SummaryRow label={t.totalVat} value={formatMoney(invoice.totalVatGrosze, locale)} />
+            <SummaryRow
+              label={t.totalDue}
+              value={formatMoney(invoice.totalGrossGrosze, locale)}
+              strong
+            />
             {invoice.paidGrosze > 0 ? (
               <>
-                <SummaryRow label="Wpłacono" value={formatPLN(invoice.paidGrosze)} />
-                <SummaryRow label="Pozostaje" value={formatPLN(remaining)} strong />
+                <SummaryRow label={t.paid} value={formatMoney(invoice.paidGrosze, locale)} />
+                <SummaryRow label={t.remaining} value={formatMoney(remaining, locale)} strong />
               </>
             ) : null}
             <p className="mt-1 text-xs text-muted">
@@ -206,13 +216,14 @@ export default async function InvoiceDetailPage({ params }: Params) {
 
       <section className="flex flex-col gap-2">
         <h2 className="text-[15px] font-semibold text-fg">
-          Wpłaty <span className="font-normal text-muted">({invoice.payments.length})</span>
+          {t.payments}{" "}
+          <span className="font-normal text-muted">({invoice.payments.length})</span>
         </h2>
 
         {invoice.payments.length === 0 ? (
           <Card>
             <CardContent className="p-4 text-sm text-muted">
-              Nie odnotowano jeszcze żadnej wpłaty.
+              {t.noPayments}
             </CardContent>
           </Card>
         ) : (
@@ -227,14 +238,15 @@ export default async function InvoiceDetailPage({ params }: Params) {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-fg">
-                      {shortDate.format(payment.paidAt)} · {paymentMethodLabels(d)[payment.method]}
+                      {formatDateIn(payment.paidAt, locale, "short")} ·{" "}
+                      {paymentMethodLabels(d)[payment.method]}
                     </p>
                     {payment.reference ? (
                       <p className="text-xs text-muted">{payment.reference}</p>
                     ) : null}
                   </div>
                   <p className="tabular font-mono text-sm text-fg">
-                    {formatPLN(payment.amountGrosze)}
+                    {formatMoney(payment.amountGrosze, locale)}
                   </p>
                   <DeletePayment paymentId={payment.id} />
                 </div>
@@ -250,9 +262,9 @@ export default async function InvoiceDetailPage({ params }: Params) {
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
             <div className="min-w-0 text-xs">
               <p className="font-medium text-fg">
-                {lastNotification.status === "SENT"
-                  ? `Wysłano przypomnienie ${shortDate.format(lastNotification.createdAt)}`
-                  : `Nie udało się wysłać przypomnienia ${shortDate.format(lastNotification.createdAt)}`}
+                {fill(lastNotification.status === "SENT" ? t.reminderSent : t.reminderFailed, {
+                  date: formatDateIn(lastNotification.createdAt, locale, "short"),
+                })}
               </p>
               <p className="text-muted">
                 {lastNotification.toEmail}
@@ -280,7 +292,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
       {invoice.notes ? (
         <Card className="bg-surface-alt">
           <CardContent className="flex flex-col gap-1.5 p-4">
-            <p className="text-[13px] font-semibold text-fg">Uwagi</p>
+            <p className="text-[13px] font-semibold text-fg">{t.notes}</p>
             <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{invoice.notes}</p>
           </CardContent>
         </Card>

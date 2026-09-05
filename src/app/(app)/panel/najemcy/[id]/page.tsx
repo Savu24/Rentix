@@ -28,11 +28,12 @@ import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices"
 import { ManualInvoiceForm } from "@/components/panel/invoices/manual-invoice-form";
 import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { resolveLeaseExpiry } from "@/lib/leases/expiry";
-import { formatPLN } from "@/lib/money";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import { getTenant } from "@/lib/tenants/service";
 import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
 import { tenantStatusLabels, TENANT_STATUS_TONE } from "@/lib/validations/tenant";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -43,10 +44,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return { title: tenant ? `${tenant.firstName} ${tenant.lastName}` : "Najemca" };
 }
 
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 export default async function TenantDetailPage({ params }: Params) {
-  const d = await panelDictionary();
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const t = d.panel.tenantsPage.detail;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -132,7 +133,7 @@ export default async function TenantDetailPage({ params }: Params) {
               {/* Osoby fizycznej nie oznaczamy — to domyślny przypadek,
                   a plakietka „osoba fizyczna" przy każdym najemcy nie niosłaby
                   żadnej informacji. */}
-              {tenant.legalForm === "COMPANY" ? <Badge tone="accent">Firma</Badge> : null}
+              {tenant.legalForm === "COMPANY" ? <Badge tone="accent">{t.company}</Badge> : null}
               {expiry ? (
                 <Badge tone={expiry.tone}>
                   <CalendarClock className="h-3 w-3" aria-hidden />
@@ -169,8 +170,8 @@ export default async function TenantDetailPage({ params }: Params) {
               endpoint="/api/tenants"
               id={tenant.id}
               archived={tenant.archivedAt !== null}
-              label="najemcę"
-              hint="Zniknie z listy najemców. Jego umowy i wystawione dokumenty zostaną nietknięte. Widnieje na nich jako nabywca."
+              label={t.archiveLabel}
+              hint={t.archiveHint}
             />
 
             {/* Przypisanie idzie przez kreator umowy z wypełnionym najemcą —
@@ -179,7 +180,7 @@ export default async function TenantDetailPage({ params }: Params) {
             <Button asChild size="sm">
               <Link href={`/panel/umowy/nowa?tenantId=${tenant.id}`}>
                 <DoorOpen className="h-4 w-4" aria-hidden />
-                Przypisz do mieszkania
+                {t.assignToProperty}
               </Link>
             </Button>
           </div>
@@ -187,19 +188,23 @@ export default async function TenantDetailPage({ params }: Params) {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <SummaryTile label="Do zapłaty" value={formatPLN(outstanding)} tone={outstanding > 0 ? "bad" : "good"} />
-        <SummaryTile label="Wpłacono łącznie" value={formatPLN(totalPaid)} />
-        <SummaryTile label="Umowy" value={String(leases.length)} />
+        <SummaryTile
+          label={t.outstanding}
+          value={formatMoney(outstanding, locale)}
+          tone={outstanding > 0 ? "bad" : "good"}
+        />
+        <SummaryTile label={t.paidTotal} value={formatMoney(totalPaid, locale)} />
+        <SummaryTile label={t.leases} value={String(leases.length)} />
       </div>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-semibold text-fg">Umowy</h2>
+        <h2 className="text-[15px] font-semibold text-fg">{t.leases}</h2>
         {leases.length === 0 ? (
           <Card>
             <CardContent className="p-4 text-sm text-muted">
               Ten najemca nie ma jeszcze żadnej umowy.{" "}
               <Link href="/panel/umowy/nowa" className="font-medium text-accent hover:underline">
-                Utwórz umowę
+                {t.createLease}
               </Link>
               .
             </CardContent>
@@ -220,13 +225,15 @@ export default async function TenantDetailPage({ params }: Params) {
                       </Badge>
                     </div>
                     <p className="mt-1 text-xs text-muted">
-                      {dateFormat.format(lease.startDate)} –{" "}
-                      {lease.endDate ? dateFormat.format(lease.endDate) : "czas nieokreślony"}
-                      {lease.number ? ` · nr ${lease.number}` : ""}
+                      {formatDateIn(lease.startDate, locale, "short")} –{" "}
+                      {lease.endDate
+                        ? formatDateIn(lease.endDate, locale, "short")
+                        : t.openEnded}
+                      {lease.number ? fill(t.leaseNumber, { number: lease.number }) : ""}
                     </p>
                   </div>
                   <p className="tabular font-mono text-sm font-medium text-fg">
-                    {formatPLN(lease.rentGrosze)}/mies.
+                    {fill(t.perMonth, { amount: formatMoney(lease.rentGrosze, locale) })}
                   </p>
                 </CardContent>
               </Link>
@@ -237,7 +244,7 @@ export default async function TenantDetailPage({ params }: Params) {
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[15px] font-semibold text-fg">Rozliczenia</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.invoices}</h2>
 
           {/* Obsługa płatności siedzi przy najemcy, a nie przy umowie:
               rozliczamy człowieka, a jeden najemca miewa dwie umowy. */}
@@ -257,7 +264,7 @@ export default async function TenantDetailPage({ params }: Params) {
 
         {invoices.length === 0 ? (
           <Card>
-            <CardContent className="p-4 text-sm text-muted">Brak wystawionych faktur.</CardContent>
+            <CardContent className="p-4 text-sm text-muted">{t.noInvoices}</CardContent>
           </Card>
         ) : (
           <Card>
@@ -276,12 +283,12 @@ export default async function TenantDetailPage({ params }: Params) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-fg">{invoice.number}</p>
                       <p className="text-xs text-muted">
-                        termin {dateFormat.format(invoice.dueDate)}
+                        termin {formatDateIn(invoice.dueDate, locale, "short")}
                       </p>
                     </div>
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                     <p className="tabular w-24 text-right font-mono text-sm text-fg">
-                      {formatPLN(invoice.totalGrossGrosze)}
+                      {formatMoney(invoice.totalGrossGrosze)}
                     </p>
                   </div>
                 );
@@ -294,12 +301,12 @@ export default async function TenantDetailPage({ params }: Params) {
       <section className="flex flex-col gap-2">
         <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
           <MessageSquare className="h-4 w-4 text-muted" aria-hidden />
-          Komunikacja
+          {t.messages}
         </h2>
         {tenant.messageThreads.length === 0 ? (
           <Card>
             <CardContent className="p-4 text-sm text-muted">
-              Brak wątków rozmów z tym najemcą.
+              {t.noThreads}
             </CardContent>
           </Card>
         ) : (
@@ -312,10 +319,10 @@ export default async function TenantDetailPage({ params }: Params) {
                 >
                   <div className="flex items-baseline justify-between gap-3">
                     <p className="text-sm font-medium text-fg">
-                      {thread.subject ?? "Wątek bez tematu"}
+                      {thread.subject ?? t.threadWithoutSubject}
                     </p>
                     <p className="shrink-0 text-xs text-muted">
-                      {dateFormat.format(thread.lastMessageAt)}
+                      {formatDateIn(thread.lastMessageAt, locale, "short")}
                     </p>
                   </div>
                   {thread.messages[0] ? (
@@ -338,17 +345,17 @@ export default async function TenantDetailPage({ params }: Params) {
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
             <IdCard className="h-4 w-4 text-muted" aria-hidden />
-            Dane identyfikacyjne
+            {t.identity}
           </h2>
           <Card>
             <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
-              <DetailItem label="Dowód osobisty" value={tenant.idCardNumber} />
-              <DetailItem label="PESEL" value={tenant.pesel} />
-              <DetailItem label="Paszport" value={tenant.passportNumber} />
-              <DetailItem label="Karta pobytu" value={tenant.residenceCardNumber} />
+              <DetailItem label={t.idCard} value={tenant.idCardNumber} />
+              <DetailItem label={t.nationalId} value={tenant.pesel} />
+              <DetailItem label={t.passport} value={tenant.passportNumber} />
+              <DetailItem label={t.residenceCard} value={tenant.residenceCardNumber} />
               <DetailItem
-                label="Data urodzenia"
-                value={tenant.dateOfBirth ? dateFormat.format(tenant.dateOfBirth) : null}
+                label={t.dateOfBirth}
+                value={tenant.dateOfBirth ? formatDateIn(tenant.dateOfBirth, locale, "short") : null}
               />
             </CardContent>
           </Card>
@@ -359,13 +366,13 @@ export default async function TenantDetailPage({ params }: Params) {
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
             <LifeBuoy className="h-4 w-4 text-muted" aria-hidden />
-            Kontakt w nagłym wypadku
+            {t.emergency}
           </h2>
           <Card>
             <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
-              <DetailItem label="Osoba" value={emergencyName || null} />
-              <DetailItem label="Telefon" value={tenant.emergencyContactPhone} />
-              <DetailItem label="E-mail" value={tenant.emergencyContactEmail} />
+              <DetailItem label={t.person} value={emergencyName || null} />
+              <DetailItem label={t.phone} value={tenant.emergencyContactPhone} />
+              <DetailItem label={t.email} value={tenant.emergencyContactEmail} />
             </CardContent>
           </Card>
         </section>
@@ -375,15 +382,15 @@ export default async function TenantDetailPage({ params }: Params) {
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
             <Home className="h-4 w-4 text-muted" aria-hidden />
-            Adres zameldowania
+            {t.registered}
           </h2>
           <Card>
             <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
-              <DetailItem label="Adres" value={registeredAddress || null} />
+              <DetailItem label={t.address} value={registeredAddress || null} />
               <DetailItem
-                label="Zameldowanie do"
+                label={t.registeredUntil}
                 value={
-                  tenant.registeredUntil ? dateFormat.format(tenant.registeredUntil) : "bezterminowo"
+                  tenant.registeredUntil ? formatDateIn(tenant.registeredUntil, locale, "short") : "bezterminowo"
                 }
               />
             </CardContent>
@@ -395,13 +402,13 @@ export default async function TenantDetailPage({ params }: Params) {
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
             <Banknote className="h-4 w-4 text-muted" aria-hidden />
-            Płatności
+            {t.payments}
           </h2>
           <Card>
             <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
-              <DetailItem label="E-mail do płatności" value={tenant.billingEmail} />
-              <DetailItem label="Telefon do płatności" value={tenant.billingPhone} />
-              <DetailItem label="Rachunek do zwrotu kaucji" value={tenant.depositRefundAccount} />
+              <DetailItem label={t.billingEmail} value={tenant.billingEmail} />
+              <DetailItem label={t.billingPhone} value={tenant.billingPhone} />
+              <DetailItem label={t.depositAccount} value={tenant.depositRefundAccount} />
             </CardContent>
           </Card>
         </section>
@@ -411,15 +418,15 @@ export default async function TenantDetailPage({ params }: Params) {
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
             <Briefcase className="h-4 w-4 text-muted" aria-hidden />
-            Praca i studia
+            {t.work}
           </h2>
           <Card>
             <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
-              <DetailItem label="Pracodawca lub uczelnia" value={tenant.employerName} />
+              <DetailItem label={t.employer} value={tenant.employerName} />
               <DetailItem
-                label="Do kiedy"
+                label={t.until}
                 value={
-                  tenant.employmentUntil ? dateFormat.format(tenant.employmentUntil) : "bezterminowo"
+                  tenant.employmentUntil ? formatDateIn(tenant.employmentUntil, locale, "short") : "bezterminowo"
                 }
               />
             </CardContent>
@@ -431,23 +438,23 @@ export default async function TenantDetailPage({ params }: Params) {
         <section className="flex flex-col gap-2">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
             <ShieldCheck className="h-4 w-4 text-muted" aria-hidden />
-            Ubezpieczenie najemcy
+            {t.insurance}
           </h2>
           <Card>
             <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">
-              <DetailItem label="Ubezpieczyciel" value={tenant.insurerName} />
-              <DetailItem label="Numer polisy" value={tenant.insurancePolicyNumber} />
+              <DetailItem label={t.insurer} value={tenant.insurerName} />
+              <DetailItem label={t.policyNumber} value={tenant.insurancePolicyNumber} />
               {/* Polisa po terminie jest gorsza niż jej brak — właściciel liczy
                   na ochronę, której już nie ma. Dlatego data dostaje kolor. */}
               {tenant.insuranceExpiresAt ? (
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <p className="text-xs text-muted">Ważna do</p>
+                  <p className="text-xs text-muted">{t.validUntil}</p>
                   <p
                     className={`text-sm ${
                       tenant.insuranceExpiresAt < now ? "font-medium text-bad" : "text-fg"
                     }`}
                   >
-                    {dateFormat.format(tenant.insuranceExpiresAt)}
+                    {formatDateIn(tenant.insuranceExpiresAt, locale, "short")}
                     {tenant.insuranceExpiresAt < now ? " · wygasła" : ""}
                   </p>
                 </div>
@@ -462,7 +469,7 @@ export default async function TenantDetailPage({ params }: Params) {
           <CardContent className="flex flex-col gap-1.5 p-4">
             <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
               <FileText className="h-3.5 w-3.5 text-muted" aria-hidden />
-              Notatki wewnętrzne
+              {t.notes}
             </p>
             <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{tenant.notes}</p>
           </CardContent>
