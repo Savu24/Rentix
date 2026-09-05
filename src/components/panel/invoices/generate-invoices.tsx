@@ -10,25 +10,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
-import { plural } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/client";
+import { LOCALE_META } from "@/lib/i18n/config";
+import { fill, pluralize } from "@/lib/i18n/format";
 
-const MONTHS = [
-  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
-  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
-];
+/**
+ * Numery miesięcy, nie nazwy — te bierze `Intl` w języku konta. Lista nazw
+ * w kodzie byłaby czwartym miejscem, w którym trzymamy polski kalendarz.
+ */
+const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 type GenerateResponse = {
   created: Array<{ leaseId: string; invoiceId: string; number: string }>;
   skipped: Array<{ leaseId: string; reason: string }>;
-};
-
-const SKIP_REASON_LABEL: Record<string, string> = {
-  ALREADY_INVOICED: "miały już dokument za ten okres",
-  OUTSIDE_LEASE_PERIOD: "nie obowiązywały w tym miesiącu",
-  NO_TENANT: "nie mają przypisanego najemcy",
-  NOTHING_TO_BILL: "nie mają czego naliczyć",
-  BILLING_DAY_AHEAD: "mają dzień naliczania w przyszłości",
-  BEFORE_BILLING_START: "są rozliczane w Rentiksie dopiero od późniejszego miesiąca",
 };
 
 /**
@@ -41,7 +35,7 @@ const SKIP_REASON_LABEL: Record<string, string> = {
 export function GenerateInvoices({
   leaseId,
   tenantId,
-  label = "Nalicz czynsz",
+  label,
 }: {
   /** Ustawione = naliczamy tylko tę umowę. */
   leaseId?: string;
@@ -53,6 +47,8 @@ export function GenerateInvoices({
   const router = useRouter();
   const now = new Date();
 
+  const { d, locale } = useI18n();
+  const t = d.panel.financePage.generate;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +83,7 @@ export function GenerateInvoices({
     return (
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         <Receipt className="h-4 w-4" aria-hidden />
-        {label}
+        {label ?? t.button}
       </Button>
     );
   }
@@ -100,12 +96,9 @@ export function GenerateInvoices({
     <Card className="border-accent/40">
       <CardContent className="flex flex-col gap-4 p-4">
         <div>
-          <p className="text-sm font-semibold text-fg">Naliczenie czynszu</p>
+          <p className="text-sm font-semibold text-fg">{t.title}</p>
           <p className="mt-0.5 text-xs text-muted">
-            {leaseId || tenantId
-              ? "Wystawi dokumenty za wskazany miesiąc dla aktywnych umów tego najemcy."
-              : "Wystawi dokumenty wszystkim aktywnym umowom za wskazany miesiąc."}{" "}
-            Umowy, które mają już rozliczenie za ten okres, zostaną pominięte.
+            {leaseId || tenantId ? t.leadTenant : t.leadAll} {t.alsoSkipped}
           </p>
         </div>
 
@@ -115,43 +108,53 @@ export function GenerateInvoices({
           <Alert tone={result.created.length > 0 ? "success" : "info"}>
             {result.created.length > 0 ? (
               <>
-                Wystawiono {result.created.length}{" "}
-                {plural(result.created.length, ["dokument", "dokumenty", "dokumentów"])}:{" "}
-                {result.created.map((invoice) => invoice.number).join(", ")}.
+                {fill(t.issued, {
+                  count: result.created.length,
+                  noun: pluralize(locale, result.created.length, d.panel.financePage.documentNoun),
+                  numbers: result.created.map((invoice) => invoice.number).join(", "),
+                })}
               </>
             ) : (
-              "Nie wystawiono żadnego nowego dokumentu."
+              t.nothingIssued
             )}
             {result.skipped.length > 0 ? (
               <span className="mt-1 block text-muted">
-                Pominięto {result.skipped.length}{" "}
-                {plural(result.skipped.length, ["umowę", "umowy", "umów"])}:{" "}
-                {[...new Set(result.skipped.map((entry) => SKIP_REASON_LABEL[entry.reason] ?? entry.reason))].join(
-                  "; ",
-                )}
-                .
+                {fill(t.skipped, {
+                  count: result.skipped.length,
+                  noun: pluralize(locale, result.skipped.length, d.panel.leasesPage.noun),
+                  reasons: [
+                    ...new Set(
+                      result.skipped.map(
+                        (entry) =>
+                          t.skipReason[entry.reason as keyof typeof t.skipReason] ?? entry.reason,
+                      ),
+                    ),
+                  ].join("; "),
+                })}
               </span>
             ) : null}
           </Alert>
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="generate-month" label="Miesiąc">
+          <FormField id="generate-month" label={t.month}>
             <Select
               id="generate-month"
               value={month}
               onChange={(event) => setMonth(Number(event.target.value))}
               disabled={busy}
             >
-              {MONTHS.map((name, index) => (
-                <option key={name} value={index + 1}>
-                  {name}
+              {MONTHS.map((index) => (
+                <option key={index} value={index + 1}>
+                  {new Intl.DateTimeFormat(LOCALE_META[locale].intl, { month: "long" }).format(
+                    new Date(Date.UTC(2026, index, 1)),
+                  )}
                 </option>
               ))}
             </Select>
           </FormField>
 
-          <FormField id="generate-year" label="Rok">
+          <FormField id="generate-year" label={t.year}>
             <Select
               id="generate-year"
               value={year}
@@ -170,7 +173,7 @@ export function GenerateInvoices({
         <div className="flex flex-wrap gap-2.5">
           <Button size="sm" onClick={submit} disabled={busy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            Nalicz
+            {t.run}
           </Button>
           <Button
             size="sm"
@@ -182,7 +185,7 @@ export function GenerateInvoices({
             }}
             disabled={busy}
           >
-            Zamknij
+            {t.close}
           </Button>
         </div>
       </CardContent>
