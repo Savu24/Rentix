@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { ExpenseCategory, ExpenseRecurrence } from "@/generated/prisma/enums";
 
+import { fill } from "@/lib/i18n/format";
+import type { Dictionary } from "@/lib/i18n/types";
+
 import {
+  type ValidationContext,
   dateInput,
   idSchema,
   moneyInput,
@@ -16,21 +20,14 @@ const expenseCategories = Object.values(ExpenseCategory) as [
   ...ExpenseCategory[],
 ];
 
-export const EXPENSE_CATEGORY_LABEL: Record<ExpenseCategory, string> = {
-  MORTGAGE: "Rata kredytu",
-  RENT: "Wynajem",
-  COMMUNITY_FEE: "Czynsz do wspólnoty",
-  UTILITIES: "Media",
-  REPAIR: "Naprawa i remont",
-  FURNISHING: "Wyposażenie",
-  INSURANCE: "Ubezpieczenie",
-  PROPERTY_TAX: "Podatek od nieruchomości",
-  INCOME_TAX: "Podatek od najmu",
-  MANAGEMENT: "Zarządzanie i pośrednictwo",
-  ACCOUNTING: "Księgowość",
-  LEGAL: "Obsługa prawna",
-  OTHER: "Inne",
-};
+/**
+ * Etykiety kategorii siedzą w słowniku, bo to nie jest samo tłumaczenie:
+ * „czynsz do wspólnoty" odpowiada brytyjskiemu service charge przy leasehold,
+ * a „podatek od nieruchomości" — council tax, który płaci zwykle najemca.
+ */
+export function expenseCategoryLabels(d: Dictionary): Record<ExpenseCategory, string> {
+  return d.panel.expenses.category;
+}
 
 /**
  * Kolejność na liście wyboru — od kosztów, które właściciel wpisuje najczęściej.
@@ -62,12 +59,9 @@ const expenseRecurrences = Object.values(ExpenseRecurrence) as [
 ];
 
 /** Etykieta odpowiada na pytanie „co ile ponoszę ten koszt?". */
-export const EXPENSE_RECURRENCE_LABEL: Record<ExpenseRecurrence, string> = {
-  WEEKLY: "Co tydzień",
-  MONTHLY: "Co miesiąc",
-  YEARLY: "Co rok",
-  CUSTOM: "Niestandardowo",
-};
+export function expenseRecurrenceLabels(d: Dictionary): Record<ExpenseRecurrence, string> {
+  return d.panel.expenses.recurrence;
+}
 
 export const EXPENSE_RECURRENCE_ORDER: ExpenseRecurrence[] = [
   // Czynsz do wspólnoty i rata kredytu są miesięczne, więc miesiąc stoi
@@ -85,29 +79,33 @@ export const EXPENSE_RECURRENCE_MAX_DAYS = 3650;
 export function describeRecurrence(
   recurrence: ExpenseRecurrence,
   everyDays: number | null,
+  d: Dictionary,
 ): string {
-  if (recurrence !== "CUSTOM") return EXPENSE_RECURRENCE_LABEL[recurrence].toLowerCase();
-  return everyDays ? `co ${everyDays} dni` : "niestandardowo";
+  const labels = expenseRecurrenceLabels(d);
+  if (recurrence !== "CUSTOM") return labels[recurrence].toLowerCase();
+  return everyDays
+    ? fill(d.panel.expenses.everyDays, { days: everyDays })
+    : labels.CUSTOM.toLowerCase();
 }
 
-const expenseBaseSchema = z.object({
+const expenseBaseSchema = (c: ValidationContext) => z.object({
   /** Puste = koszt ogólny konta, nieprzypisany do nieruchomości. */
   propertyId: z
-    .union([z.literal(""), idSchema])
+    .union([z.literal(""), idSchema(c)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value)),
 
   category: z.enum(expenseCategories).default("OTHER"),
-  amountGrosze: moneyInput("Kwota").refine((value) => value > 0, {
-    message: "Kwota musi być większa od zera",
+  amountGrosze: moneyInput(c, c.d.panel.expenses.fields.amount).refine((value) => value > 0, {
+    message: c.d.panel.expenses.amountPositive,
   }),
   /** Kasowo — liczy się dzień, w którym pieniądze wyszły z konta. */
-  paidAt: dateInput("Data poniesienia"),
+  paidAt: dateInput(c, c.d.panel.expenses.fields.paidAt),
 
-  description: requiredText("Opis", 200),
-  vendor: optionalText(120),
-  documentRef: optionalText(80),
-  notes: optionalText(2000),
+  description: requiredText(c, c.d.panel.expenses.fields.description, 200),
+  vendor: optionalText(c, 120),
+  documentRef: optionalText(c, 80),
+  notes: optionalText(c, 2000),
 
   /**
    * Checkbox „koszt cykliczny". Trzymany osobno od `recurrence`, bo pole
@@ -123,7 +121,10 @@ const expenseBaseSchema = z.object({
   recurring: z.coerce.boolean().default(false),
   recurrence: z.enum(expenseRecurrences).nullable().optional(),
   /** Odstęp w dniach — pytany tylko przy cyklu „niestandardowo". */
-  recurrenceEveryDays: optionalInt("Odstęp", { min: 1, max: EXPENSE_RECURRENCE_MAX_DAYS }),
+  recurrenceEveryDays: optionalInt(c, c.d.panel.expenses.fields.interval, {
+    min: 1,
+    max: EXPENSE_RECURRENCE_MAX_DAYS,
+  }),
 });
 
 type RecurrenceFields = {
@@ -137,16 +138,18 @@ type RecurrenceFields = {
  * wiedziałoby, co ile ma wracać. Sprawdzamy na całym obiekcie, bo warunek
  * wiąże dwa pola.
  */
-function checkRecurrence(value: RecurrenceFields, ctx: z.RefinementCtx) {
-  if (!value.recurring) return;
+function checkRecurrence(c: ValidationContext) {
+  return (value: RecurrenceFields, ctx: z.RefinementCtx) => {
+    if (!value.recurring) return;
 
-  if (value.recurrence === "CUSTOM" && !value.recurrenceEveryDays) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["recurrenceEveryDays"],
-      message: "Podaj, co ile dni wraca ten koszt",
-    });
-  }
+    if (value.recurrence === "CUSTOM" && !value.recurrenceEveryDays) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["recurrenceEveryDays"],
+        message: c.d.panel.expenses.customIntervalRequired,
+      });
+    }
+  };
 }
 
 /**
@@ -170,18 +173,15 @@ function toRecurrenceColumns<T extends RecurrenceFields>(value: T) {
   };
 }
 
-export const expenseFormSchema = expenseBaseSchema
-  .superRefine(checkRecurrence)
-  .transform(toRecurrenceColumns);
+export const expenseFormSchema = (c: ValidationContext) =>
+  expenseBaseSchema(c).superRefine(checkRecurrence(c)).transform(toRecurrenceColumns);
 
-export type ExpenseFormInput = z.input<typeof expenseBaseSchema>;
-export type ExpenseFormOutput = z.output<typeof expenseFormSchema>;
+export type ExpenseFormInput = z.input<ReturnType<typeof expenseBaseSchema>>;
+export type ExpenseFormOutput = z.output<ReturnType<typeof expenseFormSchema>>;
 
-export const expenseUpdateSchema = expenseBaseSchema
-  .partial()
-  .superRefine(checkRecurrence)
-  .transform(toRecurrenceColumns);
-export type ExpenseUpdateOutput = z.output<typeof expenseUpdateSchema>;
+export const expenseUpdateSchema = (c: ValidationContext) =>
+  expenseBaseSchema(c).partial().superRefine(checkRecurrence(c)).transform(toRecurrenceColumns);
+export type ExpenseUpdateOutput = z.output<ReturnType<typeof expenseUpdateSchema>>;
 
 export const expenseListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),

@@ -20,3 +20,13 @@ const DICTIONARIES: Record<Locale, Dictionary> = { pl, uk };
 export function getDictionary(locale: Locale): Dictionary {
   return DICTIONARIES[locale];
 }
+
+/**
+ * Kontekst dla schematów walidacji: kraj plus jego teksty.
+ *
+ * Schematy nie sięgają po słownik same, bo importuje je także przeglądarka —
+ * dostają go stąd (serwer) albo z `useI18n()` (klient).
+ */
+export function localeContext(locale: Locale): { locale: Locale; d: Dictionary } {
+  return { locale, d: getDictionary(locale) };
+}

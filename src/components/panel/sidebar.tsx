@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Logo } from "@/components/brand/logo";
-import { isNavItemActive, PANEL_NAV } from "@/lib/panel/nav";
+import { useI18n } from "@/lib/i18n/client";
+import { isNavItemActive, navLabel, PANEL_NAV } from "@/lib/panel/nav";
 import { cn } from "@/lib/utils";
 
 export function Sidebar({
@@ -17,6 +18,8 @@ export function Sidebar({
   initials: string;
 }) {
   const pathname = usePathname();
+  const { d } = useI18n();
+  const t = d.panel.shell;
 
   return (
     <aside className="hidden w-56 shrink-0 flex-col gap-0.5 border-r border-border px-3 py-4 lg:flex">
@@ -24,7 +27,7 @@ export function Sidebar({
         <Logo size="sm" />
       </Link>
 
-      <nav aria-label="Nawigacja panelu" className="flex flex-col gap-0.5">
+      <nav aria-label={t.navAria} className="flex flex-col gap-0.5">
         {PANEL_NAV.map((item) => {
           const active = isNavItemActive(item, pathname);
           const Icon = item.icon;
@@ -34,12 +37,12 @@ export function Sidebar({
               <span
                 key={item.href}
                 aria-disabled
-                title="Moduł w przygotowaniu"
+                title={t.soonTitle}
                 className="flex cursor-not-allowed items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium text-muted/60"
               >
                 <Icon className="h-[17px] w-[17px] shrink-0" aria-hidden />
-                <span className="truncate">{item.label}</span>
-                <span className="ml-auto text-[10px] uppercase tracking-wide">wkrótce</span>
+                <span className="truncate">{navLabel(item, d.panel.nav)}</span>
+                <span className="ml-auto text-[10px] uppercase tracking-wide">{t.soon}</span>
               </span>
             );
           }
@@ -60,7 +63,7 @@ export function Sidebar({
                 className={cn("h-[17px] w-[17px] shrink-0", !active && "text-muted")}
                 aria-hidden
               />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{navLabel(item, d.panel.nav)}</span>
             </Link>
           );
         })}

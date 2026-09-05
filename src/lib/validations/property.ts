@@ -2,7 +2,11 @@ import { z } from "zod";
 
 import { HeatingType, PropertyType, RentalStatus } from "@/generated/prisma/enums";
 
+import { fill } from "@/lib/i18n/format";
+import type { Dictionary } from "@/lib/i18n/types";
+
 import {
+  type ValidationContext,
   optionalDateInput,
   optionalDecimalInput,
   optionalEmail,
@@ -18,21 +22,13 @@ const propertyTypes = Object.values(PropertyType) as [PropertyType, ...PropertyT
 const rentalStatuses = Object.values(RentalStatus) as [RentalStatus, ...RentalStatus[]];
 const heatingTypes = Object.values(HeatingType) as [HeatingType, ...HeatingType[]];
 
-export const PROPERTY_TYPE_LABEL: Record<PropertyType, string> = {
-  APARTMENT: "Mieszkanie",
-  HOUSE: "Dom",
-  ROOM: "Pokój",
-  COMMERCIAL: "Lokal użytkowy",
-  PARKING: "Miejsce postojowe",
-  STORAGE: "Komórka lokatorska",
-  BUILDING: "Budynek",
-};
+export function propertyTypeLabels(d: Dictionary): Record<PropertyType, string> {
+  return d.panel.properties.type;
+}
 
-export const RENTAL_STATUS_LABEL: Record<RentalStatus, string> = {
-  AVAILABLE: "Wolne",
-  OCCUPIED: "Wynajęte",
-  UNAVAILABLE: "W remoncie",
-};
+export function rentalStatusLabels(d: Dictionary): Record<RentalStatus, string> {
+  return d.panel.properties.rentalStatus;
+}
 
 /**
  * Statusy, które właściciel ustawia sam.
@@ -49,14 +45,9 @@ export const RENTAL_STATUS_TONE: Record<RentalStatus, "good" | "warning" | "neut
   UNAVAILABLE: "neutral",
 };
 
-export const HEATING_TYPE_LABEL: Record<HeatingType, string> = {
-  DISTRICT: "Miejskie",
-  GAS: "Gazowe",
-  ELECTRIC: "Elektryczne",
-  HEAT_PUMP: "Pompa ciepła",
-  SOLID_FUEL: "Paliwo stałe",
-  OTHER: "Inne",
-};
+export function heatingTypeLabels(d: Dictionary): Record<HeatingType, string> {
+  return d.panel.properties.heating;
+}
 
 /**
  * Godzina zdania lokalu — „HH:MM" po normalizacji.
@@ -65,7 +56,8 @@ export const HEATING_TYPE_LABEL: Record<HeatingType, string> = {
  * zawsze „09:00": ta godzina trafia do wiadomości dla najemcy i do umowy,
  * więc nie może raz wyglądać tak, a raz inaczej.
  */
-const checkoutTimeSchema = z
+const checkoutTimeSchema = (c: ValidationContext) =>
+  z
   .union([
     z.literal(""),
     z
@@ -74,13 +66,13 @@ const checkoutTimeSchema = z
       .transform((value, ctx) => {
         const match = /^(\d{1,2})[:.](\d{2})$/.exec(value);
         if (!match) {
-          ctx.addIssue({ code: "custom", message: "Godzina w formacie GG:MM, np. 11:00" });
+          ctx.addIssue({ code: "custom", message: c.d.panel.properties.checkoutTimeFormat });
           return z.NEVER;
         }
 
         const [, hour, minute] = match.map(Number) as [never, number, number];
         if (hour > 23 || minute > 59) {
-          ctx.addIssue({ code: "custom", message: "Taka godzina nie istnieje" });
+          ctx.addIssue({ code: "custom", message: c.d.panel.properties.checkoutTimeInvalid });
           return z.NEVER;
         }
 
@@ -99,7 +91,8 @@ const checkoutTimeSchema = z
  * Kropka, nie przecinek dziesiętny: przy przecinku „52,2297, 21,0122" nie da
  * się odróżnić separatora liczb od separatora części dziesiętnej.
  */
-const coordinatesSchema = z
+const coordinatesSchema = (c: ValidationContext) =>
+  z
   .union([
     z.literal(""),
     z
@@ -110,7 +103,7 @@ const coordinatesSchema = z
         const invalid = () => {
           ctx.addIssue({
             code: "custom",
-            message: "Współrzędne w formacie 52.2297, 21.0122",
+            message: c.d.panel.properties.coordinatesFormat,
           });
           return z.NEVER;
         };
@@ -122,7 +115,7 @@ const coordinatesSchema = z
         if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
           ctx.addIssue({
             code: "custom",
-            message: "Szerokość mieści się w ±90, długość w ±180",
+            message: c.d.panel.properties.coordinatesRange,
           });
           return z.NEVER;
         }
@@ -142,8 +135,9 @@ export const MAX_ROOMS_PER_PROPERTY = 30;
  * które wcześniej siedziały na osobnej „jednostce": powierzchnię, piętro
  * i czynsz wywoławczy.
  */
-export const propertyFormSchema = z.object({
-  name: requiredText("Nazwa", 120),
+export const propertyFormSchema = (c: ValidationContext) =>
+  z.object({
+  name: requiredText(c, c.d.panel.properties.fields.name, 120),
   type: z.enum(propertyTypes),
 
   /**
@@ -158,61 +152,61 @@ export const propertyFormSchema = z.object({
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value)),
 
-  street: requiredText("Ulica", 120),
-  buildingNumber: requiredText("Numer budynku", 20),
+  street: requiredText(c, c.d.panel.properties.fields.street, 120),
+  buildingNumber: requiredText(c, c.d.panel.properties.fields.buildingNumber, 20),
   /** Puste przy domu i budynku w całości — tam numeru lokalu nie ma. */
-  apartmentNumber: optionalText(20),
+  apartmentNumber: optionalText(c, 20),
   postalCode: postalCodeSchema,
-  city: requiredText("Miejscowość", 80),
-  district: optionalText(80),
+  city: requiredText(c, c.d.panel.properties.fields.city, 80),
+  district: optionalText(c, 80),
 
-  areaM2: optionalDecimalInput("Powierzchnia", { max: 10_000, scale: 2 }),
-  floor: optionalInt("Piętro", { min: -5, max: 200 }),
-  askingRentGrosze: optionalMoneyInput("Czynsz za całość"),
+  areaM2: optionalDecimalInput(c, c.d.panel.properties.fields.area, { max: 10_000, scale: 2 }),
+  floor: optionalInt(c, c.d.panel.properties.fields.floor, { min: -5, max: 200 }),
+  askingRentGrosze: optionalMoneyInput(c, c.d.panel.properties.fields.askingRent),
 
   // Dostęp do lokalu — to, co przekazuje się przy wydaniu kluczy.
-  intercomCode: optionalText(40),
-  checkoutTime: checkoutTimeSchema,
-  storageUnit: optionalText(200),
-  bikeStorage: optionalText(200),
-  wasteDisposal: optionalText(200),
+  intercomCode: optionalText(c, 40),
+  checkoutTime: checkoutTimeSchema(c),
+  storageUnit: optionalText(c, 200),
+  bikeStorage: optionalText(c, 200),
+  wasteDisposal: optionalText(c, 200),
 
   // Administracja budynku: wspólnota albo spółdzielnia, nie właściciel lokalu.
-  buildingManagerName: optionalText(160),
-  buildingManagerAddress: optionalText(200),
-  buildingManagerPhone: optionalPhone,
-  buildingManagerEmail: optionalEmail,
+  buildingManagerName: optionalText(c, 160),
+  buildingManagerAddress: optionalText(c, 200),
+  buildingManagerPhone: optionalPhone(c),
+  buildingManagerEmail: optionalEmail(c),
 
   // Media i internet.
   heatingType: z
     .union([z.literal(""), z.enum(heatingTypes)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value)),
-  internetProvider: optionalText(120),
-  internetProviderPhone: optionalPhone,
-  internetSpeedMbps: optionalInt("Prędkość łącza", { min: 1, max: 100_000 }),
-  wifiSsid: optionalText(64),
-  wifiPassword: optionalText(120),
+  internetProvider: optionalText(c, 120),
+  internetProviderPhone: optionalPhone(c),
+  internetSpeedMbps: optionalInt(c, c.d.panel.properties.fields.internetSpeed, { min: 1, max: 100_000 }),
+  wifiSsid: optionalText(c, 64),
+  wifiPassword: optionalText(c, 120),
   internetContractEndsAt: optionalDateInput("Koniec umowy na internet"),
 
   // Przeglądy i dokumenty.
-  landRegistryNumber: optionalText(60),
-  energyCertificateEp: optionalDecimalInput("Wskaźnik EP", { max: 9999, scale: 2 }),
-  energyCertificateExpiresAt: optionalDateInput("Ważność świadectwa"),
-  boilerModel: optionalText(120),
-  boilerInspectionAt: optionalDateInput("Przegląd pieca"),
-  technicalInspectionAt: optionalDateInput("Przegląd techniczny"),
+  landRegistryNumber: optionalText(c, 60),
+  energyCertificateEp: optionalDecimalInput(c, c.d.panel.properties.fields.energyIndex, { max: 9999, scale: 2 }),
+  energyCertificateExpiresAt: optionalDateInput(c, c.d.panel.properties.fields.certificateValidUntil),
+  boilerModel: optionalText(c, 120),
+  boilerInspectionAt: optionalDateInput(c, c.d.panel.properties.fields.boilerInspection),
+  technicalInspectionAt: optionalDateInput(c, c.d.panel.properties.fields.technicalInspection),
 
   // Okolica i dojazd. Odległości w metrach — 100 km to sufit z zapasem,
   // powyżej tego „w okolicy" przestaje cokolwiek znaczyć.
   gpsCoordinates: coordinatesSchema,
-  transitLines: optionalText(200),
-  transitStopDistanceM: optionalInt("Odległość od przystanku", { min: 0, max: 100_000 }),
-  universityDistanceM: optionalInt("Odległość od uczelni", { min: 0, max: 100_000 }),
-  nearbyPlaces: optionalText(1000),
+  transitLines: optionalText(c, 200),
+  transitStopDistanceM: optionalInt(c, c.d.panel.properties.fields.transitDistance, { min: 0, max: 100_000 }),
+  universityDistanceM: optionalInt(c, c.d.panel.properties.fields.universityDistance, { min: 0, max: 100_000 }),
+  nearbyPlaces: optionalText(c, 1000),
 
-  description: optionalText(2000),
-  notes: optionalText(2000),
+  description: optionalText(c, 2000),
+  notes: optionalText(c, 2000),
   publiclyListed: z.boolean().default(false),
 });
 
@@ -226,7 +220,8 @@ export type PropertyFormOutput = z.output<typeof propertyFormSchema>;
  * liczbę i w kolejnym kroku wpisuje ceny. Dzięki temu nie ma stanu, w którym
  * nieruchomość istnieje, a pokoje trzeba dodawać po jednym.
  */
-export const propertyCreateSchema = propertyFormSchema.extend({
+export const propertyCreateSchema = (c: ValidationContext) =>
+  propertyFormSchema(c).extend({
   roomCount: z
     .union([z.string(), z.number()])
     .optional()
@@ -235,13 +230,13 @@ export const propertyCreateSchema = propertyFormSchema.extend({
 
       const parsed = typeof value === "number" ? value : Number(String(value).trim());
       if (!Number.isInteger(parsed) || parsed < 0) {
-        ctx.addIssue({ code: "custom", message: "Liczba pokoi musi być liczbą całkowitą" });
+        ctx.addIssue({ code: "custom", message: c.d.panel.properties.roomCountInteger });
         return z.NEVER;
       }
       if (parsed > MAX_ROOMS_PER_PROPERTY) {
         ctx.addIssue({
           code: "custom",
-          message: `Maksymalnie ${MAX_ROOMS_PER_PROPERTY} pokoi naraz`,
+          message: fill(c.d.panel.properties.roomCountTooMany, { max: MAX_ROOMS_PER_PROPERTY }),
         });
         return z.NEVER;
       }
@@ -252,35 +247,37 @@ export const propertyCreateSchema = propertyFormSchema.extend({
 export type PropertyCreateInput = z.input<typeof propertyCreateSchema>;
 export type PropertyCreateOutput = z.output<typeof propertyCreateSchema>;
 
-export const propertyUpdateSchema = propertyFormSchema.partial();
+export const propertyUpdateSchema = (c: ValidationContext) => propertyFormSchema(c).partial();
 
 /**
  * Pokój. Bez powierzchni — przy pokoju nikt jej nie rozlicza.
  */
-export const roomFormSchema = z.object({
-  name: requiredText("Oznaczenie pokoju", 60),
+export const roomFormSchema = (c: ValidationContext) =>
+  z.object({
+  name: requiredText(c, c.d.panel.properties.fields.roomName, 60),
   status: z.enum(rentalStatuses).default("AVAILABLE"),
-  monthlyRentGrosze: optionalMoneyInput("Czynsz za pokój"),
-  notes: optionalText(1000),
+  monthlyRentGrosze: optionalMoneyInput(c, c.d.panel.properties.fields.roomRent),
+  notes: optionalText(c, 1000),
 });
 
 export type RoomFormInput = z.input<typeof roomFormSchema>;
 export type RoomFormOutput = z.output<typeof roomFormSchema>;
 
-export const roomUpdateSchema = roomFormSchema.partial();
+export const roomUpdateSchema = (c: ValidationContext) => roomFormSchema(c).partial();
 
 /**
  * Krok „wpisz ceny": zapis wszystkich pokoi nieruchomości naraz.
  * Jedno żądanie zamiast N — inaczej połowa cen mogłaby się zapisać,
  * a połowa nie.
  */
-export const roomsBulkUpdateSchema = z.object({
+export const roomsBulkUpdateSchema = (c: ValidationContext) =>
+  z.object({
   rooms: z
     .array(
       z.object({
         id: z.string().min(1),
-        name: requiredText("Oznaczenie pokoju", 60),
-        monthlyRentGrosze: optionalMoneyInput("Czynsz za pokój"),
+        name: requiredText(c, c.d.panel.properties.fields.roomName, 60),
+        monthlyRentGrosze: optionalMoneyInput(c, c.d.panel.properties.fields.roomRent),
       }),
     )
     .min(1, "Brak pokoi do zapisania")
@@ -301,7 +298,7 @@ export const propertyListQuerySchema = z.object({
 
 export type PropertyListQuery = z.output<typeof propertyListQuerySchema>;
 
-/** Domyślne nazwy pokoi przy zakładaniu: „Pokój 1", „Pokój 2"… */
-export function defaultRoomName(index: number): string {
-  return `Pokój ${index + 1}`;
+/** Domyślne nazwy pokoi przy zakładaniu: „Pokój 1" / „Room 1"… */
+export function defaultRoomName(index: number, d: Dictionary): string {
+  return fill(d.panel.properties.defaultRoomName, { number: index + 1 });
 }

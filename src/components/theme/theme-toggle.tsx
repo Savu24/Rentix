@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { useTheme } from "@/components/theme/theme-provider";
+import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
+  const { d } = useI18n();
   const [mounted, setMounted] = useState(false);
 
   // Do czasu montażu nie znamy motywu wybranego przez skrypt w <head>,
@@ -20,7 +22,7 @@ export function ThemeToggle({ className }: { className?: string }) {
   useEffect(() => setMounted(true), []);
 
   const isDark = theme === "dark";
-  const label = isDark ? "Włącz tryb jasny" : "Włącz tryb ciemny";
+  const label = isDark ? d.common.themeToLight : d.common.themeToDark;
 
   return (
     <button

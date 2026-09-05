@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { InvoiceKind, InvoiceStatus, PaymentMethod, VatRate } from "@/generated/prisma/enums";
 
+import type { Dictionary } from "@/lib/i18n/types";
+
 import {
+  type ValidationContext,
   dateInput,
   idSchema,
   moneyInput,
@@ -16,12 +19,9 @@ const invoiceStatuses = Object.values(InvoiceStatus) as [InvoiceStatus, ...Invoi
 const paymentMethods = Object.values(PaymentMethod) as [PaymentMethod, ...PaymentMethod[]];
 const vatRates = Object.values(VatRate) as [VatRate, ...VatRate[]];
 
-export const INVOICE_KIND_LABEL: Record<InvoiceKind, string> = {
-  BILL: "Rachunek",
-  VAT_INVOICE: "Faktura VAT",
-  PROFORMA: "Proforma",
-  CHARGE: "Naliczenie",
-};
+export function invoiceKindLabels(d: Dictionary): Record<InvoiceKind, string> {
+  return d.panel.invoices.kind;
+}
 
 /**
  * Czy dokument danego rodzaju jest dowodem księgowym.
@@ -34,13 +34,9 @@ export function isAccountingDocument(kind: InvoiceKind): boolean {
   return kind !== "CHARGE";
 }
 
-export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-  TRANSFER: "Przelew",
-  CASH: "Gotówka",
-  CARD: "Karta",
-  DIRECT_DEBIT: "Polecenie zapłaty",
-  OTHER: "Inna",
-};
+export function paymentMethodLabels(d: Dictionary): Record<PaymentMethod, string> {
+  return d.panel.invoices.method;
+}
 
 /**
  * Ilość na pozycji dokumentu → tysięczne części jednostki.
@@ -50,7 +46,8 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
  * ilość odbyło się na liczbach całkowitych (`multiplyByQuantity`), a nie
  * na floatach, które gubiłyby grosze przy sumowaniu pozycji.
  */
-export const quantityInput = z
+export const quantityInput = (c: ValidationContext) =>
+  z
   .union([z.string(), z.number()])
   .default(1)
   .transform((value, ctx) => {
@@ -58,35 +55,36 @@ export const quantityInput = z
     const parsed = Number(raw);
 
     if (raw === "" || !Number.isFinite(parsed)) {
-      ctx.addIssue({ code: "custom", message: "Ilość musi być liczbą" });
+      ctx.addIssue({ code: "custom", message: c.d.panel.invoices.quantityNotNumber });
       return z.NEVER;
     }
     if (parsed <= 0) {
-      ctx.addIssue({ code: "custom", message: "Ilość musi być większa od zera" });
+      ctx.addIssue({ code: "custom", message: c.d.panel.invoices.quantityPositive });
       return z.NEVER;
     }
     if (parsed > 1_000_000) {
-      ctx.addIssue({ code: "custom", message: "Ilość wygląda na zawyżoną" });
+      ctx.addIssue({ code: "custom", message: c.d.panel.invoices.quantityTooHigh });
       return z.NEVER;
     }
 
     return Math.round(parsed * 1000);
   });
 
-export const invoiceLineSchema = z.object({
-  description: requiredText("Opis pozycji", 200),
-  quantityMilli: quantityInput,
-  unit: z
-    .string()
-    .trim()
-    .max(12, "Maksymalnie 12 znaków")
-    .default("szt.")
-    .transform((value) => (value === "" ? "szt." : value)),
-  unitPriceNetGrosze: moneyInput("Cena jednostkowa"),
-  vatRate: z.enum(vatRates).default("ZW"),
-});
+export const invoiceLineSchema = (c: ValidationContext) =>
+  z.object({
+    description: requiredText(c, c.d.panel.invoices.fields.lineDescription, 200),
+    quantityMilli: quantityInput(c),
+    unit: z
+      .string()
+      .trim()
+      .max(12, c.d.panel.invoices.unitMaxChars)
+      .default(c.d.panel.invoices.defaultUnit)
+      .transform((value) => (value === "" ? c.d.panel.invoices.defaultUnit : value)),
+    unitPriceNetGrosze: moneyInput(c, c.d.panel.invoices.fields.unitPrice),
+    vatRate: z.enum(vatRates).default("ZW"),
+  });
 
-export type InvoiceLineFormInput = z.input<typeof invoiceLineSchema>;
+export type InvoiceLineFormInput = z.input<ReturnType<typeof invoiceLineSchema>>;
 
 /**
  * Dokument wystawiany ręcznie — kaucja, korekta, rozliczenie mediów.
@@ -95,43 +93,44 @@ export type InvoiceLineFormInput = z.input<typeof invoiceLineSchema>;
  * (`generateInvoicesForMonth`), więc ten schemat nie dubluje jej warunków:
  * pozycje przychodzą wprost, a nie są wyliczane z czynszu.
  */
-export const invoiceCreateSchema = z
+export const invoiceCreateSchema = (c: ValidationContext) =>
+  z
   .object({
     /** Puste = dokument jednorazowy, niepowiązany z żadną umową. */
     leaseId: z
-      .union([z.literal(""), idSchema])
+      .union([z.literal(""), idSchema(c)])
       .optional()
       .transform((value) => (value === "" || value === undefined ? null : value)),
     /** Nabywca. Jego dane kopiujemy na dokument w chwili wystawienia. */
-    tenantId: idSchema,
+    tenantId: idSchema(c),
 
     kind: z.enum(invoiceKinds).default("BILL"),
 
-    issueDate: dateInput("Data wystawienia"),
-    saleDate: dateInput("Data sprzedaży"),
-    dueDate: dateInput("Termin płatności"),
+    issueDate: dateInput(c, c.d.panel.invoices.fields.issueDate),
+    saleDate: dateInput(c, c.d.panel.invoices.fields.saleDate),
+    dueDate: dateInput(c, c.d.panel.invoices.fields.dueDate),
 
-    periodStart: optionalDateInput("Początek okresu"),
-    periodEnd: optionalDateInput("Koniec okresu"),
+    periodStart: optionalDateInput(c, c.d.panel.invoices.fields.periodStart),
+    periodEnd: optionalDateInput(c, c.d.panel.invoices.fields.periodEnd),
 
     lines: z
-      .array(invoiceLineSchema)
-      .min(1, "Dokument musi mieć przynajmniej jedną pozycję")
-      .max(50, "Maksymalnie 50 pozycji na dokumencie"),
+      .array(invoiceLineSchema(c))
+      .min(1, c.d.panel.invoices.linesRequired)
+      .max(50, c.d.panel.invoices.linesTooMany),
 
-    notes: optionalText(2000),
+    notes: optionalText(c, 2000),
   })
   .refine((data) => data.dueDate >= data.issueDate, {
-    message: "Termin płatności nie może być wcześniejszy niż data wystawienia",
+    message: c.d.panel.invoices.dueBeforeIssue,
     path: ["dueDate"],
   })
   .refine((data) => !data.periodStart || !data.periodEnd || data.periodEnd >= data.periodStart, {
-    message: "Koniec okresu nie może być wcześniejszy niż jego początek",
+    message: c.d.panel.invoices.periodOrder,
     path: ["periodEnd"],
   });
 
-export type InvoiceCreateInput = z.input<typeof invoiceCreateSchema>;
-export type InvoiceCreateOutput = z.output<typeof invoiceCreateSchema>;
+export type InvoiceCreateInput = z.input<ReturnType<typeof invoiceCreateSchema>>;
+export type InvoiceCreateOutput = z.output<ReturnType<typeof invoiceCreateSchema>>;
 
 /**
  * Filtr listy dokumentów.
@@ -192,19 +191,21 @@ export const invoiceListQuerySchema = z.object({
 
 export type InvoiceListQuery = z.output<typeof invoiceListQuerySchema>;
 
-export const paymentFormSchema = z.object({
-  amountGrosze: moneyInput("Kwota wpłaty").refine((value) => value > 0, {
-    message: "Kwota wpłaty musi być większa od zera",
-  }),
-  paidAt: dateInput("Data wpłaty"),
-  method: z.enum(paymentMethods).default("TRANSFER"),
-  /** Tytuł przelewu albo identyfikator z wyciągu — do uzgadniania z bankiem. */
-  reference: optionalText(140),
-  note: optionalText(500),
-});
+export const paymentFormSchema = (c: ValidationContext) =>
+  z.object({
+    amountGrosze: moneyInput(c, c.d.panel.invoices.fields.paymentAmount).refine(
+      (value) => value > 0,
+      { message: c.d.panel.invoices.paymentPositive },
+    ),
+    paidAt: dateInput(c, c.d.panel.invoices.fields.paymentDate),
+    method: z.enum(paymentMethods).default("TRANSFER"),
+    /** Tytuł przelewu albo identyfikator z wyciągu — do uzgadniania z bankiem. */
+    reference: optionalText(c, 140),
+    note: optionalText(c, 500),
+  });
 
-export type PaymentFormInput = z.input<typeof paymentFormSchema>;
-export type PaymentFormOutput = z.output<typeof paymentFormSchema>;
+export type PaymentFormInput = z.input<ReturnType<typeof paymentFormSchema>>;
+export type PaymentFormOutput = z.output<ReturnType<typeof paymentFormSchema>>;
 
 /**
  * Naliczenie czynszu za wskazany miesiąc.
@@ -213,12 +214,13 @@ export type PaymentFormOutput = z.output<typeof paymentFormSchema>;
  * w `Date` — parametr wpisuje się ręcznie w URL-u przy ponownym naliczeniu
  * i „08" musi znaczyć sierpień.
  */
-export const generateInvoicesSchema = z.object({
+export const generateInvoicesSchema = (c: ValidationContext) =>
+  z.object({
   year: z.coerce.number().int().min(2000).max(2100),
   month: z.coerce.number().int().min(1).max(12),
   /** Puste = wszystkie aktywne umowy organizacji. */
   leaseId: z
-    .union([z.literal(""), idSchema])
+    .union([z.literal(""), idSchema(c)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value)),
   /**
@@ -229,9 +231,9 @@ export const generateInvoicesSchema = z.object({
    * po kartotece.
    */
   tenantId: z
-    .union([z.literal(""), idSchema])
+    .union([z.literal(""), idSchema(c)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value)),
-});
+  });
 
-export type GenerateInvoicesOutput = z.output<typeof generateInvoicesSchema>;
+export type GenerateInvoicesOutput = z.output<ReturnType<typeof generateInvoicesSchema>>;

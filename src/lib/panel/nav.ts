@@ -10,29 +10,39 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { Dictionary } from "@/lib/i18n/types";
+
+type NavLabels = Dictionary["panel"]["nav"];
+
 export type NavItem = {
   href: string;
-  label: string;
-  /** Skrócona etykieta na dolny pasek mobilny, gdzie nie ma miejsca. */
-  shortLabel?: string;
+  /** Klucz etykiety w słowniku — sam napis zależy od języka konta. */
+  id: keyof NavLabels;
+  /** Klucz skróconej etykiety na dolny pasek mobilny, gdzie nie ma miejsca. */
+  shortId?: keyof NavLabels;
   icon: LucideIcon;
   /** Moduł jeszcze nie zbudowany — link jest nieaktywny zamiast prowadzić w 404. */
   soon?: boolean;
 };
 
+/** Napis do wyświetlenia: skrócony, jeśli o taki prosimy i jeśli istnieje. */
+export function navLabel(item: NavItem, labels: NavLabels, short = false): string {
+  return short && item.shortId ? labels[item.shortId] : labels[item.id];
+}
+
 export const PANEL_NAV: NavItem[] = [
-  { href: "/panel", label: "Pulpit", icon: LayoutDashboard },
-  { href: "/panel/nieruchomosci", label: "Nieruchomości", shortLabel: "Obiekty", icon: Building2 },
-  { href: "/panel/najemcy", label: "Najemcy", icon: Users },
-  { href: "/panel/wlasciciele", label: "Właściciele", shortLabel: "Właśc.", icon: KeyRound },
-  { href: "/panel/umowy", label: "Umowy", icon: FileText },
-  { href: "/panel/finanse", label: "Finanse", icon: Wallet },
+  { href: "/panel", id: "dashboard", icon: LayoutDashboard },
+  { href: "/panel/nieruchomosci", id: "properties", shortId: "propertiesShort", icon: Building2 },
+  { href: "/panel/najemcy", id: "tenants", icon: Users },
+  { href: "/panel/wlasciciele", id: "owners", shortId: "ownersShort", icon: KeyRound },
+  { href: "/panel/umowy", id: "leases", icon: FileText },
+  { href: "/panel/finanse", id: "finance", icon: Wallet },
   // Zgłoszenia usterek świadomie poza zakresem: najemcy zgłaszają awarie
   // telefonem, więc moduł dublowałby kanał, z którego i tak nikt by nie
   // korzystał. Tabele w bazie zostają — nic nie kosztują, a odwrócenie tej
   // decyzji nie wymagałoby wtedy migracji.
-  { href: "/panel/raporty", label: "Raporty", icon: BarChart3 },
-  { href: "/panel/ustawienia", label: "Ustawienia", shortLabel: "Konto", icon: Settings },
+  { href: "/panel/raporty", id: "reports", icon: BarChart3 },
+  { href: "/panel/ustawienia", id: "settings", shortId: "settingsShort", icon: Settings },
 ];
 
 /**

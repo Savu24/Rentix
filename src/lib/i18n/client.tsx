@@ -67,3 +67,14 @@ export function useI18n(): I18nValue {
 export function useLocale(): Locale {
   return useContext(I18nContext)?.locale ?? DEFAULT_LOCALE;
 }
+
+/**
+ * Kontekst dla schematów walidacji po stronie przeglądarki.
+ *
+ * `useMemo`, bo trafia do `zodResolver` — nowy obiekt przy każdym renderze
+ * przebudowywałby resolver formularza i gubił stan pól.
+ */
+export function useValidationContext(): { locale: Locale; d: Dictionary } {
+  const { locale, d } = useI18n();
+  return useMemo(() => ({ locale, d }), [locale, d]);
+}

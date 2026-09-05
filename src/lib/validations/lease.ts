@@ -3,7 +3,10 @@ import { z } from "zod";
 import { LeaseStatus, UtilitiesMode } from "@/generated/prisma/enums";
 import { MAX_BILLING_DAY } from "@/lib/leases/billing";
 
+import type { Dictionary } from "@/lib/i18n/types";
+
 import {
+  type ValidationContext,
   dateInput,
   moneyInput,
   optionalDateInput,
@@ -14,13 +17,9 @@ import {
 const leaseStatuses = Object.values(LeaseStatus) as [LeaseStatus, ...LeaseStatus[]];
 const utilitiesModes = Object.values(UtilitiesMode) as [UtilitiesMode, ...UtilitiesMode[]];
 
-export const LEASE_STATUS_LABEL: Record<LeaseStatus, string> = {
-  DRAFT: "Szkic",
-  RESERVED: "Rezerwacja",
-  ACTIVE: "Aktywna",
-  TERMINATED: "Wypowiedziana",
-  EXPIRED: "Wygasła",
-};
+export function leaseStatusLabels(d: Dictionary): Record<LeaseStatus, string> {
+  return d.panel.leases.status;
+}
 
 export const LEASE_STATUS_TONE: Record<LeaseStatus, "neutral" | "good" | "warning" | "critical"> = {
   DRAFT: "neutral",
@@ -42,19 +41,13 @@ export const LEASE_SETTABLE_STATUSES = ["DRAFT", "RESERVED", "ACTIVE"] as const;
 
 export type LeaseSettableStatus = (typeof LEASE_SETTABLE_STATUSES)[number];
 
-export const UTILITIES_MODE_LABEL: Record<UtilitiesMode, string> = {
-  INCLUDED: "Media w czynszu",
-  FLAT_RATE: "Stała zaliczka",
-  METERED: "Wg liczników",
-  MIXED: "Zaliczka + rozliczenie",
-};
+export function utilitiesModeLabels(d: Dictionary): Record<UtilitiesMode, string> {
+  return d.panel.leases.utilitiesMode;
+}
 
-export const UTILITIES_MODE_HINT: Record<UtilitiesMode, string> = {
-  INCLUDED: "Faktura zawiera wyłącznie czynsz.",
-  FLAT_RATE: "Do czynszu doliczana jest stała zaliczka na media.",
-  METERED: "Pozycje za media powstają z odczytów liczników.",
-  MIXED: "Zaliczka co miesiąc, rozliczenie po odczytach.",
-};
+export function utilitiesModeHints(d: Dictionary): Record<UtilitiesMode, string> {
+  return d.panel.leases.utilitiesHint;
+}
 
 /**
  * Tryby, których naliczanie nie potrafi jeszcze w pełni obsłużyć.
@@ -64,16 +57,14 @@ export const UTILITIES_MODE_HINT: Record<UtilitiesMode, string> = {
  * ostrzeżenia przechodzi niezauważone. Zamiast ukrywać tryb przed użytkownikiem
  * (są umowy, które faktycznie tak działają), mówimy wprost, czego zabraknie.
  */
-export const UTILITIES_MODE_INCOMPLETE: Partial<Record<UtilitiesMode, string>> = {
-  METERED:
-    "Odczytów liczników nie da się jeszcze wpisać w Rentiksie, więc rozliczenie obejmie sam czynsz. Pozycje za media dolicz na razie poza systemem.",
-  MIXED:
-    "Zaliczka na media będzie naliczana normalnie, ale rozliczenia po odczytach liczników Rentix jeszcze nie zrobi.",
-};
+export function utilitiesModeIncomplete(d: Dictionary): Partial<Record<UtilitiesMode, string>> {
+  return d.panel.leases.utilitiesIncomplete;
+}
 
-export const leaseFormSchema = z
+export const leaseFormSchema = (c: ValidationContext) =>
+  z
   .object({
-    propertyId: z.string().min(1, "Wybierz nieruchomość"),
+    propertyId: z.string().min(1, c.d.panel.leases.propertyRequired),
     /**
      * Pusty = najem całej nieruchomości. Ustawiony = najem samego pokoju.
      * `propertyId` wypełniamy w obu przypadkach, żeby droga do nieruchomości
@@ -87,29 +78,32 @@ export const leaseFormSchema = z
     // faktury i przypomnienia.
     tenantIds: z
       .array(z.string().min(1))
-      .min(1, "Wskaż przynajmniej jednego najemcę")
-      .max(6, "Maksymalnie sześciu najemców na umowie"),
+      .min(1, c.d.panel.leases.tenantRequired)
+      .max(6, c.d.panel.leases.tenantsTooMany),
 
-    number: optionalText(40),
+    number: optionalText(c, 40),
     status: z.enum(LEASE_SETTABLE_STATUSES).default("DRAFT"),
 
-    startDate: dateInput("Data rozpoczęcia"),
-    endDate: optionalDateInput("Data zakończenia"),
+    startDate: dateInput(c, c.d.panel.leases.fields.startDate),
+    endDate: optionalDateInput(c, c.d.panel.leases.fields.endDate),
 
-    rentGrosze: moneyInput("Czynsz"),
+    rentGrosze: moneyInput(c, c.d.panel.leases.fields.rent),
     // Puste pole = brak kaucji, nie błąd walidacji.
-    depositGrosze: optionalMoneyInput("Kaucja").transform((value) => value ?? 0),
-
-    utilitiesMode: z.enum(utilitiesModes).default("FLAT_RATE"),
-    utilitiesAdvanceGrosze: optionalMoneyInput("Zaliczka na media").transform(
+    depositGrosze: optionalMoneyInput(c, c.d.panel.leases.fields.deposit).transform(
       (value) => value ?? 0,
     ),
 
+    utilitiesMode: z.enum(utilitiesModes).default("FLAT_RATE"),
+    utilitiesAdvanceGrosze: optionalMoneyInput(
+      c,
+      c.d.panel.leases.fields.utilitiesAdvance,
+    ).transform((value) => value ?? 0),
+
     billingDay: z.coerce
       .number()
-      .int("Dzień naliczania musi być liczbą całkowitą")
-      .min(1, "Dzień naliczania musi mieścić się w zakresie 1–28")
-      .max(MAX_BILLING_DAY, "Dzień naliczania musi mieścić się w zakresie 1–28")
+      .int(c.d.panel.leases.billingDayInteger)
+      .min(1, c.d.panel.leases.billingDayRange)
+      .max(MAX_BILLING_DAY, c.d.panel.leases.billingDayRange)
       .default(1),
 
     /**
@@ -118,12 +112,12 @@ export const leaseFormSchema = z
      * początek najmu jest bezczynna, a nie błędna, i odrzucanie jej blokowałoby
      * przepisanie umowy, którą rozliczasz w Rentiksie od pierwszego dnia.
      */
-    billingStartsAt: optionalDateInput("Nie naliczaj przed"),
+    billingStartsAt: optionalDateInput(c, c.d.panel.leases.fields.billingStartsAt),
     paymentTermDays: z.coerce
       .number()
-      .int("Termin płatności musi być liczbą całkowitą")
-      .min(0, "Termin płatności nie może być ujemny")
-      .max(90, "Termin płatności nie może przekraczać 90 dni")
+      .int(c.d.panel.leases.paymentTermInteger)
+      .min(0, c.d.panel.leases.paymentTermNegative)
+      .max(90, c.d.panel.leases.paymentTermTooLong)
       .default(10),
 
     /**
@@ -135,10 +129,10 @@ export const leaseFormSchema = z
      */
     sendInvoicesByEmail: z.coerce.boolean().default(true),
 
-    notes: optionalText(2000),
+    notes: optionalText(c, 2000),
   })
   .refine((data) => !data.endDate || data.endDate >= data.startDate, {
-    message: "Data zakończenia nie może być wcześniejsza niż rozpoczęcia",
+    message: c.d.panel.leases.endBeforeStart,
     path: ["endDate"],
   })
   .refine(
@@ -147,17 +141,17 @@ export const leaseFormSchema = z
         ? data.utilitiesAdvanceGrosze > 0
         : true,
     {
-      message: "Przy zaliczce na media podaj jej kwotę",
+      message: c.d.panel.leases.advanceRequired,
       path: ["utilitiesAdvanceGrosze"],
     },
   )
   .refine((data) => new Set(data.tenantIds).size === data.tenantIds.length, {
-    message: "Ten sam najemca został wskazany dwa razy",
+    message: c.d.panel.leases.tenantDuplicate,
     path: ["tenantIds"],
   });
 
-export type LeaseFormInput = z.input<typeof leaseFormSchema>;
-export type LeaseFormOutput = z.output<typeof leaseFormSchema>;
+export type LeaseFormInput = z.input<ReturnType<typeof leaseFormSchema>>;
+export type LeaseFormOutput = z.output<ReturnType<typeof leaseFormSchema>>;
 
 /**
  * Kwota, której puste pole znaczy zero, a nieobecność — „nie ruszaj".
@@ -167,9 +161,9 @@ export type LeaseFormOutput = z.output<typeof leaseFormSchema>;
  * zero. Przy PATCH-u, który wysyła jedno pole, wyzerowałoby to kaucję na
  * każdej umowie dotkniętej przełącznikiem wysyłki maili.
  */
-const patchMoney = (label: string) =>
+const patchMoney = (c: ValidationContext, label: string) =>
   z
-    .union([z.literal(""), moneyInput(label)])
+    .union([z.literal(""), moneyInput(c, label)])
     .transform((value) => (value === "" ? 0 : value))
     .optional();
 
@@ -180,28 +174,29 @@ const patchMoney = (label: string) =>
  * Reguła spójności dat zostaje — po prostu sprawdzamy ją tylko wtedy, gdy
  * przyszły obie daty.
  */
-export const leaseUpdateSchema = z
+export const leaseUpdateSchema = (c: ValidationContext) =>
+  z
   .object({
-    number: optionalText(40),
+    number: optionalText(c, 40),
     status: z.enum(LEASE_SETTABLE_STATUSES).optional(),
-    startDate: dateInput("Data rozpoczęcia").optional(),
-    endDate: optionalDateInput("Data zakończenia").optional(),
-    rentGrosze: moneyInput("Czynsz").optional(),
-    depositGrosze: patchMoney("Kaucja"),
+    startDate: dateInput(c, c.d.panel.leases.fields.startDate).optional(),
+    endDate: optionalDateInput(c, c.d.panel.leases.fields.endDate).optional(),
+    rentGrosze: moneyInput(c, c.d.panel.leases.fields.rent).optional(),
+    depositGrosze: patchMoney(c, c.d.panel.leases.fields.deposit),
     utilitiesMode: z.enum(utilitiesModes).optional(),
-    utilitiesAdvanceGrosze: patchMoney("Zaliczka na media"),
+    utilitiesAdvanceGrosze: patchMoney(c, c.d.panel.leases.fields.utilitiesAdvance),
     billingDay: z.coerce.number().int().min(1).max(MAX_BILLING_DAY).optional(),
     // Puste pole czyści odcięcie — pomyłka przy zakładaniu umowy musi dawać się
     // cofnąć z panelu, inaczej zostałyby tylko szkice i ręczne grzebanie w bazie.
-    billingStartsAt: optionalDateInput("Nie naliczaj przed").optional(),
+    billingStartsAt: optionalDateInput(c, c.d.panel.leases.fields.billingStartsAt).optional(),
     paymentTermDays: z.coerce.number().int().min(0).max(90).optional(),
     sendInvoicesByEmail: z.coerce.boolean().optional(),
-    notes: optionalText(2000),
+    notes: optionalText(c, 2000),
   })
   .refine(
     (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
     {
-      message: "Data zakończenia nie może być wcześniejsza niż rozpoczęcia",
+      message: c.d.panel.leases.endBeforeStart,
       path: ["endDate"],
     },
   )
@@ -213,7 +208,7 @@ export const leaseUpdateSchema = z
           data.utilitiesAdvanceGrosze === undefined || data.utilitiesAdvanceGrosze > 0
         : true,
     {
-      message: "Przy zaliczce na media podaj jej kwotę",
+      message: c.d.panel.leases.advanceRequired,
       path: ["utilitiesAdvanceGrosze"],
     },
   );
@@ -227,37 +222,38 @@ export const leaseUpdateSchema = z
  * jednostkę i przestawiają najemcę. Formularz, który by je omijał, zostawiłby
  * lokal zajęty przez umowę, której już nie ma.
  */
-export const leaseEditSchema = z
+export const leaseEditSchema = (c: ValidationContext) =>
+  z
   .object({
-    number: optionalText(40),
+    number: optionalText(c, 40),
     /**
      * Brak pola = status zostaje bez zmian. Formularz pokazuje select tylko
      * dla umowy szkicowej, zarezerwowanej albo aktywnej: wypowiedzianej nie
      * wskrzesza się wyborem z listy, bo lokal jest już oddany.
      */
     status: z.enum(LEASE_SETTABLE_STATUSES).optional(),
-    startDate: dateInput("Data rozpoczęcia"),
-    endDate: optionalDateInput("Data zakończenia"),
-    rentGrosze: moneyInput("Czynsz"),
-    depositGrosze: patchMoney("Kaucja"),
+    startDate: dateInput(c, c.d.panel.leases.fields.startDate),
+    endDate: optionalDateInput(c, c.d.panel.leases.fields.endDate),
+    rentGrosze: moneyInput(c, c.d.panel.leases.fields.rent),
+    depositGrosze: patchMoney(c, c.d.panel.leases.fields.deposit),
     utilitiesMode: z.enum(utilitiesModes),
-    utilitiesAdvanceGrosze: patchMoney("Zaliczka na media"),
+    utilitiesAdvanceGrosze: patchMoney(c, c.d.panel.leases.fields.utilitiesAdvance),
     billingDay: z.coerce
       .number()
-      .int("Dzień naliczania musi być liczbą całkowitą")
-      .min(1, "Dzień naliczania musi mieścić się w zakresie 1–28")
-      .max(MAX_BILLING_DAY, "Dzień naliczania musi mieścić się w zakresie 1–28"),
-    billingStartsAt: optionalDateInput("Nie naliczaj przed"),
+      .int(c.d.panel.leases.billingDayInteger)
+      .min(1, c.d.panel.leases.billingDayRange)
+      .max(MAX_BILLING_DAY, c.d.panel.leases.billingDayRange),
+    billingStartsAt: optionalDateInput(c, c.d.panel.leases.fields.billingStartsAt),
     paymentTermDays: z.coerce
       .number()
-      .int("Termin płatności musi być liczbą całkowitą")
-      .min(0, "Termin płatności nie może być ujemny")
-      .max(90, "Termin płatności nie może przekraczać 90 dni"),
+      .int(c.d.panel.leases.paymentTermInteger)
+      .min(0, c.d.panel.leases.paymentTermNegative)
+      .max(90, c.d.panel.leases.paymentTermTooLong),
     sendInvoicesByEmail: z.coerce.boolean(),
-    notes: optionalText(2000),
+    notes: optionalText(c, 2000),
   })
   .refine((data) => !data.endDate || data.endDate >= data.startDate, {
-    message: "Data zakończenia nie może być wcześniejsza niż rozpoczęcia",
+    message: c.d.panel.leases.endBeforeStart,
     path: ["endDate"],
   })
   .refine(
@@ -266,18 +262,19 @@ export const leaseEditSchema = z
         ? (data.utilitiesAdvanceGrosze ?? 0) > 0
         : true,
     {
-      message: "Przy zaliczce na media podaj jej kwotę",
+      message: c.d.panel.leases.advanceRequired,
       path: ["utilitiesAdvanceGrosze"],
     },
   );
 
-export type LeaseEditInput = z.input<typeof leaseEditSchema>;
-export type LeaseEditOutput = z.output<typeof leaseEditSchema>;
+export type LeaseEditInput = z.input<ReturnType<typeof leaseEditSchema>>;
+export type LeaseEditOutput = z.output<ReturnType<typeof leaseEditSchema>>;
 
 /** Przedłużenie umowy — jedyne, co się zmienia, to data zakończenia. */
-export const leaseExtendSchema = z.object({
-  endDate: dateInput("Nowa data zakończenia"),
-});
+export const leaseExtendSchema = (c: ValidationContext) =>
+  z.object({
+    endDate: dateInput(c, c.d.panel.leases.fields.newEndDate),
+  });
 
 export const leaseListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
@@ -293,7 +290,8 @@ export const leaseListQuerySchema = z.object({
 
 export type LeaseListQuery = z.output<typeof leaseListQuerySchema>;
 
-export const terminateLeaseSchema = z.object({
-  terminatedAt: dateInput("Data zakończenia"),
-  terminationNote: optionalText(1000),
-});
+export const terminateLeaseSchema = (c: ValidationContext) =>
+  z.object({
+    terminatedAt: dateInput(c, c.d.panel.leases.fields.endDate),
+    terminationNote: optionalText(c, 1000),
+  });

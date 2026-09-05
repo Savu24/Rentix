@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { InvoiceKind, TenantLegalForm, TenantStatus } from "@/generated/prisma/enums";
 
+import type { Dictionary } from "@/lib/i18n/types";
+
 import {
+  type ValidationContext,
   optionalBankAccount,
   optionalDateInput,
   optionalEmail,
@@ -25,17 +28,13 @@ const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind
  */
 export const TENANT_DOCUMENT_KIND_OPTIONS = ["BILL", "VAT_INVOICE", "CHARGE"] as const;
 
-export const TENANT_DOCUMENT_KIND_HINT: Partial<Record<InvoiceKind, string>> = {
-  BILL: "Rachunek, a przy pozycji z VAT-em faktura. Domyślne i pasuje większości najmu mieszkaniowego.",
-  VAT_INVOICE: "Zawsze faktura VAT, także przy stawce zwolnionej. Dla najemcy-firmy, który tego wymaga.",
-  CHARGE: "Samo naliczenie, czyli informacja o kwocie do zapłaty. NIE jest dowodem księgowym i ma osobną numerację.",
-};
+export function tenantDocumentKindHints(d: Dictionary): Partial<Record<InvoiceKind, string>> {
+  return d.panel.tenants.documentKindHint;
+}
 
-export const TENANT_STATUS_LABEL: Record<TenantStatus, string> = {
-  PROSPECT: "Zainteresowany",
-  ACTIVE: "Aktywny",
-  FORMER: "Były najemca",
-};
+export function tenantStatusLabels(d: Dictionary): Record<TenantStatus, string> {
+  return d.panel.tenants.status;
+}
 
 export const TENANT_STATUS_TONE: Record<TenantStatus, "neutral" | "good" | "warning"> = {
   PROSPECT: "warning",
@@ -43,49 +42,72 @@ export const TENANT_STATUS_TONE: Record<TenantStatus, "neutral" | "good" | "warn
   FORMER: "neutral",
 };
 
-export const TENANT_LEGAL_FORM_LABEL: Record<TenantLegalForm, string> = {
-  INDIVIDUAL: "Osoba fizyczna",
-  COMPANY: "Firma",
-};
+export function tenantLegalFormLabels(d: Dictionary): Record<TenantLegalForm, string> {
+  return d.panel.tenants.legalForm;
+}
 
 /**
- * Numer dowodu osobistego: trzy litery i sześć cyfr (ABC123456).
+ * Dokument tożsamości ze zdjęciem.
+ *
+ * Polska: dowód osobisty, trzy litery i sześć cyfr (ABC123456).
+ * Wielka Brytania: dowodów osobistych tam nie ma, więc tę rolę pełni prawo
+ * jazdy. Jego numer ma zmienną budowę, więc sprawdzamy tylko, że to numer,
+ * a nie zdanie wpisane w złe pole.
  *
  * Spacje i wielkość liter normalizujemy sami — z dokumentu przepisuje się
  * „ABC 123456", a w bazie ma leżeć jeden zapis, żeby wyszukiwanie po numerze
  * nie zależało od tego, jak ktoś go wpisał. Cyfry kontrolnej nie liczymy,
  * z tego samego powodu co przy NIP-ie.
  */
-const idCardSchema = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value) => value.replace(/[\s-]/g, "").toUpperCase())
-      .pipe(
-        z
-          .string()
-          .regex(/^[A-Z]{3}\d{6}$/, "Numer dowodu to trzy litery i sześć cyfr, np. ABC123456"),
-      ),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+const ID_CARD_PATTERN = {
+  pl: /^[A-Z]{3}\d{6}$/,
+  uk: /^[A-Z0-9]{5,20}$/,
+} as const;
 
-/** PESEL: jedenaście cyfr. Sumy kontrolnej nie liczymy — jak przy NIP-ie. */
-const peselSchema = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value) => value.replace(/[\s-]/g, ""))
-      .pipe(z.string().regex(/^\d{11}$/, "PESEL składa się z 11 cyfr")),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+const idCardSchema = (c: ValidationContext) =>
+  z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .transform((value) => value.replace(/[\s-]/g, "").toUpperCase())
+        .pipe(z.string().regex(ID_CARD_PATTERN[c.locale], c.d.panel.tenants.identity.idCard)),
+    ])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
+
+/**
+ * Krajowy numer identyfikacyjny osoby.
+ *
+ * Polska: PESEL, jedenaście cyfr. Wielka Brytania: National Insurance number,
+ * dwie litery, sześć cyfr i litera od A do D. To ta sama kolumna, bo pełni tę
+ * samą rolę — identyfikuje najemcę w dokumentach — ale to dwa różne numery
+ * i sprawdzanie ich jednym wzorcem przepuszczałoby jeden albo blokowało drugi.
+ *
+ * Sumy kontrolnej nie liczymy — jak przy NIP-ie.
+ */
+const NATIONAL_ID_PATTERN = {
+  pl: /^\d{11}$/,
+  uk: /^[A-Z]{2}\d{6}[A-D]$/,
+} as const;
+
+const peselSchema = (c: ValidationContext) =>
+  z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .transform((value) => value.replace(/[\s-]/g, "").toUpperCase())
+        .pipe(
+          z.string().regex(NATIONAL_ID_PATTERN[c.locale], c.d.panel.tenants.identity.nationalId),
+        ),
+    ])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
 
 /**
  * Numer paszportu: litery i cyfry, 5–15 znaków.
@@ -95,91 +117,93 @@ const peselSchema = z
  * dlatego spacji w środku (inaczej niż przy dowodzie) nie wycinamy: gdyby
  * wycinać, „brak paszportu" przechodziłoby jako poprawny numer.
  */
-const passportSchema = z
+const passportSchema = (c: ValidationContext) =>
+  z
   .union([
     z.literal(""),
     z
       .string()
       .trim()
       .transform((value) => value.toUpperCase())
-      .pipe(z.string().regex(/^[A-Z0-9]{5,15}$/, "Numer paszportu wygląda nieprawidłowo")),
+      .pipe(z.string().regex(/^[A-Z0-9]{5,15}$/, c.d.panel.tenants.identity.passport)),
   ])
   .transform((value) => (value === "" ? null : value))
   .nullable()
   .optional();
 
-export const tenantFormSchema = z.object({
-  firstName: requiredText("Imię", 60),
-  lastName: requiredText("Nazwisko", 80),
+export const tenantFormSchema = (c: ValidationContext) =>
+  z.object({
+  firstName: requiredText(c, c.d.panel.tenants.fields.firstName, 60),
+  lastName: requiredText(c, c.d.panel.tenants.fields.lastName, 80),
   status: z.enum(tenantStatuses).default("PROSPECT"),
 
   // E-mail jest opcjonalny: właściciel może prowadzić najemcę, który nie ma
   // adresu — ale bez niego nie wyślemy przypomnień o płatności.
-  email: optionalEmail,
-  phone: optionalPhone,
+  email: optionalEmail(c),
+  phone: optionalPhone(c),
 
   /// Osoba fizyczna czy firma — patrz komentarz przy modelu `Tenant`.
   legalForm: z.enum(legalForms).default("INDIVIDUAL"),
-  dateOfBirth: optionalDateInput("Data urodzenia"),
+  dateOfBirth: optionalDateInput(c, c.d.panel.tenants.fields.dateOfBirth),
 
   // Adres korespondencyjny trafia na fakturę jako dane nabywcy.
-  street: optionalText(120),
-  postalCode: optionalPostalCode,
-  city: optionalText(80),
+  street: optionalText(c, 120),
+  postalCode: optionalPostalCode(c),
+  city: optionalText(c, 80),
   /// NIP, gdy najemcą jest firma.
-  taxId: optionalTaxId,
+  taxId: optionalTaxId(c),
   /// Jaki dokument dostaje ten najemca przy naliczaniu czynszu.
   documentKind: z.enum(documentKinds).default("BILL"),
 
   // Dokumenty tożsamości — każdy z osobna opcjonalny. Żadnego „przynajmniej
   // jeden": właściciel dopisuje je wtedy, gdy najemca faktycznie coś okazał,
   // a kartotekę zakłada się często wcześniej, po samym telefonie.
-  idCardNumber: idCardSchema,
-  pesel: peselSchema,
-  passportNumber: passportSchema,
+  idCardNumber: idCardSchema(c),
+  pesel: peselSchema(c),
+  passportNumber: passportSchema(c),
   // Karta pobytu: zwykły tekst. Numery bywają różne — z wojewody, z decyzji,
   // przepisane z dokumentu obcego państwa — więc nie narzucamy formatu.
-  residenceCardNumber: optionalText(60),
+  residenceCardNumber: optionalText(c, 60),
 
   // Osoba do kontaktu w nagłym wypadku — imię, nazwisko, telefon i e-mail.
   // E-mail obok telefonu, bo gdy nikt nie odbiera, do wiadomości można wrócić.
-  emergencyContactFirstName: optionalText(60),
-  emergencyContactLastName: optionalText(80),
-  emergencyContactPhone: optionalPhone,
-  emergencyContactEmail: optionalEmail,
+  emergencyContactFirstName: optionalText(c, 60),
+  emergencyContactLastName: optionalText(c, 80),
+  emergencyContactPhone: optionalPhone(c),
+  emergencyContactEmail: optionalEmail(c),
 
   // Adres zameldowania — inny byt niż korespondencyjny wyżej. Ten wchodzi do
   // umowy najmu okazjonalnego, tamten na fakturę, i mylenie ich kosztowałoby
   // ważność umowy. Data pusta = zameldowanie bezterminowe.
-  registeredStreet: optionalText(120),
-  registeredPostalCode: optionalPostalCode,
-  registeredCity: optionalText(80),
-  registeredUntil: optionalDateInput("Koniec zameldowania"),
+  registeredStreet: optionalText(c, 120),
+  registeredPostalCode: optionalPostalCode(c),
+  registeredCity: optionalText(c, 80),
+  registeredUntil: optionalDateInput(c, c.d.panel.tenants.fields.registeredUntil),
 
   // Kontakt do spraw płatności, gdy inny niż podstawowy — czynsz płaci czasem
   // rodzic studenta albo księgowość firmy najemcy.
-  billingEmail: optionalEmail,
-  billingPhone: optionalPhone,
+  billingEmail: optionalEmail(c),
+  billingPhone: optionalPhone(c),
   // Rachunek do zwrotu kaucji — ta sama reguła co przy rachunku wystawcy.
-  depositRefundAccount: optionalBankAccount,
+  depositRefundAccount: optionalBankAccount(c),
 
   // Praca albo studia: z czego najemca zapłaci i do kiedy to trwa.
-  employerName: optionalText(120),
-  employmentUntil: optionalDateInput("Koniec pracy lub studiów"),
+  employerName: optionalText(c, 120),
+  employmentUntil: optionalDateInput(c, c.d.panel.tenants.fields.employmentUntil),
 
   // Polisa OC najemcy — numeru nie sprawdzamy wzorem, każdy ubezpieczyciel
   // numeruje po swojemu.
-  insurerName: optionalText(120),
-  insurancePolicyNumber: optionalText(60),
-  insuranceExpiresAt: optionalDateInput("Ważność polisy"),
+  insurerName: optionalText(c, 120),
+  insurancePolicyNumber: optionalText(c, 60),
+  insuranceExpiresAt: optionalDateInput(c, c.d.panel.tenants.fields.insuranceExpiresAt),
 
-  notes: optionalText(2000),
-});
+  notes: optionalText(c, 2000),
+  });
 
-export type TenantFormInput = z.input<typeof tenantFormSchema>;
-export type TenantFormOutput = z.output<typeof tenantFormSchema>;
+export type TenantFormInput = z.input<ReturnType<typeof tenantFormSchema>>;
+export type TenantFormOutput = z.output<ReturnType<typeof tenantFormSchema>>;
 
-export const tenantUpdateSchema = tenantFormSchema.partial();
+export const tenantUpdateSchema = (c: ValidationContext) => tenantFormSchema(c).partial();
 
 /**
  * Porządki listy najemców.
@@ -188,12 +212,9 @@ export const tenantUpdateSchema = tenantFormSchema.partial();
  * na pytania zadawane całej liście naraz: kto gdzie mieszka (adres), kto zalega
  * (saldo) i na jakim etapie jest jego umowa.
  */
-export const TENANT_SORT_LABEL = {
-  name: "Nazwisko",
-  address: "Adres mieszkania",
-  debt: "Zaległość",
-  leaseStatus: "Status umowy",
-} as const;
+export function tenantSortLabels(d: Dictionary) {
+  return d.panel.tenants.sort;
+}
 
 export const TENANT_SORT_OPTIONS = ["name", "address", "debt", "leaseStatus"] as const;
 

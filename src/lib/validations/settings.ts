@@ -3,12 +3,11 @@ import { z } from "zod";
 import { unknownVariables } from "@/lib/email/render";
 import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
-import { getDictionary } from "@/lib/i18n";
+import { fill } from "@/lib/i18n/format";
 
 import { emailSchema, passwordSchema } from "./auth";
-
-const t = getDictionary("pl").auth.validation;
 import {
+  type ValidationContext,
   optionalBankAccount,
   optionalPostalCode,
   optionalTaxId,
@@ -29,8 +28,9 @@ import {
  * ale walidacja ich nie wymusza, inaczej nie dałoby się zapisać częściowo
  * uzupełnionego formularza.
  */
-export const organizationSettingsSchema = z.object({
-  name: requiredText("Nazwa", 120),
+export const organizationSettingsSchema = (c: ValidationContext) =>
+  z.object({
+    name: requiredText(c, c.d.panel.settings.fields.organizationName, 120),
   /**
    * Adres, pod który odpisze najemca.
    *
@@ -39,14 +39,14 @@ export const organizationSettingsSchema = z.object({
    * idzie do wynajmującego, a nie do platformy.
    */
   contactEmail: z
-    .union([z.literal(""), emailSchema(t)])
+    .union([z.literal(""), emailSchema(c.d.auth.validation)])
     .transform((value) => (value === "" ? null : value))
     .nullable()
     .optional(),
-  taxId: optionalTaxId,
-  street: optionalText(120),
-  postalCode: optionalPostalCode,
-  city: optionalText(80),
+    taxId: optionalTaxId(c),
+    street: optionalText(c, 120),
+    postalCode: optionalPostalCode(c),
+    city: optionalText(c, 80),
   /**
    * Rachunek, na który najemca ma wpłacić.
    *
@@ -54,11 +54,11 @@ export const organizationSettingsSchema = z.object({
    * przez pośrednika nie ma czego wpisywać, a dokument bez tej linii wygląda
    * dokładnie tak, jak przed dołożeniem pola.
    */
-  bankAccount: optionalBankAccount,
-});
+    bankAccount: optionalBankAccount(c),
+  });
 
-export type OrganizationSettingsInput = z.input<typeof organizationSettingsSchema>;
-export type OrganizationSettingsOutput = z.output<typeof organizationSettingsSchema>;
+export type OrganizationSettingsInput = z.input<ReturnType<typeof organizationSettingsSchema>>;
+export type OrganizationSettingsOutput = z.output<ReturnType<typeof organizationSettingsSchema>>;
 
 /**
  * Logo wystawcy — nieobowiązkowe. Bez niego dokument wygląda dokładnie tak,
@@ -85,21 +85,24 @@ function base64Bytes(base64: string): number {
   return Math.floor((base64.length * 3) / 4) - padding;
 }
 
-export const organizationLogoSchema = z.object({
-  dataUrl: z
+export const organizationLogoSchema = (c: ValidationContext) =>
+  z.object({
+    dataUrl: z
     .string()
-    .max(MAX_LOGO_BYTES * 2, "Plik jest za duży")
+    .max(MAX_LOGO_BYTES * 2, c.d.panel.settings.logoTooLarge)
     .superRefine((value, ctx) => {
       const match = DATA_URL_PATTERN.exec(value);
 
       if (!match) {
-        ctx.addIssue({ code: "custom", message: "Wgraj obrazek PNG albo JPEG" });
+        ctx.addIssue({ code: "custom", message: c.d.panel.settings.logoWrongType });
         return;
       }
       if (base64Bytes(match[2] as string) > MAX_LOGO_BYTES) {
         ctx.addIssue({
           code: "custom",
-          message: `Obrazek może ważyć najwyżej ${Math.round(MAX_LOGO_BYTES / 1024)} kB`,
+          message: fill(c.d.panel.settings.logoMaxSize, {
+            kb: Math.round(MAX_LOGO_BYTES / 1024),
+          }),
         });
       }
     })
@@ -109,10 +112,10 @@ export const organizationLogoSchema = z.object({
       dataUrl: value,
       mimeType: (DATA_URL_PATTERN.exec(value)?.[1] ?? "image/png") as string,
     })),
-});
+  });
 
-export type OrganizationLogoInput = z.input<typeof organizationLogoSchema>;
-export type OrganizationLogoOutput = z.output<typeof organizationLogoSchema>;
+export type OrganizationLogoInput = z.input<ReturnType<typeof organizationLogoSchema>>;
+export type OrganizationLogoOutput = z.output<ReturnType<typeof organizationLogoSchema>>;
 
 /**
  * Profil użytkownika.
@@ -121,23 +124,24 @@ export type OrganizationLogoOutput = z.output<typeof organizationLogoSchema>;
  * zmiana wymaga potwierdzenia nowego adresu — inaczej literówka odcina od konta.
  * To osobny przepływ, nie pole w formularzu ustawień.
  */
-export const profileSettingsSchema = z.object({
-  name: requiredText("Imię i nazwisko", 120),
+export const profileSettingsSchema = (c: ValidationContext) =>
+  z.object({
+    name: requiredText(c, c.d.panel.settings.fields.userName, 120),
   phone: z
     .union([
       z.literal(""),
       z
         .string()
         .trim()
-        .regex(/^[+()\d\s-]{6,24}$/, "Numer telefonu wygląda nieprawidłowo"),
+        .regex(/^[+()\d\s-]{6,24}$/, c.d.panel.settings.phoneInvalid),
     ])
     .transform((value) => (value === "" ? null : value))
     .nullable()
     .optional(),
-});
+  });
 
-export type ProfileSettingsInput = z.input<typeof profileSettingsSchema>;
-export type ProfileSettingsOutput = z.output<typeof profileSettingsSchema>;
+export type ProfileSettingsInput = z.input<ReturnType<typeof profileSettingsSchema>>;
+export type ProfileSettingsOutput = z.output<ReturnType<typeof profileSettingsSchema>>;
 
 /**
  * Zmiana hasła.
@@ -146,21 +150,27 @@ export type ProfileSettingsOutput = z.output<typeof profileSettingsSchema>;
  * niezablokowanego komputera, bez tego warunku przejąłby konto jednym
  * formularzem.
  */
-export const passwordChangeSchema = z
-  .object({
-    currentPassword: z.string().min(1, "Podaj obecne hasło"),
-    newPassword: passwordSchema(t),
-  })
-  .refine((data) => data.newPassword !== data.currentPassword, {
-    message: "Nowe hasło musi różnić się od obecnego",
-    path: ["newPassword"],
-  });
+export const passwordChangeSchema = (c: ValidationContext) =>
+  z
+    .object({
+      currentPassword: z.string().min(1, c.d.panel.settings.currentPasswordRequired),
+      newPassword: passwordSchema(c.d.auth.validation),
+    })
+    .refine((data) => data.newPassword !== data.currentPassword, {
+      message: c.d.panel.settings.newPasswordSame,
+      path: ["newPassword"],
+    });
 
-export type PasswordChangeInput = z.input<typeof passwordChangeSchema>;
-export type PasswordChangeOutput = z.output<typeof passwordChangeSchema>;
+export type PasswordChangeInput = z.input<ReturnType<typeof passwordChangeSchema>>;
+export type PasswordChangeOutput = z.output<ReturnType<typeof passwordChangeSchema>>;
 
-/** Frazę trzeba przepisać ręcznie — kliknięcie „tak" idzie odruchowo. */
-export const ACCOUNT_DELETE_PHRASE = "USUWAM KONTO";
+/**
+ * Frazę trzeba przepisać ręcznie — kliknięcie „tak" idzie odruchowo.
+ *
+ * Siedzi w słowniku, bo przepisywanie polskiego zdania w angielskim panelu
+ * byłoby zagadką, a nie potwierdzeniem.
+ */
+export const accountDeletePhrase = (c: ValidationContext) => c.d.panel.settings.deletePhrase;
 
 /**
  * Usunięcie konta.
@@ -169,18 +179,21 @@ export const ACCOUNT_DELETE_PHRASE = "USUWAM KONTO";
  * organizację: hasło (potwierdza, że to właściciel siedzi przy komputerze)
  * i przepisana frazа (potwierdza, że rozumie, co klika).
  */
-export const accountDeleteSchema = z.object({
-  currentPassword: z.string().min(1, "Podaj hasło, żeby potwierdzić"),
-  confirmation: z
-    .string()
-    .trim()
-    .refine((value) => value === ACCOUNT_DELETE_PHRASE, {
-      message: `Przepisz dokładnie: ${ACCOUNT_DELETE_PHRASE}`,
-    }),
-});
+export const accountDeleteSchema = (c: ValidationContext) =>
+  z.object({
+    currentPassword: z.string().min(1, c.d.panel.settings.passwordToConfirm),
+    confirmation: z
+      .string()
+      .trim()
+      .refine((value) => value === accountDeletePhrase(c), {
+        message: fill(c.d.panel.settings.deleteConfirmation, {
+          phrase: accountDeletePhrase(c),
+        }),
+      }),
+  });
 
-export type AccountDeleteInput = z.input<typeof accountDeleteSchema>;
-export type AccountDeleteOutput = z.output<typeof accountDeleteSchema>;
+export type AccountDeleteInput = z.input<ReturnType<typeof accountDeleteSchema>>;
+export type AccountDeleteOutput = z.output<ReturnType<typeof accountDeleteSchema>>;
 
 /**
  * Rytm przypominania i nazwa nadawcy.
@@ -191,22 +204,23 @@ export type AccountDeleteOutput = z.output<typeof accountDeleteSchema>;
  * Górna przy przypomnieniu przed terminem: powyżej miesiąca dokument zwykle
  * jeszcze nie istnieje, więc przypominać nie ma o czym.
  */
-export const notificationSettingsSchema = z.object({
-  senderName: optionalText(120),
-  reminderDaysBefore: z.coerce
-    .number()
-    .int("Podaj pełne dni")
-    .min(1, "Przypomnienie musi wyprzedzać termin o co najmniej dzień")
-    .max(30, "Więcej niż 30 dni przed terminem to za wcześnie"),
-  overdueRepeatDays: z.coerce
-    .number()
-    .int("Podaj pełne dni")
-    .min(2, "Codzienne wezwania trafiają do spamu, ustaw co najmniej 2 dni")
-    .max(60, "Rzadziej niż co 60 dni wezwanie przestaje być wezwaniem"),
-});
+export const notificationSettingsSchema = (c: ValidationContext) =>
+  z.object({
+    senderName: optionalText(c, 120),
+    reminderDaysBefore: z.coerce
+      .number()
+      .int(c.d.panel.settings.wholeDays)
+      .min(1, c.d.panel.settings.reminderTooLate)
+      .max(30, c.d.panel.settings.reminderTooEarly),
+    overdueRepeatDays: z.coerce
+      .number()
+      .int(c.d.panel.settings.wholeDays)
+      .min(2, c.d.panel.settings.overdueTooOften)
+      .max(60, c.d.panel.settings.overdueTooRare),
+  });
 
-export type NotificationSettingsInput = z.input<typeof notificationSettingsSchema>;
-export type NotificationSettingsOutput = z.output<typeof notificationSettingsSchema>;
+export type NotificationSettingsInput = z.input<ReturnType<typeof notificationSettingsSchema>>;
+export type NotificationSettingsOutput = z.output<ReturnType<typeof notificationSettingsSchema>>;
 
 /**
  * Pole treści pisanej przez wynajmującego.
@@ -216,8 +230,8 @@ export type NotificationSettingsOutput = z.output<typeof notificationSettingsSch
  * najemcy wiadomość z dziurą zamiast przywracać tekst domyślny — a to jest to,
  * czego ktoś kasujący zawartość pola się spodziewa.
  */
-const templateField = (max: number) =>
-  optionalText(max).superRefine((value, ctx) => {
+const templateField = (c: ValidationContext, max: number) =>
+  optionalText(c, max).superRefine((value, ctx) => {
     const unknown = value ? unknownVariables(value) : [];
     if (unknown.length === 0) return;
 
@@ -225,9 +239,9 @@ const templateField = (max: number) =>
     // jednoliterowa i bez pokazania winowajcy szuka się jej na oko.
     ctx.addIssue({
       code: "custom",
-      message: `Nieznane zmienne: ${unknown
-        .map((name) => `{{${name}}}`)
-        .join(", ")}. Sprawdź listę pod polem.`,
+      message: fill(c.d.panel.settings.unknownVariables, {
+        names: unknown.map((name) => `{{${name}}}`).join(", "),
+      }),
     });
   });
 
@@ -238,14 +252,15 @@ const templateField = (max: number) =>
  * po kilkudziesięciu znakach, a temat ucięty w połowie kwoty jest gorszy niż
  * temat krótki.
  */
-export const emailTemplateSchema = z.object({
-  type: z.enum(EDITABLE_NOTIFICATION_TYPES),
-  enabled: z.boolean(),
-  subject: templateField(160),
-  heading: templateField(60),
-  intro: templateField(1200),
-  outro: templateField(1200),
-});
+export const emailTemplateSchema = (c: ValidationContext) =>
+  z.object({
+    type: z.enum(EDITABLE_NOTIFICATION_TYPES),
+    enabled: z.boolean(),
+    subject: templateField(c, 160),
+    heading: templateField(c, 60),
+    intro: templateField(c, 1200),
+    outro: templateField(c, 1200),
+  });
 
-export type EmailTemplateInput = z.input<typeof emailTemplateSchema>;
-export type EmailTemplateOutput = z.output<typeof emailTemplateSchema>;
+export type EmailTemplateInput = z.input<ReturnType<typeof emailTemplateSchema>>;
+export type EmailTemplateOutput = z.output<ReturnType<typeof emailTemplateSchema>>;

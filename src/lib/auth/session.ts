@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import type { Session } from "next-auth";
 
 import { apiError } from "@/lib/api/response";
-import { requestLocale } from "@/lib/i18n/server";
+import { getDictionary, localeContext, type Dictionary, type Locale } from "@/lib/i18n";
+import { organizationLocale, requestLocale } from "@/lib/i18n/server";
 
 import { auth } from "./index";
 import { loginPathWithReturn, publicRoutes, ROUTES } from "./routes";
@@ -80,9 +81,18 @@ export async function getApiSession(): Promise<
  * Zwraca `organizationId` wprost, bo to jedyna wartość, której route'y
  * naprawdę potrzebują — i trudniej wtedy napisać zapytanie bez zawężenia.
  */
+export type ApiOwnerContext = {
+  session: AppSession;
+  organizationId: string;
+  /** Kraj konta — decyduje o języku odpowiedzi i o regułach walidacji. */
+  locale: Locale;
+  d: Dictionary;
+  /** Gotowy kontekst do schematów walidacji. */
+  v: { locale: Locale; d: Dictionary };
+};
+
 export async function requireApiOwner(): Promise<
-  | { session: AppSession; organizationId: string }
-  | { response: ReturnType<typeof apiError> }
+  ApiOwnerContext | { response: ReturnType<typeof apiError> }
 > {
   const result = await getApiSession();
   if ("response" in result) return result;
@@ -101,5 +111,14 @@ export async function requireApiOwner(): Promise<
     };
   }
 
-  return { session, organizationId: session.user.organizationId };
+  const organizationId = session.user.organizationId;
+  const locale = await organizationLocale(organizationId);
+
+  return {
+    session,
+    organizationId,
+    locale,
+    d: getDictionary(locale),
+    v: localeContext(locale),
+  };
 }

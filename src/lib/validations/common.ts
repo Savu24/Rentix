@@ -1,52 +1,107 @@
 import { z } from "zod";
 
-import { parsePLN } from "@/lib/money";
-
-import { getDictionary } from "@/lib/i18n";
+import { fill } from "@/lib/i18n/format";
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/types";
+import { parseMoney } from "@/lib/money";
 
 import { emailSchema } from "./auth";
-
-const t = getDictionary("pl").auth.validation;
 
 /**
  * Bloki wspólne dla formularzy i API routes. Ta sama definicja po obu stronach —
  * komunikaty nie rozjeżdżają się między walidacją w przeglądarce a serwerem.
+ *
+ * Każdy blok jest funkcją przyjmującą kontekst wersji krajowej, bo reguły
+ * naprawdę różnią się między krajami, a nie tylko brzmieniem komunikatu:
+ * kod pocztowy „00-000" kontra „SW1A 1AA", rachunek 26-cyfrowy kontra sort code
+ * z numerem konta, przecinek kontra kropka w kwocie. Sklejenie tego jednym
+ * schematem dałoby albo walidację przepuszczającą wszystko, albo odrzucającą
+ * poprawne dane jednego z krajów.
+ *
+ * Kontekst wchodzi z zewnątrz, bo ten plik importuje też komponent kliencki —
+ * sięgnięcie po słownik w środku wciągnęłoby do przeglądarki teksty wszystkich
+ * wersji naraz.
  */
+export type ValidationContext = {
+  locale: Locale;
+  /** Cały słownik aktywnej wersji — schematy sięgają po sekcje, których potrzebują. */
+  d: Dictionary;
+};
+
+/** Skrót do komunikatów walidacji, żeby nie powtarzać ścieżki w każdym bloku. */
+const v = (context: ValidationContext) => context.d.panel.validation;
 
 /** Pole tekstowe, które po przycięciu może być puste → zapisujemy NULL. */
-export const optionalText = (max: number) =>
+export const optionalText = (context: ValidationContext, max: number) =>
   z
     .string()
     .trim()
-    .max(max, `Maksymalnie ${max} znaków`)
+    .max(max, fill(v(context).maxChars, { max }))
     .transform((value) => (value === "" ? null : value))
     .nullable()
     .optional();
 
-/**
- * Etykiety mają różny rodzaj gramatyczny („Nazwa" żeński, „Numer" męski,
- * „Oznaczenie" nijaki), więc komunikat nie może odmieniać się razem z nimi.
- * „Pole …" jest nijakie i uzgadnia się z każdą etykietą.
- */
-export const requiredText = (label: string, max: number) =>
+export const requiredText = (context: ValidationContext, label: string, max: number) =>
   z
     .string()
     .trim()
-    .min(1, `Pole „${label}” jest wymagane`)
-    .max(max, `Maksymalnie ${max} znaków`);
+    .min(1, fill(v(context).required, { label }))
+    .max(max, fill(v(context).maxChars, { max }));
 
-/** Polski kod pocztowy: 30-001. */
-export const postalCodeSchema = z
-  .string()
-  .trim()
-  .regex(/^\d{2}-\d{3}$/, "Kod pocztowy w formacie 00-000");
+/**
+ * Kod pocztowy.
+ *
+ * Polski to pięć cyfr z myślnikiem. Brytyjski jest alfanumeryczny, ma od pięciu
+ * do siedmiu znaków i stałą część końcową „cyfra + dwie litery" — regexp jest
+ * ten sam, którego używa rząd w formularzach GOV.UK. Zapis normalizujemy do
+ * wersji z jedną spacją i wielkimi literami, bo ludzie wpisują go na każdy
+ * możliwy sposób, a na dokumencie ma wyglądać jednakowo.
+ */
+/**
+ * Normalizuje zapis kodu pocztowego. Brytyjski idzie wielkimi literami z jedną
+ * spacją przed trzema ostatnimi znakami („sw1a1aa" → „SW1A 1AA"), bo ludzie
+ * wpisują go na każdy możliwy sposób, a na dokumencie ma wyglądać jednakowo.
+ * Polski zostaje taki, jak przyszedł — maska w polu i tak wymusza „00-000".
+ */
+function normalizePostalCode(value: string, locale: Locale): string {
+  if (locale !== "uk") return value.trim();
+
+  const compact = value.trim().toUpperCase().replace(/\s+/g, "");
+  return compact.length >= 5 ? `${compact.slice(0, -3)} ${compact.slice(-3)}` : compact;
+}
+
+/** Wzorzec zapisu znormalizowanego. Brytyjski jest ten sam, co w formularzach GOV.UK. */
+const POSTAL_CODE_PATTERN: Record<Locale, RegExp> = {
+  pl: /^\d{2}-\d{3}$/,
+  uk: /^[A-Z]{1,2}\d[A-Z\d]? \d[A-Z]{2}$/,
+};
+
+/**
+ * Kod pocztowy.
+ *
+ * Polski to pięć cyfr z myślnikiem. Brytyjski jest alfanumeryczny, ma od pięciu
+ * do siedmiu znaków i stałą część końcową „cyfra + dwie litery" — to nie jest
+ * ta sama reguła z innym komunikatem, tylko inny format danych.
+ *
+ * Jeden schemat z podmienianym wzorcem, a nie dwa osobne zwracane warunkiem:
+ * ternary z dwóch różnie zbudowanych schematów gubi TypeScriptowi typ wyjściowy
+ * i cały rekord robi się `unknown` dopiero przy zapisie do bazy.
+ */
+export const postalCodeSchema = (context: ValidationContext) =>
+  z
+    .string()
+    .transform((value) => normalizePostalCode(value, context.locale))
+    .refine((value) => POSTAL_CODE_PATTERN[context.locale].test(value), {
+      message: v(context).postalCode,
+    });
 
 /** Kod pocztowy opcjonalny — puste pole daje NULL, nie błąd formatu. */
-export const optionalPostalCode = z
-  .union([z.literal(""), postalCodeSchema])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+export const optionalPostalCode = (context: ValidationContext) =>
+  z
+    .union([z.literal(""), postalCodeSchema(context)])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
 
 /**
  * Telefon opcjonalny: cyfry, spacje, +, myślniki i nawiasy. Formatu nie
@@ -59,97 +114,109 @@ export const optionalPostalCode = z
  * Jedna definicja na najemcę, właściciela i administrację budynku — trzy kopie
  * tej samej reguły rozjechałyby się przy pierwszej poprawce komunikatu.
  */
-export const optionalPhone = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .regex(/^[+()\d\s-]{6,24}$/, "Numer telefonu wygląda nieprawidłowo"),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+export const optionalPhone = (context: ValidationContext) =>
+  z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .regex(/^[+()\d\s-]{6,24}$/, v(context).phone),
+    ])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
 
 /** E-mail opcjonalny — puste pole daje NULL, nie błąd formatu. */
-export const optionalEmail = z
-  .union([z.literal(""), emailSchema(t)])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+export const optionalEmail = (context: ValidationContext) =>
+  z
+    .union([z.literal(""), emailSchema(context.d.auth.validation)])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
 
 /**
- * NIP opcjonalny — ten sam po stronie najemcy (nabywca) i organizacji
- * (sprzedawca), więc definicja stoi tu, a nie w dwóch miejscach osobno.
+ * Identyfikator podatkowy wystawcy — opcjonalny w obu krajach.
  *
- * Myślniki i spacje usuwamy przed sprawdzeniem długości: ludzie przepisują NIP
- * z pieczątki w zapisie 123-456-32-18, a w bazie ma leżeć dziesięć cyfr.
- * Sumy kontrolnej celowo nie liczymy — literówka w cyfrze kontrolnej zdarza się
- * rzadziej niż firma, której NIP jej nie przechodzi z powodu naszego błędu.
+ * Polska: NIP, dziesięć cyfr. Sumy kontrolnej celowo nie liczymy — literówka
+ * w cyfrze kontrolnej zdarza się rzadziej niż firma, której NIP jej nie
+ * przechodzi z powodu naszego błędu.
+ *
+ * Wielka Brytania: numer VAT, dziewięć cyfr z opcjonalnym „GB". Najem
+ * mieszkaniowy jest z VAT zwolniony, więc większość wynajmujących nie ma tu
+ * czego wpisać i pole zwyczajnie zostaje puste.
+ *
+ * Myślniki i spacje usuwamy przed sprawdzeniem: ludzie przepisują numer
+ * z pieczątki w zapisie 123-456-32-18, a w bazie ma leżeć sam ciąg cyfr.
  */
-export const optionalTaxId = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value) => value.replace(/[\s-]/g, ""))
-      .pipe(z.string().regex(/^\d{10}$/, "NIP składa się z 10 cyfr")),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+export const optionalTaxId = (context: ValidationContext) =>
+  z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .transform((value) => value.replace(/[\s-]/g, "").replace(/^GB/i, ""))
+        .pipe(z.string().regex(context.locale === "uk" ? /^\d{9}$/ : /^\d{10}$/, v(context).taxId)),
+    ])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
 
 /**
- * Polski numer rachunku: 26 cyfr, z opcjonalnym prefiksem PL.
+ * Rachunek, na który wpływa czynsz — opcjonalny.
  *
- * Spacje usuwamy przed sprawdzeniem — ludzie przepisują numer z umowy
- * w grupach po cztery i tak też go wklejają.
+ * Polska: 26 cyfr IBAN-u, z opcjonalnym prefiksem „PL". Wielka Brytania:
+ * sort code (6 cyfr) i numer konta (8), razem 14 cyfr — tam nikt nie podaje
+ * IBAN-u do przelewu krajowego.
  *
- * Sumy kontrolnej IBAN nie liczymy: przelew i tak wykonuje człowiek w banku,
- * który sprawdzi ją porządnie, a fałszywy alarm na poprawnym numerze
- * zablokowałby zapis.
+ * Spacje i myślniki usuwamy przed sprawdzeniem: ludzie przepisują numer
+ * w grupach i tak też go wklejają.
  *
- * Wspólne dla właściciela (rachunek, na który przekazujemy czynsz) i wystawcy
- * (rachunek, na który wpłaca najemca) — dwie kopie tej samej reguły rozjechałyby
- * się przy pierwszej poprawce komunikatu.
+ * Sumy kontrolnej nie liczymy: przelew i tak wykonuje człowiek w banku, który
+ * sprawdzi ją porządnie, a fałszywy alarm na poprawnym numerze zablokowałby
+ * zapis.
  */
-export const optionalBankAccount = z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value) => value.replace(/\s/g, "").replace(/^PL/i, ""))
-      .pipe(z.string().regex(/^\d{26}$/, "Numer rachunku to 26 cyfr")),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
+export const optionalBankAccount = (context: ValidationContext) =>
+  z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .transform((value) => value.replace(/[\s-]/g, "").replace(/^PL/i, ""))
+        .pipe(z.string().regex(context.locale === "uk" ? /^\d{14}$/ : /^\d{26}$/, v(context).bankAccount)),
+    ])
+    .transform((value) => (value === "" ? null : value))
+    .nullable()
+    .optional();
 
 /**
- * Kwota wpisana przez człowieka → grosze.
+ * Kwota wpisana przez człowieka → grosze (albo pensy).
  *
  * Formularz wysyła tekst („2 400,50"), bo `<input type="number">` z polskim
  * przecinkiem zachowuje się różnie w zależności od przeglądarki i ustawień
  * regionalnych. Parsujemy sami i mamy jeden wynik wszędzie.
+ *
+ * Parser dostaje kraj, bo separator dziesiętny jest w obu odwrotny: „1,234.56"
+ * to po brytyjsku tysiąc dwieście, a po polsku ten zapis znaczy co innego.
  */
-export const moneyInput = (label: string) =>
+export const moneyInput = (context: ValidationContext, label: string) =>
   z
     .union([z.string(), z.number()])
     .transform((value, ctx) => {
       if (typeof value === "number") return Math.round(value * 100);
 
-      const parsed = parsePLN(value);
+      const parsed = parseMoney(value, context.locale);
       if (parsed === null) {
-        ctx.addIssue({ code: "custom", message: `${label} musi być kwotą, np. 2 400,50` });
+        ctx.addIssue({ code: "custom", message: fill(v(context).money, { label }) });
         return z.NEVER;
       }
       return parsed;
     })
-    .refine((grosze) => grosze >= 0, { message: `${label} nie może być ujemna` })
+    .refine((grosze) => grosze >= 0, { message: fill(v(context).moneyNegative, { label }) })
     .refine((grosze) => grosze <= 2_000_000_00, {
-      message: `${label} wygląda na zawyżoną`,
+      message: fill(v(context).moneyTooHigh, { label }),
     });
 
 /**
@@ -159,50 +226,60 @@ export const moneyInput = (label: string) =>
  * pustego stringa — a formularz wysyła właśnie `""`, gdy użytkownik nic nie
  * wpisał. Parser kwoty odrzucał to jako „nie jest kwotą".
  */
-export const optionalMoneyInput = (label: string) =>
+export const optionalMoneyInput = (context: ValidationContext, label: string) =>
   z
-    .union([z.literal(""), z.null(), moneyInput(label)])
+    .union([z.literal(""), z.null(), moneyInput(context, label)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value));
 
-/** Liczba dziesiętna w polskim zapisie („48,50") → string dla kolumny Decimal. */
-export const decimalInput = (label: string, options: { max: number; scale: number }) =>
-  z
-    .union([z.string(), z.number()])
-    .transform((value, ctx) => {
-      const raw = typeof value === "number" ? String(value) : value.trim().replace(",", ".");
-      const parsed = Number(raw);
+/** Liczba dziesiętna w zapisie lokalnym („48,50" / „48.50") → string dla Decimal. */
+export const decimalInput = (
+  context: ValidationContext,
+  label: string,
+  options: { max: number; scale: number },
+) =>
+  z.union([z.string(), z.number()]).transform((value, ctx) => {
+    const raw = typeof value === "number" ? String(value) : value.trim().replace(",", ".");
+    const parsed = Number(raw);
 
-      if (raw === "" || !Number.isFinite(parsed)) {
-        ctx.addIssue({ code: "custom", message: `${label} musi być liczbą` });
-        return z.NEVER;
-      }
-      if (parsed < 0) {
-        ctx.addIssue({ code: "custom", message: `${label} nie może być ujemna` });
-        return z.NEVER;
-      }
-      if (parsed > options.max) {
-        ctx.addIssue({ code: "custom", message: `${label} nie może przekraczać ${options.max}` });
-        return z.NEVER;
-      }
-      // Prisma przyjmuje string dla Decimal — bez konwersji przez Float
-      // nie tracimy precyzji po drodze.
-      return parsed.toFixed(options.scale);
-    });
+    if (raw === "" || !Number.isFinite(parsed)) {
+      ctx.addIssue({ code: "custom", message: fill(v(context).notNumber, { label }) });
+      return z.NEVER;
+    }
+    if (parsed < 0) {
+      ctx.addIssue({ code: "custom", message: fill(v(context).moneyNegative, { label }) });
+      return z.NEVER;
+    }
+    if (parsed > options.max) {
+      ctx.addIssue({ code: "custom", message: fill(v(context).tooHigh, { label, max: options.max }) });
+      return z.NEVER;
+    }
+    // Prisma przyjmuje string dla Decimal — bez konwersji przez Float
+    // nie tracimy precyzji po drodze.
+    return parsed.toFixed(options.scale);
+  });
 
 /**
  * Liczba dziesiętna opcjonalna — puste pole daje `null`.
  * Musi stać PO `decimalInput`: wywołuje je od razu przy tworzeniu unii,
  * więc odwołanie w górę pliku wywróciłoby moduł przy imporcie.
  */
-export const optionalDecimalInput = (label: string, options: { max: number; scale: number }) =>
+export const optionalDecimalInput = (
+  context: ValidationContext,
+  label: string,
+  options: { max: number; scale: number },
+) =>
   z
-    .union([z.literal(""), z.null(), decimalInput(label, options)])
+    .union([z.literal(""), z.null(), decimalInput(context, label, options)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value));
 
 /** Pole liczbowe całkowite, opcjonalne (pokoje, piętro). */
-export const optionalInt = (label: string, options: { min: number; max: number }) =>
+export const optionalInt = (
+  context: ValidationContext,
+  label: string,
+  options: { min: number; max: number },
+) =>
   z
     .union([z.string(), z.number(), z.null()])
     .optional()
@@ -211,13 +288,13 @@ export const optionalInt = (label: string, options: { min: number; max: number }
 
       const parsed = typeof value === "number" ? value : Number(String(value).trim());
       if (!Number.isInteger(parsed)) {
-        ctx.addIssue({ code: "custom", message: `${label} musi być liczbą całkowitą` });
+        ctx.addIssue({ code: "custom", message: fill(v(context).notInteger, { label }) });
         return z.NEVER;
       }
       if (parsed < options.min || parsed > options.max) {
         ctx.addIssue({
           code: "custom",
-          message: `${label} musi mieścić się w zakresie ${options.min}–${options.max}`,
+          message: fill(v(context).outOfRange, { label, min: options.min, max: options.max }),
         });
         return z.NEVER;
       }
@@ -225,7 +302,7 @@ export const optionalInt = (label: string, options: { min: number; max: number }
     });
 
 /** Identyfikator rekordu z URL-a. */
-export const idSchema = z.string().min(1, "Brak identyfikatora").max(64);
+export const idSchema = (context: ValidationContext) => z.string().min(1, v(context).missingId).max(64);
 
 /**
  * Data z pola `<input type="date">` („2026-09-01") → Date w północy UTC.
@@ -234,7 +311,7 @@ export const idSchema = z.string().min(1, "Brak identyfikatora").max(64);
  * dałoby północ czasu lokalnego — a wtedy ta sama umowa zaczynałaby się
  * dzień wcześniej dla serwera w innej strefie. Budujemy datę jawnie z części.
  */
-export const dateInput = (label: string) =>
+export const dateInput = (context: ValidationContext, label: string) =>
   z.union([z.string(), z.date()]).transform((value, ctx) => {
     if (value instanceof Date) {
       return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
@@ -242,7 +319,7 @@ export const dateInput = (label: string) =>
 
     const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
     if (!match) {
-      ctx.addIssue({ code: "custom", message: `${label}: podaj datę w formacie RRRR-MM-DD` });
+      ctx.addIssue({ code: "custom", message: fill(v(context).dateFormat, { label }) });
       return z.NEVER;
     }
 
@@ -251,7 +328,7 @@ export const dateInput = (label: string) =>
 
     // Odsiewa daty typu 2026-02-31, które Date po cichu przesuwa na marzec.
     if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-      ctx.addIssue({ code: "custom", message: `${label}: taka data nie istnieje` });
+      ctx.addIssue({ code: "custom", message: fill(v(context).dateInvalid, { label }) });
       return z.NEVER;
     }
 
@@ -265,8 +342,8 @@ export const dateInput = (label: string) =>
  * wariant unii sprawia, że klucz nadal jest wymagany w obiekcie, więc
  * pominięcie pola wywracało walidację całego formularza.
  */
-export const optionalDateInput = (label: string) =>
+export const optionalDateInput = (context: ValidationContext, label: string) =>
   z
-    .union([z.literal(""), z.null(), dateInput(label)])
+    .union([z.literal(""), z.null(), dateInput(context, label)])
     .optional()
     .transform((value) => (value === "" || value === undefined ? null : value));
