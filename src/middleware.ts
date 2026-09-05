@@ -140,6 +140,12 @@ export const config = {
    * Wszystko poza zasobami statycznymi i `/api/*`.
    * API celowo omijamy — endpointy zwracają JSON 401, a nie przekierowanie
    * na stronę logowania, bo będzie je konsumował także klient mobilny.
+   *
+   * `manifest.webmanifest` też zostawiamy w spokoju: iOS pobiera go czasem bez
+   * ciasteczek sesji, a każde przekierowanie w odpowiedzi znaczy dla systemu
+   * tyle, co brak manifestu — czyli skrót znów otwarty w przeglądarce.
    */
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };
