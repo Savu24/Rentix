@@ -18,7 +18,8 @@ import {
   type OrganizationSettingsInput,
   type OrganizationSettingsOutput,
 } from "@/lib/validations/settings";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
+
 /**
  * Dane wystawcy dokumentów.
  *
@@ -31,6 +32,8 @@ export function OrganizationForm({
 }: {
   defaultValues: OrganizationSettingsInput;
 }) {
+  const { d, locale } = useI18n();
+  const t = d.panel.settings.seller;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -72,21 +75,19 @@ export function OrganizationForm({
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Dane wystawcy</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            Trafiają na rachunki jako sprzedawca i na umowy najmu jako wynajmujący.
-          </p>
+          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
+          <p className="mt-0.5 text-sm text-muted">{t.lead}</p>
         </div>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
-        {saved ? <Alert tone="success">Zapisano dane wystawcy.</Alert> : null}
+        {saved ? <Alert tone="success">{t.saved}</Alert> : null}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <FormField
             id="org-name"
-            label="Nazwa"
+            label={t.name}
             error={errors.name?.message}
-            hint="Firma albo imię i nazwisko, jeśli wynajmujesz prywatnie."
+            hint={t.nameHint}
           >
             <Input
               {...fieldAria("org-name", { error: errors.name?.message })}
@@ -97,9 +98,9 @@ export function OrganizationForm({
 
           <FormField
             id="org-contactEmail"
-            label="Adres kontaktowy dla najemców"
+            label={t.contactEmail}
             error={errors.contactEmail?.message}
-            hint="Tu trafi odpowiedź, gdy najemca odpisze na powiadomienie o płatności."
+            hint={t.contactEmailHint}
           >
             <Input
               {...fieldAria("org-contactEmail", { error: errors.contactEmail?.message })}
@@ -113,9 +114,9 @@ export function OrganizationForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="org-taxId"
-              label="NIP"
+              label={t.taxId}
               error={errors.taxId?.message}
-              hint="Zostaw puste, jeśli wynajmujesz jako osoba fizyczna."
+              hint={t.taxIdHint}
             >
               <Input
                 {...fieldAria("org-taxId", { error: errors.taxId?.message })}
@@ -124,7 +125,7 @@ export function OrganizationForm({
               />
             </FormField>
 
-            <FormField id="org-street" label="Ulica i numer" error={errors.street?.message}>
+            <FormField id="org-street" label={t.street} error={errors.street?.message}>
               <Input
                 {...fieldAria("org-street", { error: errors.street?.message })}
                 disabled={isSubmitting}
@@ -132,7 +133,7 @@ export function OrganizationForm({
               />
             </FormField>
 
-            <FormField id="org-postalCode" label="Kod pocztowy" error={errors.postalCode?.message}>
+            <FormField id="org-postalCode" label={t.postalCode} error={errors.postalCode?.message}>
               <PostalCodeInput
                 {...fieldAria("org-postalCode", { error: errors.postalCode?.message })}
                 disabled={isSubmitting}
@@ -140,7 +141,7 @@ export function OrganizationForm({
               />
             </FormField>
 
-            <FormField id="org-city" label="Miejscowość" error={errors.city?.message}>
+            <FormField id="org-city" label={t.city} error={errors.city?.message}>
               <Input
                 {...fieldAria("org-city", { error: errors.city?.message })}
                 disabled={isSubmitting}
@@ -151,13 +152,13 @@ export function OrganizationForm({
 
           <FormField
             id="org-bankAccount"
-            label="Numer rachunku dla najemców"
+            label={t.bankAccount}
             error={errors.bankAccount?.message}
-            hint="26 cyfr. Trafia na rachunki jako konto do przelewu. Zostaw puste, jeśli rozliczasz się inaczej."
+            hint={t.bankAccountHint}
           >
             <Input
               {...fieldAria("org-bankAccount", { error: errors.bankAccount?.message })}
-              inputMode="numeric"
+              inputMode={locale === "uk" ? "text" : "numeric"}
               autoComplete="off"
               disabled={isSubmitting}
               {...register("bankAccount")}
@@ -171,7 +172,7 @@ export function OrganizationForm({
               ) : saved ? (
                 <Check className="h-4 w-4" aria-hidden />
               ) : null}
-              Zapisz
+              {t.save}
             </Button>
           </div>
         </form>

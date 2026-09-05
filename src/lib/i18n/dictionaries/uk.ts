@@ -314,6 +314,29 @@ export const uk: Dictionary = {
         organizationName: "Name",
         userName: "Full name",
       },
+      seller: {
+        title: "Your details",
+        lead: "These appear on rent invoices as the sender and on tenancy records as the landlord.",
+        saved: "Your details have been saved.",
+        save: "Save",
+        name: "Name",
+        nameHint: "Your business name, or your own name if you let privately.",
+        contactEmail: "Contact address for tenants",
+        contactEmailHint: "Replies to payment notifications go here.",
+        /*
+          Odpowiednikiem NIP-u jest numer VAT, ale najem mieszkaniowy jest
+          z VAT zwolniony, więc większość wynajmujących zostawia to pole puste.
+        */
+        taxId: "VAT number",
+        taxIdHint: "Leave blank unless you are VAT registered.",
+        street: "Street and number",
+        postalCode: "Postcode",
+        city: "Town or city",
+        bankAccount: "Bank details for tenants",
+        /* Sort code i numer konta razem, bo tak wpisuje się je do przelewu. */
+        bankAccountHint:
+          "Sort code and account number, 14 digits in total. Shown on rent invoices as the account to pay into. Leave blank if you collect rent another way.",
+      },
       logoTooLarge: "That file is too large",
       logoWrongType: "Upload a PNG or JPEG image",
       logoMaxSize: "The image can be at most {kb} kB",
