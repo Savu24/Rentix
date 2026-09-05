@@ -167,6 +167,9 @@ export function Landing({ locale }: { locale: Locale }) {
         <section id={t.nav.pricingAnchor} className="px-5 py-10 sm:px-12 sm:py-14">
           <div className="mx-auto max-w-6xl">
             <h2 className="r-display text-center text-[32px] text-fg">{t.pricing.heading}</h2>
+            <p className="mx-auto mt-2 max-w-[520px] text-center text-[15px] text-muted">
+              {t.pricing.lead}
+            </p>
 
             {/* Cztery progi w rzędzie dopiero od lg — poniżej idą po dwa, bo
                 cena i przypis nie mieszczą się w ćwiartce szerokości tabletu. */}

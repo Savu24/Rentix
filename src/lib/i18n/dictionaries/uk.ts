@@ -89,6 +89,7 @@ export const uk: Dictionary = {
        więcej: Landlord Studio £12 plus funt za lokal, Arthur od £70. */
     pricing: {
       heading: "Simple pricing, no traps",
+      lead: "Every plan has every feature. Only the number of tenancies changes.",
       badge: "MOST POPULAR",
       note: "Prices exclude VAT and are billed monthly. Pay yearly and you pay for ten months.",
       plans: [
@@ -98,7 +99,7 @@ export const uk: Dictionary = {
           period: "",
           note: "2 tenancies",
           featured: false,
-          items: ["The whole app, no time limit", "No card needed"],
+          items: ["Every feature in the app", "No time limit, no card"],
           cta: "Start for free",
         },
         {
@@ -107,7 +108,7 @@ export const uk: Dictionary = {
           period: "/month",
           note: "up to 10 tenancies",
           featured: false,
-          items: ["Everything in Free", "Email support"],
+          items: ["Every feature in the app", "Email support"],
           cta: "Choose Start",
         },
         {
@@ -116,7 +117,7 @@ export const uk: Dictionary = {
           period: "/month",
           note: "up to 30 tenancies",
           featured: true,
-          items: ["Everything in Start", "Support within 24 hours"],
+          items: ["Every feature in the app", "Support within 24 hours"],
           cta: "Choose Pro",
         },
         {
@@ -125,7 +126,7 @@ export const uk: Dictionary = {
           period: "/month",
           note: "no tenancy limit",
           featured: false,
-          items: ["Everything in Pro", "Limit agreed with you"],
+          items: ["Every feature in the app", "Limit agreed with you"],
           cta: "Choose Portfolio",
         },
       ],

@@ -85,12 +85,14 @@ export const pl = {
       kosztował najwięcej. Umowę wynajmujący liczy też sam, więc rachunek da
       się sprawdzić bez zaglądania w panel.
 
-      Plany różnią się wyłącznie progiem. Funkcje ma każdy te same, bo dzielenie
-      panelu na płatne kawałki wymagałoby obiecywania rzeczy, których nie
-      egzekwuje kod.
+      Plany różnią się wyłącznie progiem — funkcje ma każdy te same. To decyzja
+      produktowa, nie skrót: dzielenie panelu na płatne kawałki kazałoby
+      wynajmującemu z dwoma mieszkaniami wystawiać dokumenty bez logo, a limit
+      umów i tak jest jedyną rzeczą, którą egzekwuje kod.
     */
     pricing: {
       heading: "Prosty cennik, bez pułapek",
+      lead: "Każdy plan ma wszystkie funkcje. Różni się tylko liczba umów.",
       badge: "NAJCZĘŚCIEJ WYBIERANY",
       note: "Ceny netto, płatne miesięcznie. Przy rozliczeniu rocznym płacisz za dziesięć miesięcy.",
       plans: [
@@ -100,7 +102,7 @@ export const pl = {
           period: "",
           note: "2 umowy",
           featured: false,
-          items: ["Cały panel, bez terminu", "Bez karty płatniczej"],
+          items: ["Wszystkie funkcje panelu", "Bez terminu i bez karty"],
           cta: "Zacznij za darmo",
         },
         {
@@ -109,7 +111,7 @@ export const pl = {
           period: "/mies.",
           note: "do 10 umów",
           featured: false,
-          items: ["Wszystko z Free", "Wsparcie mailem"],
+          items: ["Wszystkie funkcje panelu", "Wsparcie mailem"],
           cta: "Wybierz Start",
         },
         {
@@ -118,7 +120,7 @@ export const pl = {
           period: "/mies.",
           note: "do 30 umów",
           featured: true,
-          items: ["Wszystko ze Start", "Wsparcie w 24 godziny"],
+          items: ["Wszystkie funkcje panelu", "Wsparcie w 24 godziny"],
           cta: "Wybierz Pro",
         },
         {
@@ -127,7 +129,7 @@ export const pl = {
           period: "/mies.",
           note: "bez limitu umów",
           featured: false,
-          items: ["Wszystko z Pro", "Próg ustalany indywidualnie"],
+          items: ["Wszystkie funkcje panelu", "Próg ustalany indywidualnie"],
           cta: "Wybierz Portfel",
         },
       ],
