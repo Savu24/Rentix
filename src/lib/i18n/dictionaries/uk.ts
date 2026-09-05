@@ -92,6 +92,30 @@ export const uk: Dictionary = {
       lead: "Every plan has every feature. Only the number of tenancies changes.",
       badge: "MOST POPULAR",
       note: "Prices exclude VAT and are billed monthly. Pay yearly and you pay for ten months.",
+
+      /*
+        Ta sama lista co po polsku, poza umową: brytyjska karta mówi
+        o ewidencji najmu, nie o dokumencie do podpisu (AST, ochrona kaucji
+        i Right to Rent to inne prawo), a zestawienie opisujemy jako roczne,
+        nie podatkowe — brytyjski rok podatkowy biegnie od 6 kwietnia.
+      */
+      included: {
+        title: "In every plan, the free one included",
+        lead: "None of this is an add-on, and none of it is held back for a higher tier.",
+        items: [
+          "Properties, rooms and a tenant register",
+          "Tenancy records with dates, rent, deposit and notice period",
+          "Rent raised on the date in the tenancy, paid and overdue statuses",
+          "Rent invoices as PDFs with your logo",
+          "Documents and reminders emailed to the tenant",
+          "Your own message templates",
+          "Running costs: mortgage, service charge, repairs, insurance",
+          "Reports: income, costs and profit by property",
+          "Yearly summary and CSV export for your accountant",
+          "Owner accounts — for agents letting someone else's property",
+        ],
+      },
+
       plans: [
         {
           name: "Free",
@@ -99,7 +123,7 @@ export const uk: Dictionary = {
           period: "",
           note: "2 tenancies",
           featured: false,
-          items: ["Every feature in the app", "No time limit, no card"],
+          items: ["Every feature listed below", "No time limit, no card"],
           cta: "Start for free",
         },
         {
@@ -108,7 +132,7 @@ export const uk: Dictionary = {
           period: "/month",
           note: "up to 10 tenancies",
           featured: false,
-          items: ["Every feature in the app", "Email support"],
+          items: ["Every feature listed below", "Email support"],
           cta: "Choose Start",
         },
         {
@@ -117,7 +141,7 @@ export const uk: Dictionary = {
           period: "/month",
           note: "up to 30 tenancies",
           featured: true,
-          items: ["Every feature in the app", "Support within 24 hours"],
+          items: ["Every feature listed below", "Support within 24 hours"],
           cta: "Choose Pro",
         },
         {
@@ -126,7 +150,7 @@ export const uk: Dictionary = {
           period: "/month",
           note: "no tenancy limit",
           featured: false,
-          items: ["Every feature in the app", "Limit agreed with you"],
+          items: ["Every feature listed below", "Limit agreed with you"],
           cta: "Choose Portfolio",
         },
       ],
@@ -1365,6 +1389,7 @@ export const uk: Dictionary = {
         usage: "{used} of {limit} {noun}",
         usageUnlimited: "{used} {noun}, no limit",
         tiers: "What each plan covers",
+        sameFeatures: "Every plan has every feature. Only the number of tenancies changes.",
         tierLimit: "{limit} {noun}",
         tierUnlimited: "no limit",
         current: "Your plan",

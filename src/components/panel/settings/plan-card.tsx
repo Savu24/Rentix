@@ -68,6 +68,7 @@ export async function PlanCard({ usage }: { usage: PlanUsage }) {
 
         <div className="flex flex-col gap-1.5">
           <p className="text-xs font-medium text-fg">{t.tiers}</p>
+          <p className="text-xs text-muted">{t.sameFeatures}</p>
           <ul className="flex flex-col gap-1">
             {(Object.keys(PLAN_LEASE_LIMIT) as SubscriptionPlan[]).map((plan) => {
               const limit = PLAN_LEASE_LIMIT[plan];

@@ -227,6 +227,19 @@ export function Landing({ locale }: { locale: Locale }) {
               ))}
             </div>
 
+            {/* Lista funkcji wspólnych dla wszystkich progów. Stoi pod kartami,
+                a nie w każdej z nich: cztery razy to samo dziesięciopunktowe
+                wyliczenie zasłoniłoby jedyną realną różnicę, czyli liczbę umów. */}
+            <div className="mx-auto mt-7 max-w-[1100px] rounded-[20px] border border-border bg-surface-alt px-6 py-7 sm:px-9">
+              <p className="text-[15px] font-semibold text-fg">{t.pricing.included.title}</p>
+              <p className="mt-1 text-[13.5px] text-muted">{t.pricing.included.lead}</p>
+              <ul className="mt-4 grid gap-x-8 gap-y-2 text-sm text-muted sm:grid-cols-2">
+                {t.pricing.included.items.map((item) => (
+                  <PlanItem key={item}>{item}</PlanItem>
+                ))}
+              </ul>
+            </div>
+
             <p className="mx-auto mt-5 max-w-[560px] text-center text-[13px] text-muted">
               {t.pricing.note}
             </p>

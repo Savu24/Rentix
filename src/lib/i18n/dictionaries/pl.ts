@@ -95,6 +95,36 @@ export const pl = {
       lead: "Każdy plan ma wszystkie funkcje. Różni się tylko liczba umów.",
       badge: "NAJCZĘŚCIEJ WYBIERANY",
       note: "Ceny netto, płatne miesięcznie. Przy rozliczeniu rocznym płacisz za dziesięć miesięcy.",
+
+      /*
+        Lista tego, co dostaje każdy plan — wypisana raz, pod kartami.
+
+        Powtórzenie jej na czterech kartach zrobiłoby z cennika ścianę tekstu
+        i i tak nie odpowiedziałoby na pytanie, które zadaje wynajmujący
+        patrzący na darmowy plan: „czego mi tu zabraknie". Wypisana osobno
+        odpowiada wprost: niczego, poza liczbą umów.
+
+        Wpisujemy tu wyłącznie to, co panel naprawdę robi. Portalu najemcy
+        i zapraszania współpracowników nie ma w kodzie, więc nie ma ich też
+        w cenniku.
+      */
+      included: {
+        title: "W każdym planie, także darmowym",
+        lead: "Żadna z tych funkcji nie jest dodatkowo płatna ani zarezerwowana dla wyższego progu.",
+        items: [
+          "Nieruchomości, pokoje i kartoteka najemców",
+          "Umowy najmu z gotowym PDF-em do podpisu",
+          "Naliczanie czynszu w dniu z umowy, statusy opłacone i zaległe",
+          "Rachunki i faktury PDF z Twoim logo",
+          "Wysyłka dokumentów i przypomnień mailem do najemcy",
+          "Własne szablony wiadomości",
+          "Koszty najmu: kredyt, wspólnota, remonty, ubezpieczenie",
+          "Raporty: przychód, koszty i wynik wg nieruchomości",
+          "Zestawienie roczne i eksport CSV dla księgowego",
+          "Konta właścicieli — dla zarządców obsługujących cudze mieszkania",
+        ],
+      },
+
       plans: [
         {
           name: "Free",
@@ -102,7 +132,7 @@ export const pl = {
           period: "",
           note: "2 umowy",
           featured: false,
-          items: ["Wszystkie funkcje panelu", "Bez terminu i bez karty"],
+          items: ["Komplet funkcji z listy niżej", "Bez terminu i bez karty"],
           cta: "Zacznij za darmo",
         },
         {
@@ -111,7 +141,7 @@ export const pl = {
           period: "/mies.",
           note: "do 10 umów",
           featured: false,
-          items: ["Wszystkie funkcje panelu", "Wsparcie mailem"],
+          items: ["Komplet funkcji z listy niżej", "Wsparcie mailem"],
           cta: "Wybierz Start",
         },
         {
@@ -120,7 +150,7 @@ export const pl = {
           period: "/mies.",
           note: "do 30 umów",
           featured: true,
-          items: ["Wszystkie funkcje panelu", "Wsparcie w 24 godziny"],
+          items: ["Komplet funkcji z listy niżej", "Wsparcie w 24 godziny"],
           cta: "Wybierz Pro",
         },
         {
@@ -129,7 +159,7 @@ export const pl = {
           period: "/mies.",
           note: "bez limitu umów",
           featured: false,
-          items: ["Wszystkie funkcje panelu", "Próg ustalany indywidualnie"],
+          items: ["Komplet funkcji z listy niżej", "Próg ustalany indywidualnie"],
           cta: "Wybierz Portfel",
         },
       ],
@@ -1330,6 +1360,8 @@ export const pl = {
         usage: "{used} z {limit} {noun}",
         usageUnlimited: "{used} {noun}, bez limitu",
         tiers: "Progi planów",
+        /** To samo zdanie co w cenniku — progi różnią się liczbą umów, nie funkcjami. */
+        sameFeatures: "Każdy plan ma komplet funkcji. Różni się tylko liczba umów.",
         tierLimit: "{limit} {noun}",
         tierUnlimited: "bez limitu",
         current: "Twój plan",
