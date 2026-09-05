@@ -87,6 +87,7 @@ const EMPTY: PropertyCreateInput = {
 
 export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
   const { d } = useI18n();
+  const t = d.panel.propertiesPage.form;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -159,14 +160,14 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Podstawowe dane</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionBasics}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="name"
-              label="Nazwa"
+              label={t.name}
               error={errors.name?.message}
-              hint="Robocza nazwa, po której rozpoznasz obiekt na liście."
+              hint={t.nameHint}
               className="sm:col-span-2"
             >
               <Input
@@ -176,7 +177,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
 
-            <FormField id="type" label="Typ" error={errors.type?.message}>
+            <FormField id="type" label={t.type} error={errors.type?.message}>
               <Select
                 {...fieldAria("type", { error: errors.type?.message })}
                 disabled={isSubmitting}
@@ -193,9 +194,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             {canSetStatus ? (
               <FormField
                 id="status"
-                label="Status"
+                label={t.status}
                 error={errors.status?.message}
-                hint="Remont wyłącza lokal z listy wolnych."
+                hint={t.statusHint}
               >
                 <Select
                   {...fieldAria("status", { error: errors.status?.message })}
@@ -214,9 +215,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             {!isEdit ? (
               <FormField
                 id="roomCount"
-                label="Liczba pokoi"
+                label={t.roomCount}
                 error={errors.roomCount?.message}
-                hint="Pokoje utworzą się od razu. W następnym kroku wpiszesz ceny."
+                hint={t.roomCountHint}
               >
                 <Input
                   {...fieldAria("roomCount", {
@@ -238,8 +239,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Właściciel</h2>
           <p className="-mt-2 text-xs text-muted">
-            Dotyczy podnajmu i zarządzania cudzym lokalem. Przy własnej nieruchomości zostaw
-            „nieruchomość własna”.
+            {t.sectionOwnerHint}
           </p>
 
           <OwnerPicker
@@ -258,7 +258,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
           <div className="grid gap-4 sm:grid-cols-6">
             <FormField
               id="street"
-              label="Ulica"
+              label={t.street}
               error={errors.street?.message}
               className="sm:col-span-3"
             >
@@ -272,7 +272,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="buildingNumber"
-              label="Nr budynku"
+              label={t.buildingNumber}
               error={errors.buildingNumber?.message}
               className="sm:col-span-1"
             >
@@ -287,9 +287,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="apartmentNumber"
-              label="Nr mieszkania"
+              label={t.apartmentNumber}
               error={errors.apartmentNumber?.message}
-              hint="Zostaw puste przy domu."
+              hint={t.apartmentNumberHint}
               className="sm:col-span-2"
             >
               <Input
@@ -303,7 +303,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="postalCode"
-              label="Kod pocztowy"
+              label={t.postalCode}
               error={errors.postalCode?.message}
               className="sm:col-span-2"
             >
@@ -318,7 +318,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="city"
-              label="Miejscowość"
+              label={t.city}
               error={errors.city?.message}
               className="sm:col-span-2"
             >
@@ -332,7 +332,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="district"
-              label="Dzielnica"
+              label={t.district}
               error={errors.district?.message}
               className="sm:col-span-2"
             >
@@ -351,7 +351,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
           <h2 className="text-[15px] font-semibold text-fg">Metraż</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="areaM2" label="Powierzchnia (m²)" error={errors.areaM2?.message}>
+            <FormField id="areaM2" label={t.area} error={errors.areaM2?.message}>
               <Input
                 {...fieldAria("areaM2", { error: errors.areaM2?.message })}
                 inputMode="decimal"
@@ -360,7 +360,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
 
-            <FormField id="floor" label="Piętro" error={errors.floor?.message}>
+            <FormField id="floor" label={t.floor} error={errors.floor?.message}>
               <Input
                 {...fieldAria("floor", { error: errors.floor?.message })}
                 inputMode="numeric"
@@ -374,16 +374,15 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Dostęp do lokalu</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionAccess}</h2>
           <p className="-mt-2 text-xs text-muted">
-            To, co przekazujesz najemcy przy wydaniu kluczy i czego potem szukasz w mailach sprzed
-            roku.
+            {t.sectionAccessHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="intercomCode"
-              label="Kod do domofonu"
+              label={t.intercom}
               error={errors.intercomCode?.message}
             >
               <Input
@@ -397,9 +396,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="checkoutTime"
-              label="Godzina zdania lokalu"
+              label={t.checkoutTime}
               error={errors.checkoutTime?.message}
-              hint="Do której najemca oddaje klucze ostatniego dnia."
+              hint={t.checkoutTimeHint}
             >
               <Input
                 {...fieldAria("checkoutTime", {
@@ -414,9 +413,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="storageUnit"
-              label="Komórka lokatorska"
+              label={t.storage}
               error={errors.storageUnit?.message}
-              hint="Numer i gdzie jej szukać."
+              hint={t.storageHint}
               className="sm:col-span-2"
             >
               <Input
@@ -430,7 +429,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="bikeStorage"
-              label="Miejsce na rowery"
+              label={t.bikeStorage}
               error={errors.bikeStorage?.message}
             >
               <Input
@@ -442,7 +441,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
 
-            <FormField id="wasteDisposal" label="Śmietnik" error={errors.wasteDisposal?.message}>
+            <FormField id="wasteDisposal" label={t.waste} error={errors.wasteDisposal?.message}>
               <Input
                 {...fieldAria("wasteDisposal", {
                   error: errors.wasteDisposal?.message,
@@ -457,16 +456,15 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Administracja budynku</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionManager}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Wspólnota albo spółdzielnia. Numer, pod który dzwonisz przy zalaniu i awarii pionu. To
-            nie jest właściciel lokalu.
+            {t.sectionManagerHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="buildingManagerName"
-              label="Nazwa"
+              label={t.managerName}
               error={errors.buildingManagerName?.message}
             >
               <Input
@@ -480,7 +478,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="buildingManagerAddress"
-              label="Adres"
+              label={t.managerAddress}
               error={errors.buildingManagerAddress?.message}
             >
               <Input
@@ -494,7 +492,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="buildingManagerPhone"
-              label="Telefon"
+              label={t.managerPhone}
               error={errors.buildingManagerPhone?.message}
             >
               <Input
@@ -509,7 +507,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="buildingManagerEmail"
-              label="E-mail"
+              label={t.managerEmail}
               error={errors.buildingManagerEmail?.message}
             >
               <Input
@@ -527,12 +525,12 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Ogrzewanie i internet</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionUtilities}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="heatingType"
-              label="Rodzaj ogrzewania"
+              label={t.heating}
               error={errors.heatingType?.message}
             >
               <Select
@@ -542,7 +540,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 disabled={isSubmitting}
                 {...register("heatingType")}
               >
-                <option value="">Nie podano</option>
+                <option value="">{t.notSet}</option>
                 {Object.entries(heatingTypeLabels(d)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -553,7 +551,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="internetSpeedMbps"
-              label="Prędkość łącza (Mbit/s)"
+              label={t.internetSpeed}
               error={errors.internetSpeedMbps?.message}
             >
               <Input
@@ -568,7 +566,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="internetProvider"
-              label="Dostawca internetu"
+              label={t.internetProvider}
               error={errors.internetProvider?.message}
             >
               <Input
@@ -582,7 +580,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="internetProviderPhone"
-              label="Telefon do dostawcy"
+              label={t.internetProviderPhone}
               error={errors.internetProviderPhone?.message}
             >
               <Input
@@ -595,7 +593,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
 
-            <FormField id="wifiSsid" label="Nazwa sieci Wi-Fi" error={errors.wifiSsid?.message}>
+            <FormField id="wifiSsid" label={t.wifiSsid} error={errors.wifiSsid?.message}>
               <Input
                 {...fieldAria("wifiSsid", { error: errors.wifiSsid?.message })}
                 disabled={isSubmitting}
@@ -605,9 +603,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="wifiPassword"
-              label="Hasło do Wi-Fi"
+              label={t.wifiPassword}
               error={errors.wifiPassword?.message}
-              hint="Widzisz je tylko Ty. Przepiszesz najemcy przy wydaniu kluczy."
+              hint={t.wifiPasswordHint}
             >
               <Input
                 {...fieldAria("wifiPassword", {
@@ -620,9 +618,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="internetContractEndsAt"
-              label="Koniec umowy na internet"
+              label={t.internetContractEnd}
               error={errors.internetContractEndsAt?.message}
-              hint="Żeby nie przedłużyła się sama."
+              hint={t.internetContractEndHint}
             >
               <DateInput
                 {...fieldAria("internetContractEndsAt", {
@@ -639,17 +637,17 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Przeglądy i dokumenty</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionPapers}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Terminy, po których przekroczeniu robi się problem. Karta wyróżni te, które minęły.
+            {t.sectionPapersHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="landRegistryNumber"
-              label="Numer księgi wieczystej"
+              label={t.landRegistry}
               error={errors.landRegistryNumber?.message}
-              hint="Wchodzi do umowy najmu okazjonalnego."
+              hint={t.landRegistryHint}
             >
               <Input
                 {...fieldAria("landRegistryNumber", {
@@ -662,9 +660,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="energyCertificateEp"
-              label="Wskaźnik EP"
+              label={t.energyIndex}
               error={errors.energyCertificateEp?.message}
-              hint="Ze świadectwa energetycznego, w kWh/(m²·rok)."
+              hint={t.energyIndexHint}
             >
               <Input
                 {...fieldAria("energyCertificateEp", {
@@ -678,7 +676,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="energyCertificateExpiresAt"
-              label="Ważność świadectwa"
+              label={t.certificateValidUntil}
               error={errors.energyCertificateExpiresAt?.message}
             >
               <DateInput
@@ -691,7 +689,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
 
-            <FormField id="boilerModel" label="Model pieca" error={errors.boilerModel?.message}>
+            <FormField id="boilerModel" label={t.boilerModel} error={errors.boilerModel?.message}>
               <Input
                 {...fieldAria("boilerModel", {
                   error: errors.boilerModel?.message,
@@ -703,7 +701,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="boilerInspectionAt"
-              label="Następny przegląd pieca"
+              label={t.boilerInspection}
               error={errors.boilerInspectionAt?.message}
             >
               <DateInput
@@ -718,7 +716,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="technicalInspectionAt"
-              label="Następny przegląd techniczny"
+              label={t.technicalInspection}
               error={errors.technicalInspectionAt?.message}
             >
               <DateInput
@@ -736,17 +734,17 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Okolica i dojazd</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionArea}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Odpowiedzi na pytania, które padają przy każdym oglądaniu.
+            {t.sectionAreaHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="gpsCoordinates"
-              label="Współrzędne GPS"
+              label={t.gps}
               error={errors.gpsCoordinates?.message}
-              hint="Wklej z map, np. 52.2297, 21.0122."
+              hint={t.gpsHint}
               className="sm:col-span-2"
             >
               <Input
@@ -760,9 +758,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="transitLines"
-              label="Linie komunikacji"
+              label={t.transitLines}
               error={errors.transitLines?.message}
-              hint="Np. tramwaj 4 i 14, autobus 178."
+              hint={t.transitLinesHint}
               className="sm:col-span-2"
             >
               <Input
@@ -776,7 +774,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="transitStopDistanceM"
-              label="Odległość od przystanku (m)"
+              label={t.transitDistance}
               error={errors.transitStopDistanceM?.message}
             >
               <Input
@@ -791,7 +789,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="universityDistanceM"
-              label="Odległość od uczelni (m)"
+              label={t.universityDistance}
               error={errors.universityDistanceM?.message}
             >
               <Input
@@ -806,9 +804,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
             <FormField
               id="nearbyPlaces"
-              label="Ważne punkty w okolicy"
+              label={t.nearbyPlaces}
               error={errors.nearbyPlaces?.message}
-              hint="Sklep, przychodnia, szkoła, park."
+              hint={t.nearbyPlacesHint}
               className="sm:col-span-2"
             >
               <Textarea
@@ -825,13 +823,13 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Opis i notatki</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionNotes}</h2>
 
           <FormField
             id="description"
-            label="Opis"
+            label={t.description}
             error={errors.description?.message}
-            hint="Widoczny na publicznej stronie ofert, jeśli ją włączysz."
+            hint={t.descriptionHint}
           >
             <Textarea
               {...fieldAria("description", {
@@ -844,9 +842,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
           <FormField
             id="notes"
-            label="Notatki wewnętrzne"
+            label={t.notes}
             error={errors.notes?.message}
-            hint="Widoczne tylko dla Ciebie. Najemca ich nie zobaczy."
+            hint={t.notesHint}
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
@@ -856,8 +854,8 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
           </FormField>
 
           <CheckboxField
-            label="Pokazuj na publicznej stronie ofert"
-            hint="Wolne pokoje będą widoczne pod adresem Twojej organizacji."
+            label={t.publiclyListed}
+            hint={t.publiclyListedHint}
             disabled={isSubmitting}
             {...register("publiclyListed")}
           />
@@ -869,13 +867,13 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Zapisywanie…
+              {t.saving}
             </>
           ) : isEdit ? (
-            "Zapisz zmiany"
+            d.panel.common.saveChanges
           ) : (
             <>
-              Kontynuuj
+              {t.continueLabel}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </>
           )}

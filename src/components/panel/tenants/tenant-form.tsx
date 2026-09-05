@@ -73,6 +73,7 @@ export function TenantForm({
   defaultValues?: Partial<TenantFormInput>;
 }) {
   const { d, locale } = useI18n();
+  const t = d.panel.tenantsPage.form;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -146,10 +147,10 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Dane najemcy</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionBasics}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="firstName" label="Imię" error={errors.firstName?.message}>
+            <FormField id="firstName" label={t.firstName} error={errors.firstName?.message}>
               <Input
                 {...fieldAria("firstName", {
                   error: errors.firstName?.message,
@@ -160,7 +161,7 @@ export function TenantForm({
               />
             </FormField>
 
-            <FormField id="lastName" label="Nazwisko" error={errors.lastName?.message}>
+            <FormField id="lastName" label={t.lastName} error={errors.lastName?.message}>
               <Input
                 {...fieldAria("lastName", { error: errors.lastName?.message })}
                 autoComplete="family-name"
@@ -171,9 +172,9 @@ export function TenantForm({
 
             <FormField
               id="email"
-              label="E-mail"
+              label={t.email}
               error={errors.email?.message}
-              hint="Bez adresu nie wyślemy przypomnień o płatności."
+              hint={t.emailHint}
             >
               <Input
                 {...fieldAria("email", { error: errors.email?.message })}
@@ -184,7 +185,7 @@ export function TenantForm({
               />
             </FormField>
 
-            <FormField id="phone" label="Telefon" error={errors.phone?.message}>
+            <FormField id="phone" label={t.phone} error={errors.phone?.message}>
               <Input
                 {...fieldAria("phone", { error: errors.phone?.message })}
                 type="tel"
@@ -194,7 +195,7 @@ export function TenantForm({
               />
             </FormField>
 
-            <FormField id="status" label="Status" error={errors.status?.message}>
+            <FormField id="status" label={t.status} error={errors.status?.message}>
               <Select
                 {...fieldAria("status", { error: errors.status?.message })}
                 disabled={isSubmitting}
@@ -210,9 +211,9 @@ export function TenantForm({
 
             <FormField
               id="legalForm"
-              label="Forma prawna"
+              label={t.legalForm}
               error={errors.legalForm?.message}
-              hint="Przy firmie uzupełnij NIP w danych do faktury."
+              hint={t.legalFormHint}
             >
               <Select
                 {...fieldAria("legalForm", {
@@ -234,15 +235,15 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Dokumenty tożsamości</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionIdentity}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Wszystkie pola opcjonalne. Wpisz to, co najemca okazał.
+            {t.sectionIdentityHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="idCardNumber"
-              label="Dowód osobisty"
+              label={t.idCard}
               error={errors.idCardNumber?.message}
             >
               <Input
@@ -255,7 +256,7 @@ export function TenantForm({
               />
             </FormField>
 
-            <FormField id="pesel" label="PESEL" error={errors.pesel?.message}>
+            <FormField id="pesel" label={t.nationalId} error={errors.pesel?.message}>
               <Input
                 {...fieldAria("pesel", { error: errors.pesel?.message })}
                 inputMode="numeric"
@@ -266,7 +267,7 @@ export function TenantForm({
 
             <FormField
               id="passportNumber"
-              label="Numer paszportu"
+              label={t.passport}
               error={errors.passportNumber?.message}
             >
               <Input
@@ -281,7 +282,7 @@ export function TenantForm({
 
             <FormField
               id="residenceCardNumber"
-              label="Karta pobytu"
+              label={t.residenceCard}
               error={errors.residenceCardNumber?.message}
             >
               <Input
@@ -295,9 +296,9 @@ export function TenantForm({
 
             <FormField
               id="dateOfBirth"
-              label="Data urodzenia"
+              label={t.dateOfBirth}
               error={errors.dateOfBirth?.message}
-              hint="Przepisujesz ją z tego samego dokumentu co numer."
+              hint={t.dateOfBirthHint}
             >
               <DateInput
                 {...fieldAria("dateOfBirth", {
@@ -315,16 +316,16 @@ export function TenantForm({
       <Card>
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">
-            Kontakt na wypadek nagłego zdarzenia
+            {t.sectionEmergency}
           </h2>
           <p className="-mt-2 text-xs text-muted">
-            Osoba, do której zadzwonisz, gdy nie da się dodzwonić do najemcy.
+            {t.sectionEmergencyHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="emergencyContactFirstName"
-              label="Imię"
+              label={t.firstName}
               error={errors.emergencyContactFirstName?.message}
             >
               <Input
@@ -338,7 +339,7 @@ export function TenantForm({
 
             <FormField
               id="emergencyContactLastName"
-              label="Nazwisko"
+              label={t.lastName}
               error={errors.emergencyContactLastName?.message}
             >
               <Input
@@ -352,7 +353,7 @@ export function TenantForm({
 
             <FormField
               id="emergencyContactPhone"
-              label="Telefon"
+              label={t.phone}
               error={errors.emergencyContactPhone?.message}
             >
               <Input
@@ -367,7 +368,7 @@ export function TenantForm({
 
             <FormField
               id="emergencyContactEmail"
-              label="E-mail"
+              label={t.email}
               error={errors.emergencyContactEmail?.message}
             >
               <Input
@@ -385,16 +386,15 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Adres zameldowania</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionRegistered}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Adres z dowodu: ten, pod który najemca wróci po zakończeniu najmu. Wchodzi do umowy
-            najmu okazjonalnego i nie musi być tym samym, co adres do faktury.
+            {t.sectionRegisteredHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-6">
             <FormField
               id="registeredStreet"
-              label="Ulica i numer"
+              label={t.street}
               error={errors.registeredStreet?.message}
               className="sm:col-span-6"
             >
@@ -409,7 +409,7 @@ export function TenantForm({
 
             <FormField
               id="registeredPostalCode"
-              label="Kod pocztowy"
+              label={t.postalCode}
               error={errors.registeredPostalCode?.message}
               className="sm:col-span-2"
             >
@@ -424,7 +424,7 @@ export function TenantForm({
 
             <FormField
               id="registeredCity"
-              label="Miejscowość"
+              label={t.city}
               error={errors.registeredCity?.message}
               className="sm:col-span-2"
             >
@@ -439,9 +439,9 @@ export function TenantForm({
 
             <FormField
               id="registeredUntil"
-              label="Zameldowanie do"
+              label={t.registeredUntil}
               error={errors.registeredUntil?.message}
-              hint="Puste = bezterminowe."
+              hint={t.registeredUntilHint}
               className="sm:col-span-2"
             >
               <DateInput
@@ -461,14 +461,13 @@ export function TenantForm({
         <CardContent className="flex flex-col gap-4">
           <h2 className="text-[15px] font-semibold text-fg">Płatności</h2>
           <p className="-mt-2 text-xs text-muted">
-            Wypełnij tylko wtedy, gdy za czynsz odpowiada ktoś inny niż najemca, np. rodzic albo
-            księgowość jego firmy.
+            {t.sectionBillingContactHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="billingEmail"
-              label="E-mail do płatności"
+              label={t.billingEmail}
               error={errors.billingEmail?.message}
             >
               <Input
@@ -483,7 +482,7 @@ export function TenantForm({
 
             <FormField
               id="billingPhone"
-              label="Telefon do płatności"
+              label={t.billingPhone}
               error={errors.billingPhone?.message}
             >
               <Input
@@ -498,9 +497,9 @@ export function TenantForm({
 
             <FormField
               id="depositRefundAccount"
-              label="Rachunek do zwrotu kaucji"
+              label={t.depositAccount}
               error={errors.depositRefundAccount?.message}
-              hint="Wpisany na starcie oszczędza szukania numeru w dniu wyprowadzki."
+              hint={t.depositAccountHint}
               className="sm:col-span-2"
             >
               <Input
@@ -518,15 +517,15 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Praca i studia</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionWork}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Najkrótsza odpowiedź na pytanie, z czego ten najemca zapłaci.
+            {t.sectionWorkHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="employerName"
-              label="Pracodawca lub uczelnia"
+              label={t.employer}
               error={errors.employerName?.message}
             >
               <Input
@@ -540,9 +539,9 @@ export function TenantForm({
 
             <FormField
               id="employmentUntil"
-              label="Do kiedy"
+              label={t.until}
               error={errors.employmentUntil?.message}
-              hint="Puste = bezterminowo."
+              hint={t.untilHint}
             >
               <DateInput
                 {...fieldAria("employmentUntil", {
@@ -559,13 +558,13 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Ubezpieczenie najemcy</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionInsurance}</h2>
           <p className="-mt-2 text-xs text-muted">
-            Polisa OC, do której sięgasz przy szkodzie, np. zalaniu sąsiada albo zniszczeniu sprzętu.
+            {t.sectionInsuranceHint}
           </p>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id="insurerName" label="Ubezpieczyciel" error={errors.insurerName?.message}>
+            <FormField id="insurerName" label={t.insurer} error={errors.insurerName?.message}>
               <Input
                 {...fieldAria("insurerName", {
                   error: errors.insurerName?.message,
@@ -577,7 +576,7 @@ export function TenantForm({
 
             <FormField
               id="insurancePolicyNumber"
-              label="Numer polisy"
+              label={t.policyNumber}
               error={errors.insurancePolicyNumber?.message}
             >
               <Input
@@ -591,7 +590,7 @@ export function TenantForm({
 
             <FormField
               id="insuranceExpiresAt"
-              label="Ważna do"
+              label={t.validUntil}
               error={errors.insuranceExpiresAt?.message}
             >
               <DateInput
@@ -611,9 +610,9 @@ export function TenantForm({
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-[15px] font-semibold text-fg">Dane do faktury</h2>
+              <h2 className="text-[15px] font-semibold text-fg">{t.sectionBilling}</h2>
               <p className="mt-1 text-xs text-muted">
-                Trafiają na fakturę jako dane nabywcy. Możesz uzupełnić je później.
+                {t.sectionBillingHint}
               </p>
             </div>
 
@@ -625,14 +624,14 @@ export function TenantForm({
               disabled={isSubmitting || !hasRegisteredAddress}
             >
               <Copy className="h-4 w-4" aria-hidden />
-              Skopiuj adres zameldowania
+              {t.copyRegistered}
             </Button>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-6">
             <FormField
               id="street"
-              label="Ulica i numer"
+              label={t.street}
               error={errors.street?.message}
               className="sm:col-span-6"
             >
@@ -645,7 +644,7 @@ export function TenantForm({
 
             <FormField
               id="postalCode"
-              label="Kod pocztowy"
+              label={t.postalCode}
               error={errors.postalCode?.message}
               className="sm:col-span-2"
             >
@@ -660,7 +659,7 @@ export function TenantForm({
 
             <FormField
               id="city"
-              label="Miejscowość"
+              label={t.city}
               error={errors.city?.message}
               className="sm:col-span-2"
             >
@@ -673,9 +672,9 @@ export function TenantForm({
 
             <FormField
               id="taxId"
-              label="NIP"
+              label={t.taxId}
               error={errors.taxId?.message}
-              hint="Tylko dla firm."
+              hint={t.taxIdHint}
               className="sm:col-span-2"
             >
               <Input
@@ -691,7 +690,7 @@ export function TenantForm({
                 nazw nie da się jej odczytać. */}
             <FormField
               id="documentKind"
-              label="Co wystawiamy"
+              label={t.documentKind}
               error={errors.documentKind?.message}
               hint={tenantDocumentKindHints(d)[documentKind ?? "BILL"]}
               className="sm:col-span-2"
@@ -714,9 +713,9 @@ export function TenantForm({
 
           <FormField
             id="notes"
-            label="Notatki wewnętrzne"
+            label={t.notes}
             error={errors.notes?.message}
-            hint="Widoczne tylko dla Ciebie."
+            hint={t.notesHint}
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
@@ -732,12 +731,12 @@ export function TenantForm({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Zapisywanie…
+              {t.saving}
             </>
           ) : isEdit ? (
-            "Zapisz zmiany"
+            d.panel.common.saveChanges
           ) : (
-            "Dodaj najemcę"
+            d.panel.tenantsPage.add
           )}
         </Button>
         <Button
