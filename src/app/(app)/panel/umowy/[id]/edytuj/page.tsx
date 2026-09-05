@@ -70,6 +70,8 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
           status: settableStatus,
           startDate: toInputDate(lease.startDate),
           endDate: toInputDate(lease.endDate),
+          // Puste pole = terminy ustawowe; zero byłoby ustaleniem stron.
+          noticePeriodMonths: lease.noticePeriodMonths ?? "",
           rentGrosze: formatAmount(lease.rentGrosze),
           depositGrosze: lease.depositGrosze ? formatAmount(lease.depositGrosze) : "",
           utilitiesMode: lease.utilitiesMode,

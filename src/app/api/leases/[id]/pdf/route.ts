@@ -45,6 +45,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     number: lease.number,
     startDate: lease.startDate,
     endDate: lease.endDate,
+    noticePeriodMonths: lease.noticePeriodMonths,
     rentGrosze: lease.rentGrosze,
     depositGrosze: lease.depositGrosze,
     utilitiesMode: lease.utilitiesMode,

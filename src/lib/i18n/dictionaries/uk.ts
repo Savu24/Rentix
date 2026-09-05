@@ -768,6 +768,9 @@ export const uk: Dictionary = {
         billingDayValue: "day {day} of the month",
         paymentTerm: "Payment term",
         paymentTermValue: "{days} days",
+        noticePeriod: "Notice period",
+        noticeMonths: ["month", "months"],
+        noticePeriodStatutory: "statutory notice",
         extras: "Additional terms",
         invoices: "Invoices",
         archiveLabel: "this tenancy",
@@ -790,6 +793,8 @@ export const uk: Dictionary = {
         startDate: "Start date",
         endDate: "End date",
         endDateHint: "Blank means no end date.",
+        noticePeriod: "Notice period (months)",
+        noticePeriodHint: "Blank means the statutory notice applies.",
         status: "Status",
         statusHint: "Active occupies the unit and starts the invoicing.",
         number: "Tenancy reference",
@@ -1698,6 +1703,7 @@ export const uk: Dictionary = {
         startDate: "Start date",
         endDate: "End date",
         newEndDate: "New end date",
+        noticePeriod: "Notice period",
         rent: "Rent",
         /*
           Kaucja w Anglii i Walii podlega ochronie w rządowym schemacie

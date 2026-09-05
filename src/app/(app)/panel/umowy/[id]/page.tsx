@@ -218,6 +218,21 @@ export default async function LeaseDetailPage({ params }: Params) {
               label={t.paymentTerm}
               value={fill(t.paymentTermValue, { days: lease.paymentTermDays })}
             />
+            {/* Wiersz stoi zawsze, także bez ustalonego okresu: „terminy
+                ustawowe" to odpowiedź na pytanie o wypowiedzenie, a pusty
+                brak wiersza wyglądałby jak niedokończona umowa. */}
+            <Term
+              label={t.noticePeriod}
+              value={
+                lease.noticePeriodMonths === null
+                  ? t.noticePeriodStatutory
+                  : `${lease.noticePeriodMonths} ${pluralize(
+                      locale,
+                      lease.noticePeriodMonths,
+                      t.noticeMonths,
+                    )}`
+              }
+            />
           </dl>
 
           <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4">

@@ -10,9 +10,19 @@ import {
   dateInput,
   moneyInput,
   optionalDateInput,
+  optionalInt,
   optionalMoneyInput,
   optionalText,
 } from "./common";
+
+/**
+ * Górna granica okresu wypowiedzenia.
+ *
+ * Dwanaście miesięcy z zapasem mieści i polskie trzy miesiące z Kodeksu
+ * cywilnego, i brytyjskie dwa. Wyżej to już nie pomyłka w jednostce, tylko
+ * literówka — i lepiej ją zatrzymać na formularzu niż w podpisanej umowie.
+ */
+export const MAX_NOTICE_PERIOD_MONTHS = 12;
 
 const leaseStatuses = Object.values(LeaseStatus) as [LeaseStatus, ...LeaseStatus[]];
 const utilitiesModes = Object.values(UtilitiesMode) as [UtilitiesMode, ...UtilitiesMode[]];
@@ -86,6 +96,15 @@ export const leaseFormSchema = (c: ValidationContext) =>
 
     startDate: dateInput(c, c.d.panel.leases.fields.startDate),
     endDate: optionalDateInput(c, c.d.panel.leases.fields.endDate),
+
+    /**
+     * Okres wypowiedzenia w miesiącach. Puste = nie zapisano go w umowie,
+     * więc obowiązują terminy ustawowe — i tak też brzmi wtedy PDF.
+     */
+    noticePeriodMonths: optionalInt(c, c.d.panel.leases.fields.noticePeriod, {
+      min: 0,
+      max: MAX_NOTICE_PERIOD_MONTHS,
+    }),
 
     rentGrosze: moneyInput(c, c.d.panel.leases.fields.rent),
     // Puste pole = brak kaucji, nie błąd walidacji.
@@ -234,6 +253,14 @@ export const leaseEditSchema = (c: ValidationContext) =>
     status: z.enum(LEASE_SETTABLE_STATUSES).optional(),
     startDate: dateInput(c, c.d.panel.leases.fields.startDate),
     endDate: optionalDateInput(c, c.d.panel.leases.fields.endDate),
+    /**
+     * Okres wypowiedzenia w miesiącach. Puste = nie zapisano go w umowie,
+     * więc obowiązują terminy ustawowe — i tak też brzmi wtedy PDF.
+     */
+    noticePeriodMonths: optionalInt(c, c.d.panel.leases.fields.noticePeriod, {
+      min: 0,
+      max: MAX_NOTICE_PERIOD_MONTHS,
+    }),
     rentGrosze: moneyInput(c, c.d.panel.leases.fields.rent),
     depositGrosze: patchMoney(c, c.d.panel.leases.fields.deposit),
     utilitiesMode: z.enum(utilitiesModes),

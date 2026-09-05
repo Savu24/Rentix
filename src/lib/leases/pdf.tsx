@@ -128,6 +128,8 @@ export type LeasePdfData = {
   number: string | null;
   startDate: Date;
   endDate: Date | null;
+  /** Pełne miesiące wypowiedzenia. NULL = strony nie ustaliły, piszemy o ustawie. */
+  noticePeriodMonths: number | null;
   rentGrosze: number;
   depositGrosze: number;
   utilitiesMode: UtilitiesMode;
@@ -193,6 +195,31 @@ function Row({ label, value, alt }: { label: string; value: string; alt?: boolea
       <Text style={styles.cellValue}>{value}</Text>
     </View>
   );
+}
+
+/**
+ * Klauzula wypowiedzenia do § 2.
+ *
+ * Bez ustalonego okresu nie milczymy, tylko odsyłamy do ustawy: umowa najmu
+ * bez słowa o wypowiedzeniu wygląda na niedokończoną, a terminy i tak wtedy
+ * obowiązują — Kodeks cywilny i ustawa o ochronie praw lokatorów stosują się
+ * niezależnie od tego, czy strony je przepisały.
+ *
+ * „Ze skutkiem na koniec miesiąca kalendarzowego" jest częścią zdania, a nie
+ * ozdobnikiem: art. 673 § 2 k.c. tak właśnie liczy wypowiedzenie najmu
+ * z czynszem płatnym miesięcznie, a bez tego zdania strony miałyby dwie różne
+ * daty zakończenia na jedno wypowiedzenie.
+ */
+export function noticeClause(data: LeasePdfData): string {
+  const months = data.noticePeriodMonths;
+
+  if (months === null || months <= 0) {
+    return "2. Każda ze stron może wypowiedzieć umowę z zachowaniem terminów wypowiedzenia wynikających z Kodeksu cywilnego oraz ustawy o ochronie praw lokatorów.";
+  }
+
+  const unit = months === 1 ? "miesiąca" : "miesięcy";
+
+  return `2. Każda ze stron może wypowiedzieć umowę z zachowaniem okresu wypowiedzenia wynoszącego ${months} ${unit}, ze skutkiem na koniec miesiąca kalendarzowego.`;
 }
 
 /** Opis rozliczania mediów zależny od trybu — trafia wprost do §3. */
@@ -308,13 +335,14 @@ export function LeaseAgreementDocument({ data }: { data: LeasePdfData }) {
         <Text style={styles.sectionTitle}>§ 2. Okres najmu</Text>
         <Text style={styles.paragraph}>
           {data.endDate
-            ? `Umowa zostaje zawarta na czas oznaczony, od dnia ${formatDate(
+            ? `1. Umowa zostaje zawarta na czas oznaczony, od dnia ${formatDate(
                 data.startDate,
               )} do dnia ${formatDate(data.endDate)}.`
-            : `Umowa zostaje zawarta na czas nieoznaczony, począwszy od dnia ${formatDate(
+            : `1. Umowa zostaje zawarta na czas nieoznaczony, począwszy od dnia ${formatDate(
                 data.startDate,
               )}.`}
         </Text>
+        <Text style={styles.paragraph}>{noticeClause(data)}</Text>
 
         <Text style={styles.sectionTitle}>§ 3. Czynsz i opłaty</Text>
         <View style={styles.table}>

@@ -20,6 +20,7 @@ import { api } from "@/lib/api/client";
 import { formatAmount, formatMoney } from "@/lib/money";
 import {
   LEASE_SETTABLE_STATUSES,
+  MAX_NOTICE_PERIOD_MONTHS,
   leaseStatusLabels,
   utilitiesModeHints,
   utilitiesModeIncomplete,
@@ -64,6 +65,7 @@ const EMPTY: LeaseFormInput = {
   status: "DRAFT",
   startDate: "",
   endDate: "",
+  noticePeriodMonths: "",
   rentGrosze: "",
   depositGrosze: "",
   utilitiesMode: "FLAT_RATE",
@@ -371,6 +373,24 @@ export function LeaseForm({
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
                 disabled={isSubmitting}
                 {...register("endDate")}
+              />
+            </FormField>
+
+            <FormField
+              id="noticePeriodMonths"
+              label={t.noticePeriod}
+              error={errors.noticePeriodMonths?.message}
+              hint={t.noticePeriodHint}
+            >
+              <Input
+                {...fieldAria("noticePeriodMonths", {
+                  error: errors.noticePeriodMonths?.message,
+                })}
+                type="number"
+                min={0}
+                max={MAX_NOTICE_PERIOD_MONTHS}
+                disabled={isSubmitting}
+                {...register("noticePeriodMonths")}
               />
             </FormField>
 

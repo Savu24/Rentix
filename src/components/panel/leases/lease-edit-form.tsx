@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import {
   LEASE_SETTABLE_STATUSES,
+  MAX_NOTICE_PERIOD_MONTHS,
   leaseStatusLabels,
   leaseEditSchema,
   type LeaseEditInput,
@@ -110,6 +111,24 @@ export function LeaseEditForm({
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
                 disabled={isSubmitting}
                 {...register("endDate")}
+              />
+            </FormField>
+
+            <FormField
+              id="noticePeriodMonths"
+              label={t.noticePeriod}
+              error={errors.noticePeriodMonths?.message}
+              hint={t.noticePeriodHint}
+            >
+              <Input
+                {...fieldAria("noticePeriodMonths", {
+                  error: errors.noticePeriodMonths?.message,
+                })}
+                type="number"
+                min={0}
+                max={MAX_NOTICE_PERIOD_MONTHS}
+                disabled={isSubmitting}
+                {...register("noticePeriodMonths")}
               />
             </FormField>
 

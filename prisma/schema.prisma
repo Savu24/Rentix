@@ -679,6 +679,16 @@ model Lease {
   /// NULL = umowa na czas nieokreślony.
   endDate   DateTime?
 
+  /// Okres wypowiedzenia w pełnych miesiącach. NULL = strony nie zapisały go
+  /// w umowie, więc obowiązują terminy ustawowe — i tak mówi wtedy PDF.
+  ///
+  /// Miesiące, nie dni: polski Kodeks cywilny liczy wypowiedzenie najmu
+  /// z czynszem miesięcznym na koniec miesiąca kalendarzowego (art. 673 § 2),
+  /// a brytyjska umowa mówi „two months' notice". Trzymanie tego w dniach
+  /// kazałoby zamieniać „miesiąc" na 30 dni, co jest inną datą niż koniec
+  /// miesiąca i w sporze o termin wychodzi na jaw.
+  noticePeriodMonths Int?
+
   rentGrosze    Int
   depositGrosze Int @default(0)
 
