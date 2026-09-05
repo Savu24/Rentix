@@ -53,7 +53,7 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
     return (
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         <Ban className="h-4 w-4" aria-hidden />
-        Zakończ umowę
+        {t.button}
       </Button>
     );
   }
@@ -62,9 +62,9 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
     <Card className="border-bad/40">
       <CardContent className="flex flex-col gap-4 p-4">
         <div>
-          <p className="text-sm font-semibold text-fg">Zakończenie umowy</p>
+          <p className="text-sm font-semibold text-fg">{d.panel.panelMisc.terminateTitle}</p>
           <p className="mt-0.5 text-xs text-muted">
-            Jednostka wróci do puli wolnych, a najemcy zmienią status na „były najemca”.
+            {t.lead}
           </p>
         </div>
 

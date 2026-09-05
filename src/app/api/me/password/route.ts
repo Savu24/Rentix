@@ -25,14 +25,17 @@ export async function POST(request: NextRequest) {
   const rate = await consume(rateKey, LIMITS.passwordChange);
   if (!rate.success) return rateLimited(rate.retryAfterSeconds);
 
+  const context = await sessionLocaleContext(result.session);
+  const t = context.d.panel.api;
+
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", t.invalidJson);
   }
 
-  const parsed = passwordChangeSchema(await sessionLocaleContext(result.session)).safeParse(body);
+  const parsed = passwordChangeSchema(context).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const changed = await changePassword(userId, parsed.data);
@@ -46,15 +49,15 @@ export async function POST(request: NextRequest) {
 
   switch (changed.reason) {
     case "USER_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono konta.");
+      return apiError("NOT_FOUND", t.notFound.account);
     case "NO_PASSWORD_SET":
       return apiError(
         "CONFLICT",
-        "To konto loguje się przez zewnętrznego dostawcę i nie ma hasła do zmiany.",
+        t.externalProviderPassword,
       );
     case "WRONG_PASSWORD":
-      return apiError("VALIDATION_ERROR", "Popraw zaznaczone pola.", {
-        fields: { currentPassword: ["Nieprawidłowe hasło"] },
+      return apiError("VALIDATION_ERROR", t.fixFields, {
+        fields: { currentPassword: [t.fields.wrongPassword] },
       });
   }
 }

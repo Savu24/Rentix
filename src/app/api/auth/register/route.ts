@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { requestLocale } from "@/lib/i18n/server";
 
 import { apiError, created, rateLimited, validationError } from "@/lib/api/response";
 import { registerOwner } from "@/lib/auth/register";
@@ -29,7 +30,10 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    // Kraju jeszcze nie znamy — treści żądania nie da się odczytać. Bierzemy go
+    // stąd, skąd bierze go cała reszta niezalogowanych stron.
+    const dictionary = getDictionary(await requestLocale());
+    return apiError("VALIDATION_ERROR", dictionary.panel.api.invalidJson);
   }
 
   /*

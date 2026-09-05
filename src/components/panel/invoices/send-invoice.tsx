@@ -58,7 +58,7 @@ export function SendInvoice({
   }
 
   if (sentTo) {
-    return <Alert tone="success">Dokument wysłany na {sentTo}.</Alert>;
+    return <Alert tone="success">{fill(d.panel.panelMisc.sentTo, { email: sentTo })}</Alert>;
   }
 
   /*
@@ -94,10 +94,10 @@ export function SendInvoice({
           <div className="flex flex-wrap gap-2.5">
             <Button size="sm" onClick={send} disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Wyślij teraz
+              {d.panel.panelMisc.sendNow}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>
-              Anuluj
+              {d.panel.common.cancel}
             </Button>
           </div>
         </>

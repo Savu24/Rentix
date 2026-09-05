@@ -26,17 +26,3 @@ export type EditableNotificationType = (typeof EDITABLE_NOTIFICATION_TYPES)[numb
 export function isEditableType(type: string): type is EditableNotificationType {
   return (EDITABLE_NOTIFICATION_TYPES as readonly string[]).includes(type);
 }
-
-export const NOTIFICATION_TYPE_LABELS: Record<EditableNotificationType, string> = {
-  INVOICE_ISSUED: "Wystawiono dokument",
-  PAYMENT_REMINDER: "Przypomnienie przed terminem",
-  PAYMENT_OVERDUE: "Wezwanie po terminie",
-};
-
-export const NOTIFICATION_TYPE_HINTS: Record<EditableNotificationType, string> = {
-  INVOICE_ISSUED:
-    "Wychodzi raz, gdy rachunek zostanie wystawiony. Dokument PDF jedzie w załączniku.",
-  PAYMENT_REMINDER: "Wychodzi raz, na kilka dni przed terminem płatności.",
-  PAYMENT_OVERDUE:
-    "Wychodzi po terminie i jest ponawiane, dopóki wpłata nie zostanie odnotowana.",
-};

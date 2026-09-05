@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 import { LOGO_MIME_TYPES, MAX_LOGO_BYTES } from "@/lib/validations/settings";
 
 /**
@@ -24,6 +25,7 @@ import { LOGO_MIME_TYPES, MAX_LOGO_BYTES } from "@/lib/validations/settings";
 export function LogoForm({ logo }: { logo: string | null }) {
   const { d } = useI18n();
   const t = d.panel.settings.logo;
+  const misc = d.panel.panelMisc;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -38,7 +40,9 @@ export function LogoForm({ logo }: { logo: string | null }) {
     // czekanie na wczytanie kilku megabajtów tylko po to, żeby serwer je
     // odrzucił, wygląda jak zawieszenie.
     if (file.size > MAX_LOGO_BYTES) {
-      setError(`Obrazek może ważyć najwyżej ${maxKb} kB. Ten ma ${Math.round(file.size / 1024)} kB.`);
+      setError(
+        fill(misc.logoTooBig, { max: maxKb, actual: Math.round(file.size / 1024) }),
+      );
       return;
     }
 
@@ -89,8 +93,7 @@ export function LogoForm({ logo }: { logo: string | null }) {
         <div>
           <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Pojawia się w nagłówku rachunków i faktur. Nieobowiązkowe. Bez niego dokument
-            wygląda tak jak teraz.
+            {t.lead}
           </p>
         </div>
 
@@ -140,16 +143,13 @@ export function LogoForm({ logo }: { logo: string | null }) {
             {logo ? (
               <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void remove()}>
                 <Trash2 className="h-4 w-4" aria-hidden />
-                Usuń
+                {d.panel.common.delete}
               </Button>
             ) : null}
           </div>
         </div>
 
-        <p className="text-xs text-muted">
-          PNG albo JPEG, najwyżej {maxKb} kB. Najlepiej wygląda logo poziome na przezroczystym
-          albo białym tle.
-        </p>
+        <p className="text-xs text-muted">{fill(misc.logoHint, { max: maxKb })}</p>
       </CardContent>
     </Card>
   );

@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
-import { INVOICE_STATUS_META, type DisplayInvoiceStatus } from "@/lib/invoices/status";
+import { INVOICE_STATUS_TONE, type DisplayInvoiceStatus } from "@/lib/invoices/status";
 import { formatAmount, formatMoney } from "@/lib/money";
 
 export type InvoiceRow = {
@@ -120,7 +120,7 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
 
       <div className="flex flex-col gap-2">
         {invoices.map((invoice) => {
-          const meta = INVOICE_STATUS_META[invoice.displayStatus];
+          const tone = INVOICE_STATUS_TONE[invoice.displayStatus];
           const isSelected = selected.has(invoice.id);
 
           const body = (
@@ -139,7 +139,7 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[15px] font-semibold text-fg">{invoice.number}</p>
-                  <Badge tone={meta.tone}>{meta.label}</Badge>
+                  <Badge tone={tone}>{d.panel.invoices.status[invoice.displayStatus]}</Badge>
                 </div>
 
                 <p className="mt-0.5 text-sm font-medium text-fg">{invoice.buyerName}</p>
@@ -241,7 +241,7 @@ function MarkPaid({ invoiceId, remainingGrosze }: { invoiceId: string; remaining
     setError(null);
 
     const result = await api.post(`/api/invoices/${invoiceId}/payments`, {
-      amountGrosze: formatAmount(remainingGrosze),
+      amountGrosze: formatAmount(remainingGrosze, locale),
       paidAt: new Date().toISOString().slice(0, 10),
       method: "TRANSFER",
       reference: "",

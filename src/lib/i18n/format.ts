@@ -94,6 +94,35 @@ export function fill(
   );
 }
 
+const monthNameCache = new Map<string, readonly string[]>();
+
+/**
+ * Dwanaście nazw miesięcy w mianowniku — na oś wykresu i do nagłówka tabeli.
+ *
+ * Z `Intl`, a nie z tablicy w słowniku: mianownik jest tym, czego chce
+ * `Intl.DateTimeFormat` z samym `month`, i nie trzeba go tłumaczyć ręcznie
+ * dla każdego kolejnego kraju.
+ */
+export function monthNames(
+  locale: Locale,
+  style: "long" | "short" = "long",
+): readonly string[] {
+  const key = `${locale}:${style}`;
+  const cached = monthNameCache.get(key);
+  if (cached) return cached;
+
+  const format = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+    month: style,
+    timeZone: "UTC",
+  });
+  const names = Array.from({ length: 12 }, (_, month) =>
+    format.format(new Date(Date.UTC(2024, month, 1))),
+  );
+
+  monthNameCache.set(key, names);
+  return names;
+}
+
 /** Liczba porządkowa/zwykła w zapisie lokalnym: 1234 → „1234" / „1,234". */
 export function formatNumber(value: number, locale: Locale = DEFAULT_LOCALE): string {
   return new Intl.NumberFormat(LOCALE_META[locale].intl).format(value);

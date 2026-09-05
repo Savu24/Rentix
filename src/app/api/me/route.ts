@@ -74,14 +74,16 @@ export async function PATCH(request: NextRequest) {
   const result = await getApiSession();
   if ("response" in result) return result.response;
 
+  const context = await sessionLocaleContext(result.session);
+
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", context.d.panel.api.invalidJson);
   }
 
-  const parsed = profileSettingsSchema(await sessionLocaleContext(result.session)).safeParse(body);
+  const parsed = profileSettingsSchema(context).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   return ok(await updateProfile(result.session.user.id, parsed.data));
@@ -103,9 +105,11 @@ export async function DELETE(request: NextRequest) {
 
   const { session } = result;
   const organizationId = session.user.organizationId;
+  const context = await sessionLocaleContext(session);
+  const t = context.d.panel.api;
 
   if (!organizationId) {
-    return apiError("FORBIDDEN", "Konto nie ma przypisanej organizacji.");
+    return apiError("FORBIDDEN", t.noOrganization);
   }
 
   const rateKey = `account-delete:${session.user.id}`;
@@ -116,10 +120,10 @@ export async function DELETE(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
-    return apiError("VALIDATION_ERROR", "Treść żądania musi być poprawnym JSON-em.");
+    return apiError("VALIDATION_ERROR", t.invalidJson);
   }
 
-  const parsed = accountDeleteSchema(await sessionLocaleContext(result.session)).safeParse(body);
+  const parsed = accountDeleteSchema(context).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
   const deleted = await deleteAccount(session.user.id, organizationId, parsed.data);
@@ -128,15 +132,15 @@ export async function DELETE(request: NextRequest) {
 
   switch (deleted.reason) {
     case "USER_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono konta.");
+      return apiError("NOT_FOUND", t.notFound.account);
     case "NO_PASSWORD_SET":
       return apiError(
         "CONFLICT",
-        "To konto loguje się przez zewnętrznego dostawcę. Usunięcie wymaga kontaktu z pomocą.",
+        t.externalProviderDelete,
       );
     case "WRONG_PASSWORD":
-      return apiError("VALIDATION_ERROR", "Popraw zaznaczone pola.", {
-        fields: { currentPassword: ["Nieprawidłowe hasło"] },
+      return apiError("VALIDATION_ERROR", t.fixFields, {
+        fields: { currentPassword: [t.fields.wrongPassword] },
       });
   }
 }

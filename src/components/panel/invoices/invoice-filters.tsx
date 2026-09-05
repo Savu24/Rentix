@@ -20,13 +20,8 @@ import { fill, pluralize } from "@/lib/i18n/format";
  * linkiem i cofnąć przyciskiem wstecz, a serwer renderuje listę już
  * przefiltrowaną.
  */
-const STATUS_OPTIONS: Array<[string, string]> = [
-  ["all", "Wszystkie"],
-  ["UNPAID", "Nieopłacone"],
-  ["OVERDUE", "Zaległości"],
-  ["PAID", "Opłacone"],
-  ["CANCELLED", "Anulowane"],
-];
+/** Kolejność pozycji w filtrze; napisy przychodzą ze słownika. */
+const STATUS_VALUES = ["all", "UNPAID", "OVERDUE", "PAID", "CANCELLED"] as const;
 
 /** Filtry szczegółowe — pola, które mają własny wiersz w rozwijanym panelu. */
 const DETAILED_KEYS = [
@@ -122,9 +117,9 @@ export function InvoiceFilters({ total }: { total: number }) {
           onChange={(event) => setParam("status", event.target.value)}
           className="sm:w-48"
         >
-          {STATUS_OPTIONS.map(([value, label]) => (
+          {STATUS_VALUES.map((value) => (
             <option key={value} value={value}>
-              {label}
+              {d.panel.panelMisc.invoiceStatusFilter[value]}
             </option>
           ))}
         </Select>
@@ -139,7 +134,7 @@ export function InvoiceFilters({ total }: { total: number }) {
           aria-expanded={detailed}
         >
           <SlidersHorizontal className="h-4 w-4" aria-hidden />
-          Filtry szczegółowe
+          {d.panel.panelMisc.detailedFilters}
           {activeDetailed > 0 ? (
             <span className="ml-1 rounded-full bg-accent px-1.5 text-[11px] text-accent-contrast">
               {activeDetailed}

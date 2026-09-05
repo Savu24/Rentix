@@ -22,14 +22,12 @@ import {
   paymentReminderEmail,
   type TemplateFields,
 } from "@/lib/email/templates";
-import {
-  NOTIFICATION_TYPE_HINTS,
-  NOTIFICATION_TYPE_LABELS,
-  type EditableNotificationType,
-} from "@/lib/notifications/types";
+import type { EditableNotificationType } from "@/lib/notifications/types";
 import { emailTemplateSchema, type EmailTemplateInput } from "@/lib/validations/settings";
 import { useI18n, useValidationContext } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
+import { fill } from "@/lib/i18n/format";
+
 /**
  * Edytor treści jednego powiadomienia, z podglądem obok pól.
  *
@@ -68,6 +66,10 @@ export function TemplateEditor({
   defaultValues: { subject: string; heading: string; intro: string; outro: string };
 }) {
   const { d, locale } = useI18n();
+  const te = d.panel.panelMisc.templateEditor;
+  const misc = d.panel.panelMisc;
+  const nt = d.panel.settings.notifications;
+  const types = nt.types;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -172,20 +174,20 @@ export function TemplateEditor({
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">{NOTIFICATION_TYPE_LABELS[type]}</h2>
-          <p className="mt-0.5 text-sm text-muted">{NOTIFICATION_TYPE_HINTS[type]}</p>
+          <h2 className="text-[15px] font-semibold text-fg">{types[type].label}</h2>
+          <p className="mt-0.5 text-sm text-muted">{types[type].hint}</p>
         </div>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
-        {saved ? <Alert tone="success">Zapisano treść wiadomości.</Alert> : null}
+        {saved ? <Alert tone="success">{te.saved}</Alert> : null}
 
         <div className="grid gap-5 lg:grid-cols-2">
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
             <FormField
               id={`tpl-${type}-subject`}
-              label="Temat"
+              label={te.subject}
               error={errors.subject?.message}
-              hint="Puste pole = tekst domyślny, pokazany w tle."
+              hint={te.subjectHint}
             >
               <Input
                 {...fieldAria(`tpl-${type}-subject`, { error: errors.subject?.message })}
@@ -197,7 +199,7 @@ export function TemplateEditor({
 
             <FormField
               id={`tpl-${type}-heading`}
-              label="Nadpis nad treścią"
+              label={te.heading}
               error={errors.heading?.message}
             >
               <Input
@@ -210,7 +212,7 @@ export function TemplateEditor({
 
             <FormField
               id={`tpl-${type}-intro`}
-              label="Akapit powitalny"
+              label={te.intro}
               error={errors.intro?.message}
             >
               <Textarea
@@ -224,7 +226,7 @@ export function TemplateEditor({
 
             <FormField
               id={`tpl-${type}-outro`}
-              label="Akapit zamykający"
+              label={te.outro}
               error={errors.outro?.message}
             >
               <Textarea
@@ -237,9 +239,9 @@ export function TemplateEditor({
             </FormField>
 
             <div className="rounded-card border border-border bg-surface-alt p-3">
-              <p className="text-xs font-medium text-fg">Zmienne do wstawienia</p>
+              <p className="text-xs font-medium text-fg">{te.variables}</p>
               <p className="mt-0.5 text-xs text-muted">
-                Wpisz nazwę w podwójnych klamrach. Podstawi się dana z dokumentu.
+                {te.variablesHint}
               </p>
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {templateVariables(d).map((variable) => (
@@ -277,7 +279,7 @@ export function TemplateEditor({
                 ) : (
                   <Send className="h-4 w-4" aria-hidden />
                 )}
-                Wyślij test do siebie
+                {misc.sendTestToSelf}
               </Button>
             </div>
 
@@ -288,12 +290,12 @@ export function TemplateEditor({
             */}
             {isDirty ? (
               <p className="text-xs text-muted">
-                Test wyśle ostatnio zapisaną wersję. Zapisz najpierw, żeby sprawdzić zmiany.
+                {te.testHint}
               </p>
             ) : null}
 
             {testState.status === "sent" ? (
-              <Alert tone="success">Wysłano próbkę na {testState.email}.</Alert>
+              <Alert tone="success">{fill(misc.testSent, { email: testState.email })}</Alert>
             ) : null}
             {testState.status === "error" ? (
               <Alert tone="error">{testState.message}</Alert>
@@ -302,9 +304,9 @@ export function TemplateEditor({
 
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-medium text-fg">Podgląd</p>
+              <p className="text-xs font-medium text-fg">{misc.previewTitle}</p>
               <p className="text-xs text-muted">
-                Temat: <span className="text-fg">{preview.subject}</span>
+                {misc.previewSubject} <span className="text-fg">{preview.subject}</span>
               </p>
             </div>
 
@@ -317,7 +319,7 @@ export function TemplateEditor({
               wyłącza skrypty — treść pochodzi z pola tekstowego użytkownika.
             */}
             <iframe
-              title={`Podgląd wiadomości: ${NOTIFICATION_TYPE_LABELS[type]}`}
+              title={fill(misc.previewFrameTitle, { type: types[type].label })}
               sandbox=""
               srcDoc={preview.html}
               className="h-[420px] w-full rounded-card border border-border bg-white"

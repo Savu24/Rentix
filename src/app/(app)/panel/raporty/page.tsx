@@ -36,7 +36,10 @@ export default async function ReportsPage({
   // raport wyglądający jak awaria.
   const year = years.includes(requested) ? requested : years[0]!;
 
-  const report = await annualReport(organizationId, year);
+  const report = await annualReport(organizationId, year, locale, {
+    deletedProperty: t.deletedProperty,
+    generalCosts: t.generalCosts,
+  });
   const { totals, collection } = report;
   const profitable = totals.profitGrosze >= 0;
 
@@ -153,7 +156,7 @@ export default async function ReportsPage({
 
             {report.expensesByCategory.length === 0 ? (
               <p className="text-sm text-muted">
-                Nie wpisano jeszcze żadnych kosztów za ten rok.
+                {t.noCategoryData}
               </p>
             ) : (
               <div className="flex flex-col">

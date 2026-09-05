@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
   if (result.ok) return created(result.expense);
 
-  return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.", {
-    fields: { propertyId: ["Wybierz nieruchomość z listy"] },
+  return apiError("NOT_FOUND", auth.d.panel.api.notFound.property, {
+    fields: { propertyId: [auth.d.panel.api.fields.selectProperty] },
   });
 }

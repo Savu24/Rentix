@@ -10,16 +10,8 @@
  * po dacie wystawienia dokumentu nie zgadzałoby się z zeznaniem.
  */
 
-export const MONTH_NAMES = [
-  "styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec",
-  "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień",
-];
-
-/** Skrót na oś wykresu, gdzie „październik" się nie mieści. */
-export const MONTH_SHORT = [
-  "sty", "lut", "mar", "kwi", "maj", "cze",
-  "lip", "sie", "wrz", "paź", "lis", "gru",
-];
+import type { Locale } from "@/lib/i18n/config";
+import { monthNames } from "@/lib/i18n/format";
 
 export type CashEntry = {
   /** Data przepływu — po niej trafia do miesiąca. */
@@ -48,8 +40,9 @@ export type MonthlyRow = {
 export function monthlyBreakdown(
   income: readonly CashEntry[],
   expenses: readonly CashEntry[],
+  locale: Locale,
 ): MonthlyRow[] {
-  const rows: MonthlyRow[] = MONTH_NAMES.map((label, month) => ({
+  const rows: MonthlyRow[] = monthNames(locale).map((label, month) => ({
     month,
     label,
     incomeGrosze: 0,
@@ -85,6 +78,7 @@ export function propertyBreakdown(
   income: readonly CashEntry[],
   expenses: readonly CashEntry[],
   names: ReadonlyMap<string, string>,
+  labels: { deletedProperty: string; generalCosts: string },
 ): PropertyRow[] {
   const rows = new Map<string, PropertyRow>();
 
@@ -95,7 +89,7 @@ export function propertyBreakdown(
 
     const row: PropertyRow = {
       propertyId,
-      name: propertyId ? (names.get(propertyId) ?? "nieruchomość usunięta") : "Koszty ogólne",
+      name: propertyId ? (names.get(propertyId) ?? labels.deletedProperty) : labels.generalCosts,
       incomeGrosze: 0,
       expenseGrosze: 0,
       profitGrosze: 0,

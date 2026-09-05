@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { ZodError } from "zod";
 
+import { getDictionary } from "@/lib/i18n";
+import { requestLocale } from "@/lib/i18n/server";
+
 /**
  * Jednolity kształt odpowiedzi REST.
  *
@@ -67,14 +70,28 @@ export function fieldErrors(error: ZodError): Record<string, string[]> {
   return fields;
 }
 
-export function validationError(error: ZodError): NextResponse<ApiErrorBody> {
-  return apiError("VALIDATION_ERROR", "Popraw zaznaczone pola.", {
+/*
+  Oba komunikaty poniżej padają tam, gdzie kraju konta jeszcze nie znamy albo
+  gdzie trasa i tak go nie potrzebuje (limit prób przy rejestracji). Bierzemy
+  go więc z żądania — z prefiksu strony, na której użytkownik stoi.
+
+  Same treści błędów per pole przychodzą już przetłumaczone: schematy Zoda
+  dostają słownik przy budowaniu.
+*/
+export async function validationError(error: ZodError): Promise<NextResponse<ApiErrorBody>> {
+  const t = getDictionary(await requestLocale()).panel.api;
+
+  return apiError("VALIDATION_ERROR", t.fixFields, {
     fields: fieldErrors(error),
   });
 }
 
-export function rateLimited(retryAfterSeconds: number): NextResponse<ApiErrorBody> {
-  return apiError("RATE_LIMITED", "Zbyt wiele prób. Spróbuj ponownie za chwilę.", {
+export async function rateLimited(
+  retryAfterSeconds: number,
+): Promise<NextResponse<ApiErrorBody>> {
+  const t = getDictionary(await requestLocale()).panel.api;
+
+  return apiError("RATE_LIMITED", t.rateLimited, {
     headers: { "Retry-After": String(retryAfterSeconds) },
   });
 }

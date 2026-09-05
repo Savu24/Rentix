@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getInvoice } from "@/lib/invoices/service";
-import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { vatLabels } from "@/lib/invoices/vat";
 import { fill, formatDateIn } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
@@ -28,7 +28,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const invoice = await getInvoice(session.user.organizationId, id);
 
-  return { title: invoice ? invoice.number : "Dokument" };
+  return {
+    title: invoice ? invoice.number : (await panelDictionary()).panel.panelMisc.meta.document,
+  };
 }
 
 
@@ -43,7 +45,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
 
   const now = new Date();
   const status = resolveInvoiceStatus(invoice, now);
-  const meta = INVOICE_STATUS_META[status];
+  const tone = INVOICE_STATUS_TONE[status];
   const remaining = remainingGrosze(invoice);
 
   const property = invoice.lease?.property;
@@ -67,7 +69,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="r-display text-[26px] leading-tight text-fg">{invoice.number}</h1>
-              <Badge tone={meta.tone}>{meta.label}</Badge>
+              <Badge tone={tone}>{d.panel.invoices.status[status]}</Badge>
               <Badge>{invoiceKindLabels(d)[invoice.kind]}</Badge>
             </div>
 
@@ -207,9 +209,12 @@ export default async function InvoiceDetailPage({ params }: Params) {
                 <SummaryRow label={t.remaining} value={formatMoney(remaining, locale)} strong />
               </>
             ) : null}
-            <p className="mt-1 text-xs text-muted">
-              Słownie: {groszeToPolishWords(invoice.totalGrossGrosze)}
-            </p>
+            {t.inWords ? (
+              <p className="mt-1 text-xs text-muted">
+                {t.inWords}
+                {groszeToPolishWords(invoice.totalGrossGrosze)}
+              </p>
+            ) : null}
           </div>
         </CardContent>
       </Card>

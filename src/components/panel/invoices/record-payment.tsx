@@ -29,14 +29,14 @@ export function RecordPayment({
   invoiceId: string;
   remainingGrosze: number;
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
   const t = d.panel.financePage.payment;
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [amount, setAmount] = useState(() => formatAmount(remainingGrosze));
+  const [amount, setAmount] = useState(() => formatAmount(remainingGrosze, locale));
   const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
   const [method, setMethod] = useState("TRANSFER");
   const [reference, setReference] = useState("");
@@ -185,10 +185,10 @@ export function DeletePayment({ paymentId }: { paymentId: string }) {
     <span className="flex items-center gap-1.5">
       <Button size="sm" variant="danger" onClick={remove} disabled={busy}>
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-        Usuń
+        {d.panel.common.delete}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} disabled={busy}>
-        Anuluj
+        {d.panel.common.cancel}
       </Button>
     </span>
   );

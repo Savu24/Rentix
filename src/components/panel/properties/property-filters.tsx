@@ -132,7 +132,7 @@ export function PropertyFilters({ total }: { total: number }) {
             className="inline-flex items-center gap-1 rounded-btn font-medium text-accent hover:underline"
           >
             <X className="h-3 w-3" aria-hidden />
-            Wyczyść filtry
+            {t.clear}
           </button>
         ) : null}
       </div>

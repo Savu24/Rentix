@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { fill, pluralize } from "@/lib/i18n/format";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
@@ -79,8 +80,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć. Z nieruchomością powiązano ${result.leaseCount} ${
-      result.leaseCount === 1 ? "umowę" : "umów"
-    }. Zarchiwizuj ją zamiast usuwać.`,
+    fill(auth.d.panel.api.propertyHasLeases, {
+      count: result.leaseCount,
+      noun: pluralize(auth.locale, result.leaseCount, auth.d.panel.api.countable.leases),
+    }),
   );
 }

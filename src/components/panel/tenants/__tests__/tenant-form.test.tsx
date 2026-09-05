@@ -12,6 +12,8 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/api/client", () => ({
   api: { post: vi.fn(), patch: vi.fn() },
+  // Woła go `I18nProvider` przy montowaniu formularza.
+  setTransportMessages: vi.fn(),
 }));
 
 /**

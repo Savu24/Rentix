@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
 
   switch (result.reason) {
     case "TENANT_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono najemcy.", {
-        fields: { tenantId: ["Wybierz najemcę z listy"] },
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant, {
+        fields: { tenantId: [auth.d.panel.api.fields.selectTenant] },
       });
     case "LEASE_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono umowy.", {
-        fields: { leaseId: ["Wybierz umowę z listy"] },
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.lease, {
+        fields: { leaseId: [auth.d.panel.api.fields.selectLease] },
       });
   }
 }

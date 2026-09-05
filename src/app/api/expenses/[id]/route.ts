@@ -45,8 +45,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     case "NOT_FOUND":
       return apiError("NOT_FOUND", auth.d.panel.api.notFound.expense);
     case "PROPERTY_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.", {
-        fields: { propertyId: ["Wybierz nieruchomość z listy"] },
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.property, {
+        fields: { propertyId: [auth.d.panel.api.fields.selectProperty] },
       });
   }
 }

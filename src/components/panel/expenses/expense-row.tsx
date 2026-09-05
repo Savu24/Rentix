@@ -10,10 +10,10 @@ import {
 } from "@/components/panel/expenses/expense-form";
 import { Badge } from "@/components/ui/badge";
 import type { ExpenseListItem } from "@/lib/expenses/service";
-import { formatPLN } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { describeRecurrence, expenseCategoryLabels } from "@/lib/validations/expense";
+import { fill } from "@/lib/i18n/format";
 import { useI18n } from "@/lib/i18n/client";
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 /**
  * Wiersz listy kosztów.
@@ -39,7 +39,8 @@ export function ExpenseRow({
   properties?: ExpensePropertyOption[];
   lockedPropertyId?: string | null;
 }) {
-  const { d } = useI18n();
+  const { d, locale, date } = useI18n();
+  const misc = d.panel.panelMisc;
   const [editing, setEditing] = useState(false);
 
   if (editing) {
@@ -97,18 +98,18 @@ export function ExpenseRow({
         </div>
 
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-          <span>{dateFormat.format(expense.paidAt)}</span>
-          {showProperty ? <span>{expense.property?.name ?? "koszt ogólny"}</span> : null}
+          <span>{date(expense.paidAt, "short")}</span>
+          {showProperty ? <span>{expense.property?.name ?? misc.generalExpense}</span> : null}
           {expense.vendor ? <span>{expense.vendor}</span> : null}
           {expense.documentRef ? <span>{expense.documentRef}</span> : null}
           {expense.recurrence && expense.recurrenceNextAt ? (
-            <span>następny {dateFormat.format(expense.recurrenceNextAt)}</span>
+            <span>{fill(misc.expenseNext, { date: date(expense.recurrenceNextAt, "short") })}</span>
           ) : null}
-          {expense.recurringFromId ? <span>naliczony automatycznie</span> : null}
+          {expense.recurringFromId ? <span>{misc.expenseAuto}</span> : null}
         </p>
       </div>
 
-      <p className="tabular font-mono text-sm text-fg">{formatPLN(expense.amountGrosze)}</p>
+      <p className="tabular font-mono text-sm text-fg">{formatMoney(expense.amountGrosze, locale)}</p>
 
       <span className="flex items-center gap-0.5">
         <button

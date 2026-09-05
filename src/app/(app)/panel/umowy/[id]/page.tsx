@@ -12,16 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { resolveLeaseExpiry } from "@/lib/leases/expiry";
+import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { getLease } from "@/lib/leases/service";
-import { INVOICE_STATUS_META, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { INVOICE_STATUS_TONE, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { BillingStartField } from "@/components/panel/leases/billing-start-field";
 import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
-import { fill, formatDateIn } from "@/lib/i18n/format";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { formatPropertyAddress } from "@/lib/properties/address";
-import { formatDate } from "@/lib/utils";
 import {
   leaseStatusLabels,
   LEASE_STATUS_TONE,
@@ -36,13 +35,20 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const lease = await getLease(session.user.organizationId, id);
 
-  return { title: lease?.number ? `Umowa ${lease.number}` : "Umowa" };
+  const t = (await panelDictionary()).panel;
+
+  return {
+    title: lease?.number
+      ? fill(t.leasesPage.detail.numbered, { number: lease.number })
+      : t.panelMisc.meta.lease,
+  };
 }
 
 
 export default async function LeaseDetailPage({ params }: Params) {
   const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
   const t = d.panel.leasesPage.detail;
+  const misc = d.panel.panelMisc;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -88,7 +94,7 @@ export default async function LeaseDetailPage({ params }: Params) {
               </span>
               {/* Odliczanie na karcie umowy, nie tylko przy najemcy: to tutaj
                   właściciel trafia, gdy ma zdecydować o przedłużeniu. */}
-              {expiry ? <Badge tone={expiry.tone}>{expiry.label}</Badge> : null}
+              {expiry ? <Badge tone={expiry.tone}>{leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}</Badge> : null}
             </p>
           </div>
 
@@ -150,8 +156,13 @@ export default async function LeaseDetailPage({ params }: Params) {
             </p>
             {lease.property.areaM2 ? (
               <p className="text-xs text-muted">
-                {lease.property.areaM2.toFixed(2).replace(".", ",")} m²
-                {lease.property.floor !== null ? ` · piętro ${lease.property.floor}` : ""}
+                {locale === "pl"
+                  ? lease.property.areaM2.toFixed(2).replace(".", ",")
+                  : lease.property.areaM2.toFixed(2)}{" "}
+                m²
+                {lease.property.floor !== null
+                  ? fill(misc.propertyFloor, { floor: lease.property.floor })
+                  : ""}
               </p>
             ) : null}
           </CardContent>
@@ -238,18 +249,19 @@ export default async function LeaseDetailPage({ params }: Params) {
             rozliczamy człowieka, a nie umowę — ten sam najemca miewa dwie
             umowy i oczekuje jednego miejsca do obsługi płatności. */}
         <h2 className="text-[15px] font-semibold text-fg">
-          Rozliczenia <span className="font-normal text-muted">({lease.invoices.length})</span>
+          {t.invoices} <span className="font-normal text-muted">({lease.invoices.length})</span>
         </h2>
 
         {lease.invoices.length === 0 ? (
           <Card>
             <CardContent className="p-4 text-sm text-muted">
-              Do tej umowy nie wystawiono jeszcze dokumentów. Czynsz nalicza się automatycznie
-              w {lease.billingDay}. dniu miesiąca
+              {fill(misc.noInvoicesYet, { day: lease.billingDay })}
               {/* Bez tego dopisku pusta lista wygląda jak awaria naliczania,
                   a jest dokładnie tym, o co poprosił właściciel. */}
               {lease.billingStartsAt
-                ? `, ale nie za okresy zaczynające się przed ${formatDate(lease.billingStartsAt)}.`
+                ? fill(misc.noInvoicesBefore, {
+                    date: formatDateIn(lease.billingStartsAt, locale, "long"),
+                  })
                 : "."}
             </CardContent>
           </Card>
@@ -258,7 +270,7 @@ export default async function LeaseDetailPage({ params }: Params) {
             <CardContent className="flex flex-col p-0">
               {lease.invoices.map((invoice, index) => {
                 const status = resolveInvoiceStatus(invoice, now);
-                const meta = INVOICE_STATUS_META[status];
+                const tone = INVOICE_STATUS_TONE[status];
 
                 return (
                   <Link
@@ -271,15 +283,19 @@ export default async function LeaseDetailPage({ params }: Params) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-fg">{invoice.number}</p>
                       <p className="text-xs text-muted">
-                        termin {new Intl.DateTimeFormat("pl-PL").format(invoice.dueDate)}
+                        {fill(misc.dueOn, {
+                          date: formatDateIn(invoice.dueDate, locale, "short"),
+                        })}
                         {invoice.payments.length > 0
-                          ? ` · ${invoice.payments.length} ${
-                              invoice.payments.length === 1 ? "wpłata" : "wpłat"
-                            }`
+                          ? ` · ${invoice.payments.length} ${pluralize(
+                              locale,
+                              invoice.payments.length,
+                              misc.paymentsCount,
+                            )}`
                           : ""}
                       </p>
                     </div>
-                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                    <Badge tone={tone}>{d.panel.invoices.status[status]}</Badge>
                     <p className="tabular w-24 text-right font-mono text-sm text-fg">
                       {formatMoney(invoice.totalGrossGrosze)}
                     </p>
@@ -308,7 +324,9 @@ export default async function LeaseDetailPage({ params }: Params) {
         <Card className="bg-bad-soft">
           <CardContent className="flex flex-col gap-1 p-4">
             <p className="text-[13px] font-semibold text-fg">
-              Umowa zakończona {formatDateIn(lease.terminatedAt, locale, "short")}
+              {fill(misc.leaseTerminatedOn, {
+                date: formatDateIn(lease.terminatedAt, locale, "short"),
+              })}
             </p>
             {lease.terminationNote ? (
               <p className="text-sm text-fg/80">{lease.terminationNote}</p>

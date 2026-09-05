@@ -17,6 +17,24 @@ export type ApiResult<T> =
       fields?: Record<string, string[]>;
     };
 
+/*
+  Teksty błędów transportu — jedyne, których nie pisze serwer.
+
+  Ta warstwa żyje poza Reactem i jest wołana z komponentów obu wersji
+  krajowych, więc słownika nie da się jej wstrzyknąć propsem. `I18nProvider`
+  wsuwa je tu przy montowaniu; wartości poniżej są tylko oknem na pierwszy
+  render, zanim to nastąpi.
+*/
+const transportMessages = {
+  network: "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.",
+  unknown: "Coś poszło nie tak. Spróbuj ponownie.",
+};
+
+export function setTransportMessages(messages: { network: string; unknown: string }): void {
+  transportMessages.network = messages.network;
+  transportMessages.unknown = messages.unknown;
+}
+
 async function request<T>(
   input: string,
   init: RequestInit & { json?: unknown } = {},
@@ -34,7 +52,7 @@ async function request<T>(
     return {
       ok: false,
       code: "NETWORK_ERROR",
-      message: "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.",
+      message: transportMessages.network,
     };
   }
 
@@ -47,7 +65,7 @@ async function request<T>(
     return {
       ok: false,
       code: error?.code ?? "INTERNAL_ERROR",
-      message: error?.message ?? "Coś poszło nie tak. Spróbuj ponownie.",
+      message: error?.message ?? transportMessages.unknown,
       fields: error?.fields,
     };
   }

@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/auth/routes";
-import { INVOICE_STATUS_META } from "@/lib/invoices/status";
+import { INVOICE_STATUS_TONE } from "@/lib/invoices/status";
 import { fill, formatDateIn } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
@@ -90,7 +90,9 @@ export default async function TenantPortalPage() {
           <>
             <div className="flex flex-col gap-1">
               <h1 className="r-display text-[26px] leading-tight text-fg">
-                Cześć, {portal.tenant.firstName}
+                {fill(d.panel.panelMisc.tenantPortalGreeting, {
+                  name: portal.tenant.firstName,
+                })}
               </h1>
               <p className="text-sm text-muted">
                 {fill(t.lead, { landlord: portal.landlord.name })}
@@ -175,7 +177,7 @@ export default async function TenantPortalPage() {
                     <Card>
                       <CardContent className="flex flex-col p-0">
                         {lease.invoices.map((invoice, index) => {
-                          const meta = INVOICE_STATUS_META[invoice.displayStatus];
+                          const tone = INVOICE_STATUS_TONE[invoice.displayStatus];
 
                           return (
                             <div
@@ -192,7 +194,7 @@ export default async function TenantPortalPage() {
                                   })}
                                 </p>
                               </div>
-                              <Badge tone={meta.tone}>{meta.label}</Badge>
+                              <Badge tone={tone}>{d.panel.invoices.status[invoice.displayStatus]}</Badge>
                               <p className="tabular w-24 text-right font-mono text-sm text-fg">
                                 {formatMoney(invoice.totalGrossGrosze, locale)}
                               </p>

@@ -74,7 +74,7 @@ export function ExtendLease({
     return (
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         <CalendarPlus className="h-4 w-4" aria-hidden />
-        Przedłuż umowę
+        {t.button}
       </Button>
     );
   }
@@ -83,7 +83,7 @@ export function ExtendLease({
     <Card className="w-full border-accent/40">
       <CardContent className="flex flex-col gap-4 p-4">
         <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-semibold text-fg">Przedłużenie umowy</p>
+          <p className="text-sm font-semibold text-fg">{d.panel.panelMisc.extendTitle}</p>
           <p className="text-xs text-muted">
             {fill(t.current, { date: formatDateIn(current, locale, "short") })}
           </p>

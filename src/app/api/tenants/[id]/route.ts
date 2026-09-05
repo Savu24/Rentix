@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
+import { fill, pluralize } from "@/lib/i18n/format";
 import { requireApiOwner } from "@/lib/auth/session";
 import { archiveTenant, deleteTenant, getTenant, updateTenant } from "@/lib/tenants/service";
 import { tenantUpdateSchema } from "@/lib/validations/tenant";
@@ -62,8 +63,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć. Najemca figuruje na ${result.leaseCount} ${
-      result.leaseCount === 1 ? "umowie" : "umowach"
-    }. Zarchiwizuj go zamiast usuwać.`,
+    fill(auth.d.panel.api.tenantHasLeases, {
+      count: result.leaseCount,
+      noun: pluralize(auth.locale, result.leaseCount, auth.d.panel.api.countable.leasesOn),
+    }),
   );
 }

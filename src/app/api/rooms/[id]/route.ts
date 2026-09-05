@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { fill, pluralize } from "@/lib/i18n/format";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
@@ -43,8 +44,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć. Pokój ma ${result.leaseCount} ${
-      result.leaseCount === 1 ? "umowę" : "umów"
-    }. Zakończ ją najpierw.`,
+    fill(auth.d.panel.api.roomHasLeases, {
+      count: result.leaseCount,
+      noun: pluralize(auth.locale, result.leaseCount, auth.d.panel.api.countable.leases),
+    }),
   );
 }

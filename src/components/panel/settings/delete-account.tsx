@@ -10,9 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
-import { plural } from "@/lib/utils";
 import { accountDeletePhrase } from "@/lib/validations/settings";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 export type DeletionSummary = {
   organizationName: string;
   isLastMember: boolean;
@@ -35,6 +35,9 @@ export type DeletionSummary = {
  * zatrzymuje.
  */
 export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
+  const { d, plural } = useI18n();
+  const t = d.panel.panelMisc.deleteAccount;
+  const misc = d.panel.panelMisc;
   const v = useValidationContext();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -42,13 +45,14 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
 
-  const items: Array<[number, [string, string, string]]> = [
-    [summary.properties, ["nieruchomość", "nieruchomości", "nieruchomości"]],
-    [summary.tenants, ["najemca", "najemców", "najemców"]],
-    [summary.leases, ["umowa", "umowy", "umów"]],
-    [summary.invoices, ["dokument rozliczeniowy", "dokumenty rozliczeniowe", "dokumentów rozliczeniowych"]],
-    [summary.payments, ["wpłata", "wpłaty", "wpłat"]],
-    [summary.expenses, ["koszt", "koszty", "kosztów"]],
+  const nouns = misc.deleteAccountItems;
+  const items: Array<[number, readonly string[]]> = [
+    [summary.properties, nouns.properties],
+    [summary.tenants, nouns.tenants],
+    [summary.leases, nouns.leases],
+    [summary.invoices, nouns.invoices],
+    [summary.payments, nouns.payments],
+    [summary.expenses, nouns.expenses],
   ];
 
   const losses = items
@@ -79,9 +83,9 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
     <Card className="border-bad/40">
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Usunięcie konta</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Operacja nieodwracalna. Nie ma kosza ani kopii, z której dałoby się to cofnąć.
+            {t.lead}
           </p>
         </div>
 
@@ -89,7 +93,7 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
           <div>
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
               <Trash2 className="h-4 w-4" aria-hidden />
-              Usuń konto
+              {t.button}
             </Button>
           </div>
         ) : (
@@ -99,26 +103,22 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
             <Alert tone="error">
               {summary.isLastMember ? (
                 <>
-                  Razem z kontem zniknie organizacja <strong>{summary.organizationName}</strong>
+                  {t.organizationGoesToo} <strong>{summary.organizationName}</strong>
                   {losses.length > 0 ? (
-                    <>
-                      {" "}
-                      i wszystko, co do niej należy: {losses.join(", ")}.
-                    </>
+                    <>{fill(misc.deleteAccountLosses, { losses: losses.join(", ") })}</>
                   ) : (
                     "."
                   )}
                 </>
               ) : (
                 <>
-                  Organizacja <strong>{summary.organizationName}</strong> zostanie, bo ma innych
-                  członków. Usuwamy wyłącznie Twoje konto i dostęp do niej.
+                  <strong>{summary.organizationName}</strong> {t.organizationStays}
                 </>
               )}
             </Alert>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="delete-password" label="Hasło">
+              <FormField id="delete-password" label={t.password}>
                 <Input
                   id="delete-password"
                   type="password"
@@ -131,8 +131,8 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
 
               <FormField
                 id="delete-confirmation"
-                label="Potwierdzenie"
-                hint={`Przepisz: ${accountDeletePhrase(v)}`}
+                label={t.confirmation}
+                hint={fill(misc.deleteAccountPhraseHint, { phrase: accountDeletePhrase(v) })}
               >
                 <Input
                   id="delete-confirmation"
@@ -153,7 +153,7 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
                 disabled={busy || confirmation.trim() !== accountDeletePhrase(v) || !password}
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                Usuń konto na zawsze
+                {misc.deleteAccountForever}
               </Button>
               <Button
                 size="sm"
@@ -166,7 +166,7 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
                 }}
                 disabled={busy}
               >
-                Anuluj
+                {d.panel.common.cancel}
               </Button>
             </div>
           </>

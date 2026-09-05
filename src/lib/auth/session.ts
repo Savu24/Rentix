@@ -120,15 +120,16 @@ export async function requireApiOwner(): Promise<
 
   const { session } = result;
 
-  if (session.user.role === "TENANT") {
-    return {
-      response: apiError("FORBIDDEN", "Ten zasób jest dostępny tylko dla właściciela konta."),
-    };
-  }
+  // Bez organizacji nie ma jeszcze języka konta — bierzemy ten z żądania,
+  // czyli z prefiksu strony, którą użytkownik miał przed sobą.
+  if (session.user.role === "TENANT" || !session.user.organizationId) {
+    const t = getDictionary(await requestLocale()).panel.api;
 
-  if (!session.user.organizationId) {
     return {
-      response: apiError("FORBIDDEN", "Konto nie ma przypisanej organizacji."),
+      response: apiError(
+        "FORBIDDEN",
+        session.user.role === "TENANT" ? t.ownerOnly : t.noOrganization,
+      ),
     };
   }
 

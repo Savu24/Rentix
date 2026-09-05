@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { resolveLeaseExpiry } from "@/lib/leases/expiry";
+import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { formatMoney } from "@/lib/money";
 import { listTenants } from "@/lib/tenants/service";
 import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
@@ -121,7 +121,7 @@ export default async function TenantsPage({
                         {expiry ? (
                           <Badge tone={expiry.tone}>
                             <CalendarClock className="h-3 w-3" aria-hidden />
-                            {expiry.label}
+                            {leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}
                           </Badge>
                         ) : null}
                       </div>

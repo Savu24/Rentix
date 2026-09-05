@@ -123,7 +123,7 @@ export function OwnerPicker({
             disabled={disabled}
           >
             <Plus className="h-4 w-4" aria-hidden />
-            Dodaj właściciela
+            {d.panel.ownersPage.add}
           </Button>
         </div>
       ) : (
@@ -131,7 +131,7 @@ export function OwnerPicker({
           <div>
             <p className="text-sm font-semibold text-fg">{t.addNew}</p>
             <p className="mt-0.5 text-xs text-muted">
-              Zapisze się od razu i zostanie wybrany przy tej nieruchomości.
+              {t.addNewHint}
             </p>
           </div>
 
@@ -151,7 +151,7 @@ export function OwnerPicker({
               ) : (
                 <Check className="h-4 w-4" aria-hidden />
               )}
-              Zapisz właściciela
+              {d.panel.panelMisc.saveOwner}
             </Button>
             <Button
               type="button"
@@ -165,7 +165,7 @@ export function OwnerPicker({
               disabled={busy}
             >
               <X className="h-4 w-4" aria-hidden />
-              Anuluj
+              {d.panel.common.cancel}
             </Button>
           </div>
         </div>

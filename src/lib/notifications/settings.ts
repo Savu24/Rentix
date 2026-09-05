@@ -9,8 +9,6 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 export {
   EDITABLE_NOTIFICATION_TYPES,
   isEditableType,
-  NOTIFICATION_TYPE_HINTS,
-  NOTIFICATION_TYPE_LABELS,
   type EditableNotificationType,
 } from "./types";
 

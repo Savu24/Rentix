@@ -1,5 +1,7 @@
 import type { VatRate } from "@/generated/prisma/enums";
+import { getDictionary } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
+import { fill } from "@/lib/i18n/format";
 import { formatPropertyAddress, roomDesignation } from "@/lib/properties/address";
 
 import type { InvoicePdfData } from "./pdf";
@@ -25,11 +27,19 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
     byRate.set(line.vatRate, bucket);
   }
 
+  const locale = isLocale(invoice.organization.locale)
+    ? invoice.organization.locale
+    : DEFAULT_LOCALE;
+
   const property = invoice.lease?.property;
   const subject = property
     ? [
         property.name,
-        invoice.lease?.room ? `pokój ${roomDesignation(invoice.lease.room.name)}` : null,
+        invoice.lease?.room
+          ? fill(getDictionary(locale).documents.invoice.roomSubject, {
+              name: roomDesignation(invoice.lease.room.name),
+            })
+          : null,
         formatPropertyAddress(property),
       ]
         .filter(Boolean)
@@ -37,7 +47,7 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
     : null;
 
   return {
-    locale: isLocale(invoice.organization.locale) ? invoice.organization.locale : DEFAULT_LOCALE,
+    locale,
     kind: invoice.kind,
     number: invoice.number,
     issueDate: invoice.issueDate,

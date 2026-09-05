@@ -4,9 +4,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 
 import { Select } from "@/components/ui/select";
+import { useI18n } from "@/lib/i18n/client";
 
 /** Wybór roku obrotowego. Stan w URL-u, żeby raport dało się wysłać linkiem. */
 export function YearPicker({ years, selected }: { years: number[]; selected: number }) {
+  const { d } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -14,7 +16,7 @@ export function YearPicker({ years, selected }: { years: number[]; selected: num
 
   return (
     <Select
-      aria-label="Rok raportu"
+      aria-label={d.panel.panelMisc.yearPicker}
       value={selected}
       disabled={isPending}
       onChange={(event) => {

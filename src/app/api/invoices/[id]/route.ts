@@ -45,7 +45,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     case "HAS_PAYMENTS":
       return apiError(
         "CONFLICT",
-        "Do dokumentu wpisano wpłaty. Usuń je najpierw, inaczej w kasie zostałyby pieniądze bez dokumentu.",
+        auth.d.panel.api.invoiceHasPayments,
       );
   }
 }

@@ -16,8 +16,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
-import { formatPLN } from "@/lib/money";
-import { plural } from "@/lib/utils";
+import { formatMoney } from "@/lib/money";
 import {
   rentalStatusLabels,
   RENTAL_STATUS_TONE,
@@ -27,6 +26,7 @@ import {
 } from "@/lib/validations/property";
 import type { RentalStatus } from "@/generated/prisma/enums";
 import { useI18n, useValidationContext } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 export type RoomView = {
   id: string;
   name: string;
@@ -57,6 +57,9 @@ export function RoomsList({
   /** Najemca całej nieruchomości — wtedy pokoje nie są wynajmowane osobno. */
   wholePropertyTenant: { id: string; name: string; leaseId: string } | null;
 }) {
+  const { d, locale, plural } = useI18n();
+  const t = d.panel.propertiesPage.roomsPanel;
+  const misc = d.panel.panelMisc;
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -69,12 +72,14 @@ export function RoomsList({
         <h2 className="flex flex-wrap items-baseline gap-2 text-[15px] font-semibold text-fg">
           <span className="flex items-center gap-2">
             <DoorClosed className="h-4 w-4 text-muted" aria-hidden />
-            Pokoje
+            {misc.roomsTitle}
           </span>
           {rooms.length > 0 ? (
             <span className="text-sm font-normal text-muted">
-              {occupied}/{rooms.length} zajętych
-              {totalRent > 0 ? ` · ${formatPLN(totalRent)} miesięcznie` : ""}
+              {fill(misc.roomsOccupied, { occupied, total: rooms.length })}
+              {totalRent > 0
+                ? fill(misc.roomsTotalRent, { amount: formatMoney(totalRent, locale) })
+                : ""}
             </span>
           ) : null}
         </h2>
@@ -82,21 +87,21 @@ export function RoomsList({
         {!creating ? (
           <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>
             <Plus className="h-4 w-4" aria-hidden />
-            Dodaj pokój
+            {t.add}
           </Button>
         ) : null}
       </div>
 
       {wholePropertyTenant ? (
         <Alert tone="info">
-          Cała nieruchomość jest wynajęta:{" "}
+          {t.wholeLet}
           <Link
             href={`/panel/najemcy/${wholePropertyTenant.id}`}
             className="font-medium underline"
           >
             {wholePropertyTenant.name}
           </Link>
-          . Pokoje nie są wynajmowane osobno.
+          {t.notLetSeparately}
         </Alert>
       ) : null}
 
@@ -111,12 +116,12 @@ export function RoomsList({
       {rooms.length === 0 && !creating ? (
         <EmptyState
           icon={DoorClosed}
-          title="Ta nieruchomość nie ma pokoi"
-          description="Dodaj pokoje, jeśli chcesz wynajmować je osobno. Bez nich nieruchomość wynajmuje się w całości."
+          title={t.emptyTitle}
+          description={t.emptyLead}
           action={
             <Button size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-4 w-4" aria-hidden />
-              Dodaj pokój
+              {t.add}
             </Button>
           }
         />
@@ -149,9 +154,11 @@ export function RoomsList({
 
       {rooms.length > 0 ? (
         <p className="text-xs text-muted">
-          {plural(rooms.length - occupied, ["Wolny", "Wolne", "Wolnych"])}{" "}
-          {rooms.length - occupied}{" "}
-          {plural(rooms.length - occupied, ["pokój", "pokoje", "pokoi"])}.
+          {fill(misc.roomsFree, {
+            lead: plural(rooms.length - occupied, misc.roomsFreeLead),
+            count: rooms.length - occupied,
+            noun: plural(rooms.length - occupied, misc.roomsCount),
+          })}
         </p>
       ) : null}
     </section>
@@ -171,7 +178,8 @@ function RoomRow({
   disabled: boolean;
   onEdit: () => void;
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
+  const misc = d.panel.panelMisc;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,32 +222,35 @@ function RoomRow({
 
           {room.monthlyRentGrosze ? (
             <span className="tabular font-mono text-sm text-fg">
-              {formatPLN(room.monthlyRentGrosze)}
+              {formatMoney(room.monthlyRentGrosze, locale)}
             </span>
           ) : (
-            <span className="text-xs text-muted">bez ceny</span>
+            <span className="text-xs text-muted">{misc.roomNoPrice}</span>
           )}
 
           <span className="flex items-center gap-0.5">
             {room.tenantId && room.leaseId ? (
               <Button asChild size="sm" variant="ghost">
-                <Link href={`/panel/umowy/${room.leaseId}`}>Umowa</Link>
+                <Link href={`/panel/umowy/${room.leaseId}`}>{misc.roomLease}</Link>
               </Button>
             ) : !disabled ? (
               <Button asChild size="sm" variant="ghost">
                 <Link
                   href={`/panel/umowy/nowa?propertyId=${propertyId}&roomId=${room.id}`}
-                  title={`Przypisz najemcę do pokoju ${room.name} w ${propertyName}`}
+                  title={fill(misc.roomAssignTitle, {
+                    room: room.name,
+                    property: propertyName,
+                  })}
                 >
                   <UserPlus className="h-3.5 w-3.5" aria-hidden />
-                  <span className="sr-only sm:not-sr-only">Przypisz</span>
+                  <span className="sr-only sm:not-sr-only">{misc.roomAssign}</span>
                 </Link>
               </Button>
             ) : null}
 
             <Button size="sm" variant="ghost" onClick={onEdit} disabled={busy}>
               <Pencil className="h-3.5 w-3.5" aria-hidden />
-              <span className="sr-only">Edytuj pokój {room.name}</span>
+              <span className="sr-only">{fill(misc.roomEdit, { room: room.name })}</span>
             </Button>
 
             <Button size="sm" variant="ghost" onClick={remove} disabled={busy}>
@@ -248,7 +259,7 @@ function RoomRow({
               ) : (
                 <Trash2 className="h-3.5 w-3.5" aria-hidden />
               )}
-              <span className="sr-only">Usuń pokój {room.name}</span>
+              <span className="sr-only">{fill(misc.roomDelete, { room: room.name })}</span>
             </Button>
           </span>
         </div>
@@ -271,6 +282,7 @@ function RoomForm({
   onCancel: () => void;
 }) {
   const { d } = useI18n();
+  const t = d.panel.propertiesPage.roomsPanel;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -322,9 +334,9 @@ function RoomForm({
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-fg">
-              {isEdit ? `Pokój ${room!.name}` : "Nowy pokój"}
+              {isEdit ? room!.name : t.newRoom}
             </p>
-            <Button type="button" size="icon" variant="ghost" onClick={onCancel} aria-label="Zamknij">
+            <Button type="button" size="icon" variant="ghost" onClick={onCancel} aria-label={t.close}>
               <X className="h-4 w-4" aria-hidden />
             </Button>
           </div>
@@ -332,7 +344,7 @@ function RoomForm({
           {formError ? <Alert tone="error">{formError}</Alert> : null}
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id={idFor("name")} label="Oznaczenie" error={errors.name?.message}>
+            <FormField id={idFor("name")} label={t.designation} error={errors.name?.message}>
               <Input
                 {...fieldAria(idFor("name"), { error: errors.name?.message })}
                 disabled={isSubmitting}
@@ -340,7 +352,7 @@ function RoomForm({
               />
             </FormField>
 
-            <FormField id={idFor("status")} label="Status" error={errors.status?.message}>
+            <FormField id={idFor("status")} label={t.status} error={errors.status?.message}>
               <Select
                 {...fieldAria(idFor("status"), { error: errors.status?.message })}
                 disabled={isSubmitting}
@@ -356,7 +368,7 @@ function RoomForm({
 
             <FormField
               id={idFor("rent")}
-              label="Czynsz za pokój"
+              label={t.rent}
               error={errors.monthlyRentGrosze?.message}
             >
               <Input
@@ -371,10 +383,10 @@ function RoomForm({
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {isEdit ? "Zapisz" : "Dodaj pokój"}
+              {isEdit ? d.panel.common.save : t.add}
             </Button>
             <Button type="button" size="sm" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-              Anuluj
+              {d.panel.common.cancel}
             </Button>
           </div>
         </form>

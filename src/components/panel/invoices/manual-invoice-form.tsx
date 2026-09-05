@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import { calculateInvoiceTotals } from "@/lib/invoices/totals";
 import { VAT_PERCENT, vatLabels } from "@/lib/invoices/vat";
-import { formatPLN, parsePLN } from "@/lib/money";
+import { formatAmount, formatMoney, parseMoney } from "@/lib/money";
 import {
   invoiceKindLabels,
   selectableInvoiceKinds,
@@ -27,6 +27,7 @@ import {
   type InvoiceCreateOutput,
 } from "@/lib/validations/invoice";
 import { useI18n, useValidationContext } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 export type ManualInvoiceLease = {
   id: string;
   label: string;
@@ -39,10 +40,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 const inDays = (days: number) =>
   new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 
-const emptyLine = () => ({
+/* Jednostka domyślna zależy od kraju („szt." / „item"), więc wchodzi z zewnątrz. */
+const emptyLine = (unit: string) => ({
   description: "",
   quantityMilli: "1",
-  unit: "szt.",
+  unit,
   unitPriceNetGrosze: "",
   vatRate: "ZW" as const,
 });
@@ -69,6 +71,7 @@ export function ManualInvoiceForm({
   leases: ManualInvoiceLease[];
 }) {
   const { d, locale } = useI18n();
+  const t = d.panel.financePage.manualInvoice;
   const v = useValidationContext();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -101,7 +104,7 @@ export function ManualInvoiceForm({
       dueDate: inDays(7),
       periodStart: "",
       periodEnd: "",
-      lines: [emptyLine()],
+      lines: [emptyLine(d.panel.invoices.defaultUnit)],
       notes: "",
     },
   });
@@ -116,8 +119,8 @@ export function ManualInvoiceForm({
       .map((line) => ({
         description: line?.description ?? "",
         quantityMilli: Math.round(Number(String(line?.quantityMilli ?? "0").replace(",", ".")) * 1000),
-        unit: line?.unit ?? "szt.",
-        unitPriceNetGrosze: parsePLN(String(line?.unitPriceNetGrosze ?? "")) ?? 0,
+        unit: line?.unit ?? d.panel.invoices.defaultUnit,
+        unitPriceNetGrosze: parseMoney(String(line?.unitPriceNetGrosze ?? ""), locale) ?? 0,
         vatRate: (line?.vatRate ?? "ZW") as keyof typeof VAT_PERCENT,
       }))
       .filter((line) => line.unitPriceNetGrosze > 0 && line.quantityMilli > 0),
@@ -153,7 +156,7 @@ export function ManualInvoiceForm({
       );
 
       if (!sent.ok) {
-        setFormError(`Dokument wystawiony, ale nie udało się go wysłać: ${sent.message}`);
+        setFormError(fill(d.panel.panelMisc.issuedButNotSent, { error: sent.message }));
         return;
       }
     }
@@ -166,7 +169,7 @@ export function ManualInvoiceForm({
     return (
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         <FilePlus2 className="h-4 w-4" aria-hidden />
-        Wystaw ręcznie
+        {t.open}
       </Button>
     );
   }
@@ -177,8 +180,7 @@ export function ManualInvoiceForm({
         <div>
           <p className="text-sm font-semibold text-fg">Nowy dokument dla: {tenantName}</p>
           <p className="mt-0.5 text-xs text-muted">
-            Do kaucji, rozliczenia mediów, refaktury albo korekty, czyli wszystkiego, czego nie
-            obejmuje naliczanie czynszu z umowy.
+            {t.lead}
           </p>
         </div>
 
@@ -186,7 +188,7 @@ export function ManualInvoiceForm({
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="mi-kind" label="Rodzaj dokumentu" error={errors.kind?.message}>
+            <FormField id="mi-kind" label={t.kind} error={errors.kind?.message}>
               <Select
                 {...fieldAria("mi-kind", { error: errors.kind?.message })}
                 disabled={isSubmitting}
@@ -202,16 +204,16 @@ export function ManualInvoiceForm({
 
             <FormField
               id="mi-leaseId"
-              label="Umowa"
+              label={t.lease}
               error={errors.leaseId?.message}
-              hint="Puste = dokument jednorazowy, poza umową. Wysyłka mailem działa tak czy inaczej. Adresatem jest najemca, dla którego wystawiasz dokument."
+              hint={t.leaseHint}
             >
               <Select
                 {...fieldAria("mi-leaseId", { error: errors.leaseId?.message })}
                 disabled={isSubmitting}
                 {...register("leaseId")}
               >
-                <option value="">Bez umowy</option>
+                <option value="">{t.noLease}</option>
                 {leases.map((lease) => (
                   <option key={lease.id} value={lease.id}>
                     {lease.label}
@@ -222,7 +224,7 @@ export function ManualInvoiceForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id="mi-issueDate" label="Data wystawienia" error={errors.issueDate?.message}>
+            <FormField id="mi-issueDate" label={t.issueDate} error={errors.issueDate?.message}>
               <DateInput
                 {...fieldAria("mi-issueDate", { error: errors.issueDate?.message })}
                 disabled={isSubmitting}
@@ -232,9 +234,9 @@ export function ManualInvoiceForm({
 
             <FormField
               id="mi-saleDate"
-              label="Data sprzedaży"
+              label={t.saleDate}
               error={errors.saleDate?.message}
-              hint="Dzień wykonania usługi."
+              hint={t.saleDateHint}
             >
               <DateInput
                 {...fieldAria("mi-saleDate", { error: errors.saleDate?.message })}
@@ -243,7 +245,7 @@ export function ManualInvoiceForm({
               />
             </FormField>
 
-            <FormField id="mi-dueDate" label="Termin płatności" error={errors.dueDate?.message}>
+            <FormField id="mi-dueDate" label={t.dueDate} error={errors.dueDate?.message}>
               <DateInput
                 {...fieldAria("mi-dueDate", { error: errors.dueDate?.message })}
                 disabled={isSubmitting}
@@ -255,9 +257,9 @@ export function ManualInvoiceForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="mi-periodStart"
-              label="Okres od"
+              label={t.periodFrom}
               error={errors.periodStart?.message}
-              hint="Opcjonalne, gdy dokument dotyczy okresu."
+              hint={t.periodFromHint}
             >
               <DateInput
                 {...fieldAria("mi-periodStart", { error: errors.periodStart?.message })}
@@ -266,7 +268,7 @@ export function ManualInvoiceForm({
               />
             </FormField>
 
-            <FormField id="mi-periodEnd" label="Okres do" error={errors.periodEnd?.message}>
+            <FormField id="mi-periodEnd" label={t.periodTo} error={errors.periodEnd?.message}>
               <DateInput
                 {...fieldAria("mi-periodEnd", { error: errors.periodEnd?.message })}
                 disabled={isSubmitting}
@@ -282,11 +284,11 @@ export function ManualInvoiceForm({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => append(emptyLine())}
+                onClick={() => append(emptyLine(d.panel.invoices.defaultUnit))}
                 disabled={isSubmitting || fields.length >= 50}
               >
                 <Plus className="h-4 w-4" aria-hidden />
-                Dodaj pozycję
+                {t.addLine}
               </Button>
             </div>
 
@@ -301,7 +303,7 @@ export function ManualInvoiceForm({
               >
                 <FormField
                   id={`mi-line-${index}-description`}
-                  label="Opis"
+                  label={t.description}
                   error={errors.lines?.[index]?.description?.message}
                   className="sm:col-span-12"
                 >
@@ -316,7 +318,7 @@ export function ManualInvoiceForm({
 
                 <FormField
                   id={`mi-line-${index}-qty`}
-                  label="Ilość"
+                  label={t.quantity}
                   error={errors.lines?.[index]?.quantityMilli?.message}
                   className="sm:col-span-2"
                 >
@@ -332,7 +334,7 @@ export function ManualInvoiceForm({
 
                 <FormField
                   id={`mi-line-${index}-unit`}
-                  label="Jedn."
+                  label={t.unit}
                   error={errors.lines?.[index]?.unit?.message}
                   className="sm:col-span-2"
                 >
@@ -347,7 +349,7 @@ export function ManualInvoiceForm({
 
                 <FormField
                   id={`mi-line-${index}-price`}
-                  label="Cena netto"
+                  label={t.unitPrice}
                   error={errors.lines?.[index]?.unitPriceNetGrosze?.message}
                   className="sm:col-span-4"
                 >
@@ -363,7 +365,7 @@ export function ManualInvoiceForm({
 
                 <FormField
                   id={`mi-line-${index}-vat`}
-                  label="VAT"
+                  label={t.vat}
                   error={errors.lines?.[index]?.vatRate?.message}
                   className="sm:col-span-3"
                 >
@@ -387,7 +389,7 @@ export function ManualInvoiceForm({
                     type="button"
                     size="icon"
                     variant="ghost"
-                    aria-label={`Usuń pozycję ${index + 1}`}
+                    aria-label={fill(d.panel.panelMisc.removeLine, { index: index + 1 })}
                     onClick={() => remove(index)}
                     // Ostatniej pozycji nie da się usunąć — dokument bez
                     // żadnej i tak odbiłby się o walidację.
@@ -409,19 +411,21 @@ export function ManualInvoiceForm({
                 disabled={isSubmitting}
                 onClick={() => {
                   // Skrót na najczęstszy przypadek: kaucja równa czynszowi.
-                  setValue("lines.0.description", "Kaucja zabezpieczająca");
+                  setValue("lines.0.description", t.depositLine);
                   setValue(
                     "lines.0.unitPriceNetGrosze",
-                    (leases[0]!.rentGrosze / 100).toFixed(2).replace(".", ","),
+                    formatAmount(leases[0]!.rentGrosze, locale),
                   );
                 }}
               >
-                Wypełnij jako kaucję ({formatPLN(leases[0].rentGrosze)})
+                {fill(d.panel.panelMisc.fillAsDeposit, {
+                  amount: formatMoney(leases[0].rentGrosze, locale),
+                })}
               </Button>
             </div>
           ) : null}
 
-          <FormField id="mi-notes" label="Uwagi na dokumencie" error={errors.notes?.message}>
+          <FormField id="mi-notes" label={t.notes} error={errors.notes?.message}>
             <Textarea
               {...fieldAria("mi-notes", { error: errors.notes?.message })}
               disabled={isSubmitting}
@@ -430,15 +434,15 @@ export function ManualInvoiceForm({
           </FormField>
 
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-control bg-surface-alt px-3.5 py-3">
-            <span className="text-sm text-muted">Razem do zapłaty</span>
+            <span className="text-sm text-muted">{t.total}</span>
             <span className="tabular font-mono text-[17px] font-semibold text-fg">
-              {formatPLN(preview.totalGrossGrosze)}
+              {formatMoney(preview.totalGrossGrosze, locale)}
             </span>
           </div>
 
           <CheckboxField
-            label={`Wyślij mailem do: ${tenantName}`}
-            hint="Dokument pójdzie od razu po wystawieniu, z PDF-em w załączniku. Wysłanej wiadomości nie da się cofnąć."
+            label={fill(d.panel.panelMisc.sendByEmailTo, { tenant: tenantName })}
+            hint={t.sendHint}
             checked={sendEmail}
             disabled={isSubmitting}
             onChange={(event) => setSendEmail(event.target.checked)}
@@ -447,7 +451,7 @@ export function ManualInvoiceForm({
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {sendEmail ? "Wystaw i wyślij" : "Wystaw dokument"}
+              {sendEmail ? t.issueAndSend : t.issue}
             </Button>
             <Button
               type="button"

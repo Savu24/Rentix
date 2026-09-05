@@ -4,6 +4,7 @@ import { requireApiOwner } from "@/lib/auth/session";
 import { buildCsv, toCsvAmount } from "@/lib/reports/aggregate";
 import { annualReport } from "@/lib/reports/service";
 import { expenseCategoryLabels } from "@/lib/validations/expense";
+import { fill } from "@/lib/i18n/format";
 
 export const runtime = "nodejs";
 
@@ -23,11 +24,15 @@ export async function GET(request: NextRequest) {
     ? requested
     : new Date().getUTCFullYear();
 
-  const report = await annualReport(auth.organizationId, year);
+  const t = auth.d.panel.reportsPage;
+  const report = await annualReport(auth.organizationId, year, auth.locale, {
+    deletedProperty: t.deletedProperty,
+    generalCosts: t.generalCosts,
+  });
 
   const rows: string[][] = [];
 
-  rows.push(["Miesiąc", "Przychód", "Koszty", "Wynik"]);
+  rows.push([t.csv.month, t.income, t.expenses, t.profit]);
   for (const month of report.months) {
     rows.push([
       month.label,
@@ -37,14 +42,14 @@ export async function GET(request: NextRequest) {
     ]);
   }
   rows.push([
-    "RAZEM",
+    t.csv.total,
     toCsvAmount(report.totals.incomeGrosze),
     toCsvAmount(report.totals.expenseGrosze),
     toCsvAmount(report.totals.profitGrosze),
   ]);
 
   rows.push([]);
-  rows.push(["Nieruchomość", "Przychód", "Koszty", "Wynik"]);
+  rows.push([t.property, t.income, t.expenses, t.profit]);
   for (const property of report.properties) {
     rows.push([
       property.name,
@@ -55,17 +60,17 @@ export async function GET(request: NextRequest) {
   }
 
   rows.push([]);
-  rows.push(["Kategoria kosztu", "Kwota"]);
+  rows.push([t.csv.category, t.csv.amount]);
   for (const bucket of report.expensesByCategory) {
     rows.push([expenseCategoryLabels(auth.d)[bucket.category], toCsvAmount(bucket.totalGrosze)]);
   }
 
-  const csv = buildCsv([`Zestawienie roczne ${year} (rozliczenie kasowe)`], rows);
+  const csv = buildCsv([fill(t.csv.heading, { year })], rows);
 
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="rentix-zestawienie-${year}.csv"`,
+      "Content-Disposition": `attachment; filename="${fill(t.csv.fileName, { year })}"`,
       "Cache-Control": "no-store",
     },
   });

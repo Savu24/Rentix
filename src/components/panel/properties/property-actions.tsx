@@ -7,6 +7,8 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 
 /**
  * Archiwizacja i przywracanie nieruchomości.
@@ -24,6 +26,8 @@ export function PropertyActions({
   propertyName: string;
   archived: boolean;
 }) {
+  const { d } = useI18n();
+  const misc = d.panel.panelMisc;
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -58,7 +62,7 @@ export function PropertyActions({
           ) : (
             <ArchiveRestore className="h-4 w-4" aria-hidden />
           )}
-          Przywróć
+          {d.panel.common.restore}
         </Button>
         {error ? <Alert tone="error">{error}</Alert> : null}
       </div>
@@ -69,7 +73,7 @@ export function PropertyActions({
     return (
       <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
         <Archive className="h-4 w-4" aria-hidden />
-        Archiwizuj
+        {d.panel.common.archive}
       </Button>
     );
   }
@@ -77,13 +81,15 @@ export function PropertyActions({
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted">Zarchiwizować „{propertyName}”?</span>
+        <span className="text-xs text-muted">
+          {fill(misc.archiveConfirm, { name: propertyName })}
+        </span>
         <Button size="sm" variant="danger" onClick={() => run("archive")} disabled={busy}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          Tak, archiwizuj
+          {misc.archiveYes}
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>
-          Anuluj
+          {d.panel.common.cancel}
         </Button>
       </div>
       {error ? <Alert tone="error">{error}</Alert> : null}

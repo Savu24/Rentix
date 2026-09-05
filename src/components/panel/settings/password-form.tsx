@@ -65,7 +65,7 @@ export function PasswordForm() {
         <div>
           <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Co najmniej 10 znaków, w tym wielka litera, mała litera i cyfra.
+            {t.newHint}
           </p>
         </div>
 
@@ -106,7 +106,7 @@ export function PasswordForm() {
               ) : changed ? (
                 <Check className="h-4 w-4" aria-hidden />
               ) : null}
-              Zmień hasło
+              {d.panel.panelMisc.changePassword}
             </Button>
           </div>
         </form>

@@ -1,4 +1,5 @@
-import { plural } from "@/lib/utils";
+import type { Locale } from "@/lib/i18n/config";
+import { fill, pluralize } from "@/lib/i18n/format";
 
 /**
  * Odliczanie do końca umowy najmu.
@@ -61,8 +62,14 @@ export function addMonthsUtc(date: Date, months: number): Date {
 export type LeaseExpiry = {
   /** Ile dni zostało. 0 = kończy się dziś. */
   days: number;
-  label: string;
   tone: "neutral" | "warning" | "critical";
+};
+
+/** Teksty licznika — sekcja `panel.leasesPage.expiry` ze słownika kraju. */
+export type LeaseExpiryLabels = {
+  today: string;
+  remaining: string;
+  days: readonly string[];
 };
 
 /**
@@ -84,10 +91,26 @@ export function resolveLeaseExpiry(
 
   return {
     days,
-    label:
-      days === 0
-        ? "Umowa kończy się dziś"
-        : `${days} ${plural(days, ["dzień", "dni", "dni"])} do końca umowy`,
     tone: days <= CRITICAL_DAYS ? "critical" : days <= WARNING_DAYS ? "warning" : "neutral",
   };
+}
+
+/**
+ * Napis licznika w języku konta.
+ *
+ * Osobno od wyliczenia, bo `resolveLeaseExpiry` odpowiada na pytanie „ile dni
+ * i jak pilne", a to jest odpowiedź na „jak to napisać" — i tylko ona zmienia
+ * się między krajami.
+ */
+export function leaseExpiryLabel(
+  expiry: LeaseExpiry,
+  locale: Locale,
+  labels: LeaseExpiryLabels,
+): string {
+  if (expiry.days === 0) return labels.today;
+
+  return fill(labels.remaining, {
+    days: expiry.days,
+    noun: pluralize(locale, expiry.days, labels.days),
+  });
 }

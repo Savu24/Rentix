@@ -48,10 +48,10 @@ export function DeleteExpense({ expenseId }: { expenseId: string }) {
     <span className="flex items-center gap-1.5">
       <Button size="sm" variant="danger" onClick={remove} disabled={busy}>
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-        Usuń
+        {d.panel.common.delete}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setConfirming(false)} disabled={busy}>
-        Anuluj
+        {d.panel.common.cancel}
       </Button>
     </span>
   );

@@ -41,7 +41,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     case "CANCELLED":
       return apiError(
         "CONFLICT",
-        "Dokument jest anulowany. Wpłatę trzeba przypisać do innego dokumentu.",
+        auth.d.panel.api.paymentOnCancelled,
       );
   }
 }

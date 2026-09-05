@@ -77,18 +77,23 @@ export function remainingGrosze(invoice: InvoiceLike): number {
   return Math.max(0, invoice.totalGrossGrosze - invoice.paidGrosze);
 }
 
-/** Etykieta i token statusu z design systemu — patrz docs/chart-palette.md. */
-export const INVOICE_STATUS_META: Record<
+/**
+ * Token statusu z design systemu — patrz docs/chart-palette.md.
+ *
+ * Sam kolor, bez etykiety: tekst zależy od języka organizacji i przychodzi
+ * ze słownika (`d.panel.invoices.status`), a ten moduł działa też poza Reactem.
+ */
+export const INVOICE_STATUS_TONE: Record<
   DisplayInvoiceStatus,
-  { label: string; tone: "neutral" | "good" | "warning" | "critical" }
+  "neutral" | "good" | "warning" | "critical"
 > = {
-  DRAFT: { label: "Szkic", tone: "neutral" },
-  PAID: { label: "Opłacona", tone: "good" },
-  PARTIALLY_PAID: { label: "Opłacona częściowo", tone: "warning" },
-  DUE_SOON: { label: "Zbliża się termin", tone: "warning" },
-  OVERDUE: { label: "Zaległość", tone: "critical" },
-  UPCOMING: { label: "Nadchodząca", tone: "neutral" },
-  CANCELLED: { label: "Anulowana", tone: "neutral" },
+  DRAFT: "neutral",
+  PAID: "good",
+  PARTIALLY_PAID: "warning",
+  DUE_SOON: "warning",
+  OVERDUE: "critical",
+  UPCOMING: "neutral",
+  CANCELLED: "neutral",
 };
 
 /**

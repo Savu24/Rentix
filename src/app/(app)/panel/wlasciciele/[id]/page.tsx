@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const owner = await getOwner(session.user.organizationId, id);
 
-  return { title: owner?.name ?? "Właściciel" };
+  return { title: owner?.name ?? (await panelDictionary()).panel.panelMisc.meta.owner };
 }
 
 export default async function OwnerDetailPage({ params }: Params) {

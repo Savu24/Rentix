@@ -29,12 +29,12 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     case "NO_TENANT":
       return apiError(
         "CONFLICT",
-        "Dokument nie ma wskazanego nabywcy ani umowy, więc nie wiadomo, komu go wysłać.",
+        auth.d.panel.api.invoiceNoRecipient,
       );
     case "NO_RECIPIENT":
       return apiError(
         "CONFLICT",
-        "Najemca nie ma adresu e-mail. Uzupełnij go w kartotece, bo nie ma dokąd wysłać dokumentu.",
+        auth.d.panel.api.tenantNoEmail,
       );
     case "CANCELLED":
       return apiError("CONFLICT", auth.d.panel.api.cancelledNotSent);

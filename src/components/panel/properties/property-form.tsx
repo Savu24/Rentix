@@ -237,7 +237,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Właściciel</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{d.panel.panelMisc.sectionOwner}</h2>
           <p className="-mt-2 text-xs text-muted">
             {t.sectionOwnerHint}
           </p>
@@ -348,7 +348,7 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Metraż</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{d.panel.panelMisc.sectionArea}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="areaM2" label={t.area} error={errors.areaM2?.message}>

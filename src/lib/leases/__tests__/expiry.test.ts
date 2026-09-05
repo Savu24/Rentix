@@ -4,10 +4,23 @@ import {
   addMonthsUtc,
   LEASE_EXPIRY_WINDOW_DAYS,
   daysUntilLeaseEnd,
+  leaseExpiryLabel,
   resolveLeaseExpiry,
 } from "@/lib/leases/expiry";
 
 const NOW = new Date("2026-08-20T09:30:00Z");
+
+/** Sekcje słownika, które w aplikacji wchodzą z `panel.leasesPage.expiry`. */
+const PL_LABELS = {
+  today: "Umowa kończy się dziś",
+  remaining: "{days} {noun} do końca umowy",
+  days: ["dzień", "dni", "dni"],
+};
+const UK_LABELS = {
+  today: "The tenancy ends today",
+  remaining: "{days} {noun} to the end of the tenancy",
+  days: ["day", "days"],
+};
 
 /** Data końca umowy oddalona o `days` dni od `NOW`. */
 function endIn(days: number): Date {
@@ -45,17 +58,27 @@ describe("resolveLeaseExpiry", () => {
   });
 
   it("odmienia dni po polsku", () => {
-    expect(resolveLeaseExpiry(endIn(60), NOW)?.label).toBe("60 dni do końca umowy");
-    expect(resolveLeaseExpiry(endIn(1), NOW)?.label).toBe("1 dzień do końca umowy");
-    expect(resolveLeaseExpiry(endIn(22), NOW)?.label).toBe("22 dni do końca umowy");
+    const label = (days: number) =>
+      leaseExpiryLabel(resolveLeaseExpiry(endIn(days), NOW)!, "pl", PL_LABELS);
+
+    expect(label(60)).toBe("60 dni do końca umowy");
+    expect(label(1)).toBe("1 dzień do końca umowy");
+    expect(label(22)).toBe("22 dni do końca umowy");
+  });
+
+  it("po angielsku odmienia przez dwie formy", () => {
+    const label = (days: number) =>
+      leaseExpiryLabel(resolveLeaseExpiry(endIn(days), NOW)!, "uk", UK_LABELS);
+
+    expect(label(1)).toBe("1 day to the end of the tenancy");
+    expect(label(22)).toBe("22 days to the end of the tenancy");
   });
 
   it("ostatni dzień mówi wprost, że to dziś", () => {
-    expect(resolveLeaseExpiry(endIn(0), NOW)).toMatchObject({
-      days: 0,
-      label: "Umowa kończy się dziś",
-      tone: "critical",
-    });
+    const expiry = resolveLeaseExpiry(endIn(0), NOW)!;
+
+    expect(expiry).toMatchObject({ days: 0, tone: "critical" });
+    expect(leaseExpiryLabel(expiry, "pl", PL_LABELS)).toBe("Umowa kończy się dziś");
   });
 
   it("ton zaostrza się w miarę zbliżania się końca", () => {

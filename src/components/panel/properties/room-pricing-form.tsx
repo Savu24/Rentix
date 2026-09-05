@@ -10,8 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api/client";
-import { formatPLN, parsePLN } from "@/lib/money";
-import { plural } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/client";
+import { formatMoney, parseMoney } from "@/lib/money";
 
 export type PricedRoom = {
   id: string;
@@ -34,6 +34,9 @@ export function RoomPricingForm({
   propertyId: string;
   initialRooms: PricedRoom[];
 }) {
+  const { d, locale, plural } = useI18n();
+  const t = d.panel.propertiesPage.roomsPanel;
+  const misc = d.panel.panelMisc;
   const router = useRouter();
   const [rooms, setRooms] = useState(initialRooms);
   const [busy, setBusy] = useState(false);
@@ -47,7 +50,7 @@ export function RoomPricingForm({
   }
 
   /** Podgląd sumy — ile przyniesie miesięcznie komplet wynajętych pokoi. */
-  const total = rooms.reduce((sum, room) => sum + (parsePLN(room.rent) ?? 0), 0);
+  const total = rooms.reduce((sum, room) => sum + (parseMoney(room.rent, locale) ?? 0), 0);
 
   async function save() {
     setError(null);
@@ -56,9 +59,9 @@ export function RoomPricingForm({
     // jeden komunikat na górze formularza.
     const nextFieldErrors: Record<number, string> = {};
     rooms.forEach((room, index) => {
-      if (!room.name.trim()) nextFieldErrors[index] = "Podaj oznaczenie pokoju";
-      else if (room.rent.trim() !== "" && parsePLN(room.rent) === null) {
-        nextFieldErrors[index] = "Czynsz musi być kwotą, np. 900,00";
+      if (!room.name.trim()) nextFieldErrors[index] = t.nameRequired;
+      else if (room.rent.trim() !== "" && parseMoney(room.rent, locale) === null) {
+        nextFieldErrors[index] = t.rentInvalid;
       }
     });
 
@@ -96,13 +99,18 @@ export function RoomPricingForm({
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-[15px] font-semibold text-fg">
-              {rooms.length} {plural(rooms.length, ["pokój", "pokoje", "pokoi"])}
+              {rooms.length} {plural(rooms.length, misc.roomsCount)}
             </h2>
             {total > 0 ? (
+              /* Kwota ma zostać w monospace także po przetłumaczeniu, więc
+                 zdanie rozcinamy na dziurze po kwocie zamiast wstawiać ją
+                 gotowym tekstem. */
               <p className="text-sm text-muted">
-                Razem{" "}
-                <span className="tabular font-mono font-medium text-fg">{formatPLN(total)}</span>{" "}
-                miesięcznie
+                {misc.roomsTotal.split("{amount}")[0]}
+                <span className="tabular font-mono font-medium text-fg">
+                  {formatMoney(total, locale)}
+                </span>
+                {misc.roomsTotal.split("{amount}")[1]}
               </p>
             ) : null}
           </div>
@@ -113,7 +121,7 @@ export function RoomPricingForm({
                 <div className="grid gap-2.5 sm:grid-cols-[1fr_180px]">
                   <div className="flex flex-col gap-1">
                     <Label htmlFor={`room-name-${room.id}`} className="sm:sr-only">
-                      Oznaczenie pokoju
+                      {t.pricingName}
                     </Label>
                     <Input
                       id={`room-name-${room.id}`}
@@ -126,7 +134,7 @@ export function RoomPricingForm({
 
                   <div className="flex flex-col gap-1">
                     <Label htmlFor={`room-rent-${room.id}`} className="sm:sr-only">
-                      Czynsz miesięczny
+                      {t.pricingRent}
                     </Label>
                     <Input
                       id={`room-rent-${room.id}`}
@@ -149,8 +157,7 @@ export function RoomPricingForm({
           </div>
 
           <p className="text-xs text-muted">
-            Ceny możesz zostawić puste i uzupełnić później. Najemców przypiszesz
-            do pokoi w widoku nieruchomości.
+            {t.pricingLead}
           </p>
         </CardContent>
       </Card>
@@ -160,12 +167,12 @@ export function RoomPricingForm({
           {busy ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Zapisywanie…
+              {t.saving}
             </>
           ) : (
             <>
               <Check className="h-4 w-4" aria-hidden />
-              Zapisz i zakończ
+              {t.saveAndFinish}
             </>
           )}
         </Button>
@@ -175,7 +182,7 @@ export function RoomPricingForm({
           disabled={busy}
           onClick={() => router.push(`/panel/nieruchomosci/${propertyId}`)}
         >
-          Pomiń ceny
+          {t.skipPricing}
         </Button>
       </div>
     </div>

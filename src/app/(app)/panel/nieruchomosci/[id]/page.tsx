@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const property = await getProperty(session.user.organizationId, id);
 
-  return { title: property?.name ?? "Nieruchomość" };
+  return { title: property?.name ?? (await panelDictionary()).panel.panelMisc.meta.property };
 }
 
 export default async function PropertyDetailPage({ params }: Params) {
@@ -132,7 +132,7 @@ export default async function PropertyDetailPage({ params }: Params) {
           className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
-          Nieruchomości
+          {d.panel.panelMisc.propertiesBack}
         </Link>
 
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -9,8 +9,12 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { getLease } from "@/lib/leases/service";
 import { formatAmount } from "@/lib/money";
 import { LEASE_SETTABLE_STATUSES } from "@/lib/validations/lease";
+import { fill } from "@/lib/i18n/format";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
-export const metadata: Metadata = { title: "Edycja umowy" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.panelMisc.leaseEditTitle };
+}
 
 const toInputDate = (date: Date | null | undefined) =>
   date ? date.toISOString().slice(0, 10) : "";
@@ -22,7 +26,10 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
   const lease = await getLease(session.user.organizationId, id);
   if (!lease) notFound();
 
-  const title = lease.number ? `Umowa ${lease.number}` : "Umowa najmu";
+  const d = await panelDictionary();
+  const title = lease.number
+    ? fill(d.panel.leasesPage.detail.numbered, { number: lease.number })
+    : d.panel.leasesPage.detail.untitled;
 
   const settableStatus = LEASE_SETTABLE_STATUSES.find((value) => value === lease.status);
 
@@ -37,7 +44,9 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
           {title}
         </Link>
 
-        <h1 className="r-display text-[26px] leading-tight text-fg">Edycja umowy</h1>
+        <h1 className="r-display text-[26px] leading-tight text-fg">
+          {d.panel.panelMisc.leaseEditTitle}
+        </h1>
         <p className="text-sm text-muted">
           {lease.property.name}
           {lease.room ? ` · ${lease.room.name}` : ""} ·{" "}
@@ -48,8 +57,7 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
       {/* Mówimy wprost, czego tu nie ma, zamiast zostawiać użytkownika
           z szukaniem pola, którego nie znajdzie. */}
       <Alert tone="info">
-        Lokalu i najemców nie zmienia się tutaj. To byłaby inna umowa, a nie poprawka.
-        Wypowiedzenie najmu i archiwizacja są na karcie umowy.
+        {d.panel.panelMisc.leaseEditLead} {d.panel.panelMisc.leaseEditElsewhere}
       </Alert>
 
       <LeaseEditForm

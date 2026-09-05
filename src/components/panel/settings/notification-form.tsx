@@ -78,7 +78,7 @@ export function NotificationForm({
         <div>
           <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Kiedy przypomnienia wychodzą i pod jaką nazwą widzi je najemca.
+            {t.lead}
           </p>
         </div>
 
@@ -145,8 +145,7 @@ export function NotificationForm({
           */}
           {!contactEmail ? (
             <Alert tone="warning">
-              Nie masz adresu kontaktowego. Odpowiedzi najemców nie mają dokąd trafić. Uzupełnij
-              go w zakładce Organizacja.
+              {t.noContactEmail}
             </Alert>
           ) : null}
 

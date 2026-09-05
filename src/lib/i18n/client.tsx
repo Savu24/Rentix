@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
+
+import { setTransportMessages } from "@/lib/api/client";
 
 import { DEFAULT_LOCALE, type Locale } from "./config";
 import { formatDateIn, pluralize } from "./format";
@@ -44,6 +46,18 @@ export function I18nProvider({
     }),
     [locale, dictionary],
   );
+
+  /*
+    Warstwa `api` nie ma dostępu do kontekstu, a musi umieć powiedzieć „brak
+    połączenia" w języku konta. Efekt, nie render: moduł jest wspólny dla
+    wszystkich żądań na serwerze i zapis w renderze przeciekłby między nimi.
+  */
+  useEffect(() => {
+    setTransportMessages({
+      network: dictionary.panel.api.networkError,
+      unknown: dictionary.panel.api.unknownError,
+    });
+  }, [dictionary]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

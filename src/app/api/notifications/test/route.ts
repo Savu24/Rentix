@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { fill } from "@/lib/i18n/format";
 import { z } from "zod";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (result.reason === "NO_RECIPIENT") {
       return apiError("VALIDATION_ERROR", auth.d.panel.api.noAccountEmail);
     }
-    return apiError("INTERNAL_ERROR", `Nie udało się wysłać: ${result.error}`);
+    return apiError("INTERNAL_ERROR", fill(auth.d.panel.api.sendFailed, { error: result.error }));
   }
 
   return ok({ toEmail: result.toEmail });

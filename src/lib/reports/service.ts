@@ -1,6 +1,7 @@
 import type { ExpenseCategory } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 
+import type { Locale } from "@/lib/i18n/config";
 import {
   collectionStats,
   monthlyBreakdown,
@@ -33,7 +34,12 @@ const yearRange = (year: number) => ({
   lt: new Date(Date.UTC(year + 1, 0, 1)),
 });
 
-export async function annualReport(organizationId: string, year: number): Promise<AnnualReport> {
+export async function annualReport(
+  organizationId: string,
+  year: number,
+  locale: Locale,
+  labels: { deletedProperty: string; generalCosts: string },
+): Promise<AnnualReport> {
   const range = yearRange(year);
 
   const [payments, expenses, properties, invoices] = await Promise.all([
@@ -86,7 +92,7 @@ export async function annualReport(organizationId: string, year: number): Promis
   }));
 
   const names = new Map(properties.map((property) => [property.id, property.name]));
-  const months = monthlyBreakdown(incomeEntries, expenseEntries);
+  const months = monthlyBreakdown(incomeEntries, expenseEntries, locale);
 
   const byCategory = new Map<ExpenseCategory, number>();
   for (const expense of expenses) {
@@ -99,7 +105,7 @@ export async function annualReport(organizationId: string, year: number): Promis
   return {
     year,
     months,
-    properties: propertyBreakdown(incomeEntries, expenseEntries, names),
+    properties: propertyBreakdown(incomeEntries, expenseEntries, names, labels),
     expensesByCategory: [...byCategory.entries()]
       .map(([category, totalGrosze]) => ({ category, totalGrosze }))
       .sort((a, b) => b.totalGrosze - a.totalGrosze),

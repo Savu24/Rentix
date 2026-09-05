@@ -11,6 +11,9 @@ import {
 
 const utc = (year: number, month: number, day: number) => new Date(Date.UTC(year, month - 1, day));
 
+/** Etykiety wierszy zbiorczych — w produkcji przychodzą ze słownika kraju. */
+const labels = { deletedProperty: "nieruchomość usunięta", generalCosts: "Koszty ogólne" };
+
 const entry = (month: number, amountGrosze: number, propertyId: string | null = null): CashEntry => ({
   at: utc(2026, month, 15),
   amountGrosze,
@@ -21,14 +24,14 @@ describe("monthlyBreakdown", () => {
   it("zawsze zwraca dwanaście miesięcy", () => {
     // Miesiąc bez ruchu musi zostać w tabeli: dziura w osi czasu czytałaby się
     // jak brak danych, a nie jak zero wpływów.
-    const rows = monthlyBreakdown([entry(3, 240000)], []);
+    const rows = monthlyBreakdown([entry(3, 240000)], [], "pl");
     expect(rows).toHaveLength(12);
     expect(rows[0]?.incomeGrosze).toBe(0);
     expect(rows[0]?.label).toBe("styczeń");
   });
 
   it("wrzuca kwoty do miesiąca przepływu", () => {
-    const rows = monthlyBreakdown([entry(3, 240000), entry(3, 100000)], [entry(3, 45000)]);
+    const rows = monthlyBreakdown([entry(3, 240000), entry(3, 100000)], [entry(3, 45000)], "pl");
 
     expect(rows[2]?.incomeGrosze).toBe(340000);
     expect(rows[2]?.expenseGrosze).toBe(45000);
@@ -36,7 +39,7 @@ describe("monthlyBreakdown", () => {
   });
 
   it("miesiąc z samymi kosztami wychodzi na minus", () => {
-    const rows = monthlyBreakdown([], [entry(7, 120000)]);
+    const rows = monthlyBreakdown([], [entry(7, 120000)], "pl");
     expect(rows[6]?.profitGrosze).toBe(-120000);
   });
 
@@ -46,6 +49,7 @@ describe("monthlyBreakdown", () => {
     const rows = monthlyBreakdown(
       [{ at: new Date("2026-01-01T00:00:00.000Z"), amountGrosze: 100000, propertyId: null }],
       [],
+      "pl",
     );
 
     expect(rows[0]?.incomeGrosze).toBe(100000);
@@ -64,6 +68,7 @@ describe("propertyBreakdown", () => {
       [entry(1, 240000, "p1"), entry(2, 180000, "p2")],
       [entry(1, 40000, "p1")],
       names,
+      labels,
     );
 
     const first = rows.find((row) => row.propertyId === "p1")!;
@@ -74,7 +79,7 @@ describe("propertyBreakdown", () => {
   it("koszty bez przypisania idą do osobnego wiersza, nie są rozdzielane", () => {
     // Każdy klucz podziału byłby zmyślony, a zmyślona liczba w raporcie jest
     // gorsza niż jawne „koszty ogólne".
-    const rows = propertyBreakdown([entry(1, 240000, "p1")], [entry(1, 30000, null)], names);
+    const rows = propertyBreakdown([entry(1, 240000, "p1")], [entry(1, 30000, null)], names, labels);
 
     const general = rows.find((row) => row.propertyId === null)!;
     expect(general.name).toBe("Koszty ogólne");
@@ -87,6 +92,7 @@ describe("propertyBreakdown", () => {
       [entry(1, 10000, "p1")],
       [entry(1, 900000, null)],
       names,
+      labels,
     );
 
     expect(rows.at(-1)?.propertyId).toBeNull();
@@ -97,13 +103,14 @@ describe("propertyBreakdown", () => {
       [entry(1, 100000, "p1"), entry(1, 500000, "p2")],
       [],
       names,
+      labels,
     );
 
     expect(rows[0]?.propertyId).toBe("p2");
   });
 
   it("nazywa nieruchomość usuniętą zamiast pokazywać identyfikator", () => {
-    const rows = propertyBreakdown([entry(1, 100000, "zniknieta")], [], names);
+    const rows = propertyBreakdown([entry(1, 100000, "zniknieta")], [], names, labels);
     expect(rows[0]?.name).toBe("nieruchomość usunięta");
   });
 });

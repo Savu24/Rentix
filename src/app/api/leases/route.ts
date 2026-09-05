@@ -47,28 +47,28 @@ export async function POST(request: NextRequest) {
 
   switch (result.reason) {
     case "PROPERTY_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono nieruchomości.", {
-        fields: { propertyId: ["Wybierz nieruchomość z listy"] },
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.property, {
+        fields: { propertyId: [auth.d.panel.api.fields.selectProperty] },
       });
     case "ROOM_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono pokoju w tej nieruchomości.", {
-        fields: { roomId: ["Wybierz pokój z listy"] },
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.roomInProperty, {
+        fields: { roomId: [auth.d.panel.api.fields.selectRoom] },
       });
     case "TENANT_NOT_FOUND":
-      return apiError("NOT_FOUND", "Nie znaleziono wskazanego najemcy.", {
-        fields: { tenantIds: ["Wybierz najemcę z listy"] },
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.selectedTenant, {
+        fields: { tenantIds: [auth.d.panel.api.fields.selectTenant] },
       });
     case "PROPERTY_OCCUPIED":
       return apiError(
         "CONFLICT",
-        "Ta nieruchomość ma już aktywną umowę. Zakończ poprzednią, wybierz konkretny pokój albo zapisz nową jako szkic.",
-        { fields: { propertyId: ["Nieruchomość jest już wynajęta"] } },
+        auth.d.panel.api.propertyOccupiedMessage,
+        { fields: { propertyId: [auth.d.panel.api.fields.propertyOccupied] } },
       );
     case "ROOM_OCCUPIED":
       return apiError(
         "CONFLICT",
-        "Ten pokój ma już aktywną umowę. Zakończ poprzednią albo wybierz inny pokój.",
-        { fields: { roomId: ["Pokój jest już wynajęty"] } },
+        auth.d.panel.api.roomOccupiedMessage,
+        { fields: { roomId: [auth.d.panel.api.fields.roomOccupied] } },
       );
   }
 }

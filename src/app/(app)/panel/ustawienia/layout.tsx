@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 
 import { SettingsTabs } from "@/components/panel/settings/settings-tabs";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
-export const metadata: Metadata = { title: "Ustawienia" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.nav.settings };
+}
 
 /**
  * Wspólna rama zakładek ustawień.
@@ -11,13 +14,15 @@ export const metadata: Metadata = { title: "Ustawienia" };
  * przerysowywały się razem z treścią — Next zachowuje layout między trasami,
  * więc zakładka nie mruga przy każdym kliknięciu.
  */
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
       <div className="flex flex-col gap-1">
-        <h1 className="r-display text-[26px] leading-tight text-fg">Ustawienia</h1>
+        <h1 className="r-display text-[26px] leading-tight text-fg">
+          {(await panelDictionary()).panel.nav.settings}
+        </h1>
         <p className="text-sm text-muted">
-          Dane wystawcy, powiadomienia do najemców i Twoje konto.
+          {(await panelDictionary()).panel.panelMisc.settingsLead}
         </p>
       </div>
 

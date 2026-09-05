@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { fill, pluralize } from "@/lib/i18n/format";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
@@ -42,7 +43,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     return apiError(
       "CONFLICT",
-      "Ten lokal ma już aktywną umowę. Zakończ ją najpierw. Dwie aktywne umowy na jednej jednostce rozjechałyby stan zajętości.",
+      auth.d.panel.api.unitOccupied,
     );
   }
 
@@ -71,7 +72,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     return apiError(
       "CONFLICT",
-      "Umowa jest aktywna. Zakończ ją najpierw, inaczej jednostka zostałaby zajęta przez umowę, której nie widać na liście.",
+      auth.d.panel.api.leaseStillActive,
     );
   }
 
@@ -82,8 +83,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   return apiError(
     "CONFLICT",
-    `Nie można usunąć. Do umowy wystawiono ${result.invoiceCount} ${
-      result.invoiceCount === 1 ? "dokument" : "dokumentów"
-    }. Zostaw ją w archiwum, żeby historia rozliczeń została spójna.`,
+    fill(auth.d.panel.api.leaseHasInvoices, {
+      count: result.invoiceCount,
+      noun: pluralize(auth.locale, result.invoiceCount, auth.d.panel.api.countable.documents),
+    }),
   );
 }

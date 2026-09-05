@@ -8,11 +8,8 @@ import { Alert } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
-import {
-  NOTIFICATION_TYPE_HINTS,
-  NOTIFICATION_TYPE_LABELS,
-  type EditableNotificationType,
-} from "@/lib/notifications/types";
+import { fill } from "@/lib/i18n/format";
+import type { EditableNotificationType } from "@/lib/notifications/types";
 
 /**
  * Które powiadomienia wychodzą automatycznie.
@@ -28,6 +25,7 @@ export function NotificationToggles({
 }) {
   const { d } = useI18n();
   const t = d.panel.settings.notifications;
+  const types = t.types;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState<EditableNotificationType | null>(null);
@@ -62,8 +60,7 @@ export function NotificationToggles({
         <div>
           <h2 className="text-[15px] font-semibold text-fg">{t.togglesTitle}</h2>
           <p className="mt-0.5 text-sm text-muted">
-            Wyłączone powiadomienie nie pójdzie nocnym przebiegiem. Ręcznej wysyłki dokumentu
-            z listy rachunków nie blokuje. To osobne, świadome kliknięcie.
+            {t.togglesLead}
           </p>
         </div>
 
@@ -74,10 +71,10 @@ export function NotificationToggles({
             <li key={template.type} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-fg">
-                  {NOTIFICATION_TYPE_LABELS[template.type]}
+                  {types[template.type].label}
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
-                  {NOTIFICATION_TYPE_HINTS[template.type]}
+                  {types[template.type].hint}
                 </p>
               </div>
 
@@ -93,7 +90,7 @@ export function NotificationToggles({
                   onChange={(event) => toggle(template.type, event.target.checked)}
                 />
                 <span className="sr-only">
-                  Wysyłaj automatycznie: {NOTIFICATION_TYPE_LABELS[template.type]}
+                  {fill(t.autoSend, { type: types[template.type].label })}
                 </span>
               </label>
             </li>

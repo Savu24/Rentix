@@ -45,6 +45,7 @@ export function LeaseEditForm({
   defaultValues: LeaseEditInput;
 }) {
   const { d } = useI18n();
+  const t = d.panel.leasesPage.form;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -88,10 +89,10 @@ export function LeaseEditForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Okres i status</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionPeriod}</h2>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id="startDate" label="Data rozpoczęcia" error={errors.startDate?.message}>
+            <FormField id="startDate" label={t.startDate} error={errors.startDate?.message}>
               <DateInput
                 {...fieldAria("startDate", { error: errors.startDate?.message })}
                 disabled={isSubmitting}
@@ -101,9 +102,9 @@ export function LeaseEditForm({
 
             <FormField
               id="endDate"
-              label="Data zakończenia"
+              label={t.endDate}
               error={errors.endDate?.message}
-              hint="Puste = czas nieokreślony."
+              hint={t.endDateHint}
             >
               <DateInput
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
@@ -115,9 +116,9 @@ export function LeaseEditForm({
             {defaultValues.status ? (
               <FormField
                 id="status"
-                label="Status"
+                label={t.status}
                 error={errors.status?.message}
-                hint="Aktywna zajmuje lokal i włącza naliczanie."
+                hint={t.statusHint}
               >
                 <Select
                   {...fieldAria("status", { error: errors.status?.message })}
@@ -135,9 +136,9 @@ export function LeaseEditForm({
 
             <FormField
               id="number"
-              label="Numer umowy"
+              label={t.number}
               error={errors.number?.message}
-              hint="Opcjonalny."
+              hint={t.numberHint}
             >
               <Input
                 {...fieldAria("number", { error: errors.number?.message })}
@@ -151,10 +152,10 @@ export function LeaseEditForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Czynsz i rozliczenia</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionRent}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="rentGrosze" label="Czynsz miesięczny" error={errors.rentGrosze?.message}>
+            <FormField id="rentGrosze" label={t.rent} error={errors.rentGrosze?.message}>
               <Input
                 {...fieldAria("rentGrosze", { error: errors.rentGrosze?.message })}
                 inputMode="decimal"
@@ -165,9 +166,9 @@ export function LeaseEditForm({
 
             <FormField
               id="depositGrosze"
-              label="Kaucja"
+              label={t.deposit}
               error={errors.depositGrosze?.message}
-              hint="Zmiana nie przelicza wystawionych już rozliczeń."
+              hint={t.depositHint}
             >
               <Input
                 {...fieldAria("depositGrosze", { error: errors.depositGrosze?.message })}
@@ -179,7 +180,7 @@ export function LeaseEditForm({
 
             <FormField
               id="utilitiesMode"
-              label="Rozliczenie mediów"
+              label={t.utilities}
               error={errors.utilitiesMode?.message}
               hint={utilitiesModeHints(d)[utilitiesMode ?? "FLAT_RATE"]}
             >
@@ -205,7 +206,7 @@ export function LeaseEditForm({
             {chargesAdvance ? (
               <FormField
                 id="utilitiesAdvanceGrosze"
-                label="Zaliczka na media"
+                label={t.utilitiesAdvance}
                 error={errors.utilitiesAdvanceGrosze?.message}
               >
                 <Input
@@ -221,9 +222,9 @@ export function LeaseEditForm({
 
             <FormField
               id="billingDay"
-              label="Dzień naliczania"
+              label={t.billingDay}
               error={errors.billingDay?.message}
-              hint="1–28, żeby luty nie wymagał wyjątku."
+              hint={t.billingDayHint}
             >
               <Input
                 {...fieldAria("billingDay", { error: errors.billingDay?.message })}
@@ -237,7 +238,7 @@ export function LeaseEditForm({
 
             <FormField
               id="paymentTermDays"
-              label="Termin płatności (dni)"
+              label={t.paymentTerm}
               error={errors.paymentTermDays?.message}
             >
               <Input
@@ -252,9 +253,9 @@ export function LeaseEditForm({
 
             <FormField
               id="billingStartsAt"
-              label="Nie naliczaj przed"
+              label={t.billingStart}
               error={errors.billingStartsAt?.message}
-              hint="Miesiące rozliczone w poprzednim programie. Puste = od początku umowy."
+              hint={t.billingStartShortHint}
             >
               <DateInput
                 {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}
@@ -265,13 +266,13 @@ export function LeaseEditForm({
           </div>
 
           <CheckboxField
-            label="Wysyłaj rachunki mailem"
-            hint="Wyłącz, jeśli ten najemca ma dostawać dokumenty poza systemem. Ręczna wysyłka z widoku rachunku pozostaje dostępna."
+            label={t.sendByEmail}
+            hint={t.sendByEmailHint}
             disabled={isSubmitting}
             {...register("sendInvoicesByEmail")}
           />
 
-          <FormField id="notes" label="Ustalenia dodatkowe" error={errors.notes?.message}>
+          <FormField id="notes" label={t.extras} error={errors.notes?.message}>
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
               disabled={isSubmitting}
@@ -284,8 +285,7 @@ export function LeaseEditForm({
       {/* Zmiana warunków nie rusza wystawionych dokumentów — właściciel musi
           to wiedzieć zanim zapisze, a nie dowiedzieć się z niezgodnej faktury. */}
       <Alert tone="info">
-        Nowe warunki wejdą do rozliczeń naliczanych od teraz. Dokumenty już wystawione zostają
-        takie, jakie są. Popraw je pojedynczo, jeśli mają się zmienić.
+        {d.panel.panelMisc.leaseEditNotice}
       </Alert>
 
       <div className="flex flex-wrap gap-2.5">
@@ -293,10 +293,10 @@ export function LeaseEditForm({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Zapisywanie…
+              {t.saving}
             </>
           ) : (
-            "Zapisz zmiany"
+            d.panel.common.saveChanges
           )}
         </Button>
         <Button
@@ -305,7 +305,7 @@ export function LeaseEditForm({
           disabled={isSubmitting}
           onClick={() => router.push(`/panel/umowy/${leaseId}`)}
         >
-          Anuluj
+          {d.panel.common.cancel}
         </Button>
       </div>
     </form>

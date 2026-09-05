@@ -26,9 +26,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { ManualInvoiceForm } from "@/components/panel/invoices/manual-invoice-form";
-import { INVOICE_STATUS_META, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
-import { resolveLeaseExpiry } from "@/lib/leases/expiry";
-import { fill, formatDateIn } from "@/lib/i18n/format";
+import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
 import { getTenant } from "@/lib/tenants/service";
 import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
@@ -41,13 +41,18 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { id } = await params;
   const tenant = await getTenant(session.user.organizationId, id);
 
-  return { title: tenant ? `${tenant.firstName} ${tenant.lastName}` : "Najemca" };
+  return {
+    title: tenant
+      ? `${tenant.firstName} ${tenant.lastName}`
+      : (await panelDictionary()).panel.panelMisc.meta.tenant,
+  };
 }
 
 
 export default async function TenantDetailPage({ params }: Params) {
   const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
   const t = d.panel.tenantsPage.detail;
+  const misc = d.panel.panelMisc;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -137,7 +142,7 @@ export default async function TenantDetailPage({ params }: Params) {
               {expiry ? (
                 <Badge tone={expiry.tone}>
                   <CalendarClock className="h-3 w-3" aria-hidden />
-                  {expiry.label}
+                  {leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}
                 </Badge>
               ) : null}
             </div>
@@ -202,7 +207,7 @@ export default async function TenantDetailPage({ params }: Params) {
         {leases.length === 0 ? (
           <Card>
             <CardContent className="p-4 text-sm text-muted">
-              Ten najemca nie ma jeszcze żadnej umowy.{" "}
+              {misc.noLeasesYet}{" "}
               <Link href="/panel/umowy/nowa" className="font-medium text-accent hover:underline">
                 {t.createLease}
               </Link>
@@ -271,7 +276,7 @@ export default async function TenantDetailPage({ params }: Params) {
             <CardContent className="flex flex-col p-0">
               {invoices.slice(0, 12).map((invoice, index) => {
                 const status = resolveInvoiceStatus(invoice, now);
-                const meta = INVOICE_STATUS_META[status];
+                const tone = INVOICE_STATUS_TONE[status];
 
                 return (
                   <div
@@ -283,10 +288,10 @@ export default async function TenantDetailPage({ params }: Params) {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-fg">{invoice.number}</p>
                       <p className="text-xs text-muted">
-                        termin {formatDateIn(invoice.dueDate, locale, "short")}
+                        {fill(misc.dueOn, { date: formatDateIn(invoice.dueDate, locale, "short") })}
                       </p>
                     </div>
-                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                    <Badge tone={tone}>{d.panel.invoices.status[status]}</Badge>
                     <p className="tabular w-24 text-right font-mono text-sm text-fg">
                       {formatMoney(invoice.totalGrossGrosze)}
                     </p>
@@ -332,7 +337,7 @@ export default async function TenantDetailPage({ params }: Params) {
                   ) : null}
                   <p className="mt-1 text-xs text-muted">
                     {thread._count.messages}{" "}
-                    {thread._count.messages === 1 ? "wiadomość" : "wiadomości"}
+                    {pluralize(locale, thread._count.messages, misc.threadMessages)}
                   </p>
                 </div>
               ))}
@@ -390,7 +395,9 @@ export default async function TenantDetailPage({ params }: Params) {
               <DetailItem
                 label={t.registeredUntil}
                 value={
-                  tenant.registeredUntil ? formatDateIn(tenant.registeredUntil, locale, "short") : "bezterminowo"
+                  tenant.registeredUntil
+                    ? formatDateIn(tenant.registeredUntil, locale, "short")
+                    : misc.indefinite
                 }
               />
             </CardContent>
@@ -426,7 +433,9 @@ export default async function TenantDetailPage({ params }: Params) {
               <DetailItem
                 label={t.until}
                 value={
-                  tenant.employmentUntil ? formatDateIn(tenant.employmentUntil, locale, "short") : "bezterminowo"
+                  tenant.employmentUntil
+                    ? formatDateIn(tenant.employmentUntil, locale, "short")
+                    : misc.indefinite
                 }
               />
             </CardContent>
@@ -455,7 +464,7 @@ export default async function TenantDetailPage({ params }: Params) {
                     }`}
                   >
                     {formatDateIn(tenant.insuranceExpiresAt, locale, "short")}
-                    {tenant.insuranceExpiresAt < now ? " · wygasła" : ""}
+                    {tenant.insuranceExpiresAt < now ? misc.insuranceExpired : ""}
                   </p>
                 </div>
               ) : null}

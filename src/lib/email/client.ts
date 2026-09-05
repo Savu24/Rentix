@@ -120,7 +120,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
       if (error) return { ok: false, error: error.message };
       return { ok: true, id: data?.id ?? null };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "Nieznany błąd wysyłki" };
+      return { ok: false, error: error instanceof Error ? error.message : "Unknown delivery error" };
     }
   }
 
@@ -143,7 +143,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendEmailResult>
 
       return { ok: true, id: info.messageId ?? null };
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "Nieznany błąd SMTP" };
+      return { ok: false, error: error instanceof Error ? error.message : "Unknown SMTP error" };
     }
   }
 

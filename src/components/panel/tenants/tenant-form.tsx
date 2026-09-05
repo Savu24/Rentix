@@ -459,7 +459,7 @@ export function TenantForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Płatności</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{d.panel.panelMisc.sectionPayments}</h2>
           <p className="-mt-2 text-xs text-muted">
             {t.sectionBillingContactHint}
           </p>

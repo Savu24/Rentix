@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
-import { formatAmount } from "@/lib/money";
+import { formatAmount, formatMoney } from "@/lib/money";
 import {
   LEASE_SETTABLE_STATUSES,
   leaseStatusLabels,
@@ -29,6 +29,7 @@ import {
   type LeaseFormOutput,
 } from "@/lib/validations/lease";
 import { useI18n, useValidationContext } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 export type RoomOption = {
   id: string;
   name: string;
@@ -84,7 +85,9 @@ export function LeaseForm({
   /** Wstępny wybór — z przycisku „Przypisz” przy pokoju albo z karty najemcy. */
   preset?: { propertyId?: string; roomId?: string; tenantId?: string };
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
+  const t = d.panel.leasesPage.form;
+  const misc = d.panel.panelMisc;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -113,9 +116,9 @@ export function LeaseForm({
       // Czynsz z pokoju ma pierwszeństwo przed ceną za całość — przy najmie
       // pokojowym to on jest właściwą kwotą.
       rentGrosze: presetRoom?.monthlyRentGrosze
-        ? formatAmount(presetRoom.monthlyRentGrosze)
+        ? formatAmount(presetRoom.monthlyRentGrosze, locale)
         : presetProperty?.askingRentGrosze
-          ? formatAmount(presetProperty.askingRentGrosze)
+          ? formatAmount(presetProperty.askingRentGrosze, locale)
           : "",
     },
   });
@@ -147,7 +150,7 @@ export function LeaseForm({
     const property = properties.find((entry) => entry.id === propertyId);
     if (!property?.askingRentGrosze) return;
 
-    const suggestion = formatAmount(property.askingRentGrosze);
+    const suggestion = formatAmount(property.askingRentGrosze, locale);
     if (!watch("rentGrosze")) setValue("rentGrosze", suggestion);
     if (!watch("depositGrosze")) setValue("depositGrosze", suggestion);
   }
@@ -158,7 +161,7 @@ export function LeaseForm({
 
     const room = availableRooms.find((entry) => entry.id === roomId);
     if (room?.monthlyRentGrosze) {
-      setValue("rentGrosze", formatAmount(room.monthlyRentGrosze));
+      setValue("rentGrosze", formatAmount(room.monthlyRentGrosze, locale));
     }
   }
 
@@ -194,13 +197,13 @@ export function LeaseForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Przedmiot i strony</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionSubject}</h2>
 
           <FormField
             id="propertyId"
-            label="Nieruchomość"
+            label={t.property}
             error={errors.propertyId?.message}
-            hint="Wybór nieruchomości podpowie czynsz z ceny wywoławczej."
+            hint={t.propertyHint}
           >
             <Controller
               control={control}
@@ -212,12 +215,12 @@ export function LeaseForm({
                   onChange={(event) => onPropertyChange(event.target.value)}
                   disabled={isSubmitting}
                 >
-                  <option value="">Wybierz nieruchomość</option>
+                  <option value="">{t.choosePropertyOption}</option>
                   {properties.map((property) => (
                     <option key={property.id} value={property.id}>
                       {property.label}
                       {property.city ? ` · ${property.city}` : ""}
-                      {property.status === "OCCUPIED" ? " (wynajęta)" : ""}
+                      {property.status === "OCCUPIED" ? misc.propertyOccupiedOption : ""}
                     </option>
                   ))}
                 </Select>
@@ -228,9 +231,9 @@ export function LeaseForm({
           {availableRooms.length > 0 ? (
             <FormField
               id="roomId"
-              label="Pokój"
+              label={t.room}
               error={errors.roomId?.message}
-              hint="Zostaw puste, jeśli wynajmujesz całą nieruchomość jednej osobie lub grupie."
+              hint={t.roomHint}
             >
               <Controller
                 control={control}
@@ -242,13 +245,13 @@ export function LeaseForm({
                     onChange={(event) => onRoomChange(event.target.value)}
                     disabled={isSubmitting}
                   >
-                    <option value="">Cała nieruchomość</option>
+                    <option value="">{t.wholeProperty}</option>
                     {availableRooms.map((room) => (
                       <option key={room.id} value={room.id}>
                         {room.name}
-                        {room.status === "OCCUPIED" ? " (zajęty)" : ""}
+                        {room.status === "OCCUPIED" ? misc.roomOccupiedOption : ""}
                         {room.monthlyRentGrosze
-                          ? ` · ${formatAmount(room.monthlyRentGrosze)} zł`
+                          ? ` · ${formatMoney(room.monthlyRentGrosze, locale)}`
                           : ""}
                       </option>
                     ))}
@@ -260,9 +263,9 @@ export function LeaseForm({
 
           <FormField
             id="tenantIds"
-            label="Najemcy"
+            label={t.tenants}
             error={errors.tenantIds?.message}
-            hint="Pierwszy z listy jest głównym najemcą. To on dostaje faktury."
+            hint={t.tenantsHint}
           >
             <Controller
               control={control}
@@ -276,11 +279,13 @@ export function LeaseForm({
                           key={tenant.id}
                           className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent"
                         >
-                          {index === 0 ? <Badge tone="accent">główny</Badge> : null}
+                          {index === 0 ? <Badge tone="accent">{misc.leadTenant}</Badge> : null}
                           {tenant.firstName} {tenant.lastName}
                           <button
                             type="button"
-                            aria-label={`Usuń ${tenant.firstName} ${tenant.lastName}`}
+                            aria-label={fill(misc.removeTenant, {
+                              tenant: `${tenant.firstName} ${tenant.lastName}`,
+                            })}
                             onClick={() =>
                               field.onChange(field.value.filter((id) => id !== tenant.id))
                             }
@@ -303,8 +308,8 @@ export function LeaseForm({
                   >
                     <option value="">
                       {availableTenants.length === 0
-                        ? "Wszyscy najemcy dodani"
-                        : "Dodaj najemcę"}
+                        ? t.allTenantsAdded
+                        : t.addTenant}
                     </option>
                     {availableTenants.map((tenant) => (
                       <option key={tenant.id} value={tenant.id}>
@@ -322,7 +327,7 @@ export function LeaseForm({
               w profilu najemcy było widać zanim wygenerujemy PDF. */}
           {selectedTenants.length > 0 ? (
             <div className="rounded-control bg-surface-alt p-3 text-xs">
-              <p className="mb-1.5 font-semibold text-fg">Dane na umowę</p>
+              <p className="mb-1.5 font-semibold text-fg">{t.contractData}</p>
               {selectedTenants.map((tenant) => {
                 const address = [tenant.street, [tenant.postalCode, tenant.city].filter(Boolean).join(" ")]
                   .filter((part) => part && part.trim() !== "")
@@ -332,7 +337,7 @@ export function LeaseForm({
                     {tenant.firstName} {tenant.lastName}:{" "}
                     {address || (
                       <span className="text-warn">
-                        brak adresu, uzupełnij w karcie najemcy
+                        {t.missingAddress}
                       </span>
                     )}
                   </p>
@@ -345,10 +350,10 @@ export function LeaseForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Okres i status</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionPeriod}</h2>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id="startDate" label="Data rozpoczęcia" error={errors.startDate?.message}>
+            <FormField id="startDate" label={t.startDate} error={errors.startDate?.message}>
               <DateInput
                 {...fieldAria("startDate", { error: errors.startDate?.message })}
                 disabled={isSubmitting}
@@ -358,9 +363,9 @@ export function LeaseForm({
 
             <FormField
               id="endDate"
-              label="Data zakończenia"
+              label={t.endDate}
               error={errors.endDate?.message}
-              hint="Puste = czas nieokreślony."
+              hint={t.endDateHint}
             >
               <DateInput
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
@@ -369,7 +374,7 @@ export function LeaseForm({
               />
             </FormField>
 
-            <FormField id="status" label="Status" error={errors.status?.message}>
+            <FormField id="status" label={t.status} error={errors.status?.message}>
               <Select
                 {...fieldAria("status", { error: errors.status?.message })}
                 disabled={isSubmitting}
@@ -385,9 +390,9 @@ export function LeaseForm({
 
             <FormField
               id="number"
-              label="Numer umowy"
+              label={t.number}
               error={errors.number?.message}
-              hint="Opcjonalny."
+              hint={t.numberHint}
             >
               <Input
                 {...fieldAria("number", { error: errors.number?.message })}
@@ -401,10 +406,10 @@ export function LeaseForm({
 
       <Card>
         <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Czynsz i rozliczenia</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.sectionRent}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="rentGrosze" label="Czynsz miesięczny" error={errors.rentGrosze?.message}>
+            <FormField id="rentGrosze" label={t.rent} error={errors.rentGrosze?.message}>
               <Input
                 {...fieldAria("rentGrosze", { error: errors.rentGrosze?.message })}
                 inputMode="decimal"
@@ -413,7 +418,7 @@ export function LeaseForm({
               />
             </FormField>
 
-            <FormField id="depositGrosze" label="Kaucja" error={errors.depositGrosze?.message}>
+            <FormField id="depositGrosze" label={t.deposit} error={errors.depositGrosze?.message}>
               <Input
                 {...fieldAria("depositGrosze", { error: errors.depositGrosze?.message })}
                 inputMode="decimal"
@@ -424,7 +429,7 @@ export function LeaseForm({
 
             <FormField
               id="utilitiesMode"
-              label="Rozliczenie mediów"
+              label={t.utilities}
               error={errors.utilitiesMode?.message}
               hint={utilitiesModeHints(d)[utilitiesMode ?? "FLAT_RATE"]}
             >
@@ -452,7 +457,7 @@ export function LeaseForm({
             {chargesAdvance ? (
               <FormField
                 id="utilitiesAdvanceGrosze"
-                label="Zaliczka na media"
+                label={t.utilitiesAdvance}
                 error={errors.utilitiesAdvanceGrosze?.message}
               >
                 <Input
@@ -468,9 +473,9 @@ export function LeaseForm({
 
             <FormField
               id="billingDay"
-              label="Dzień naliczania"
+              label={t.billingDay}
               error={errors.billingDay?.message}
-              hint="1–28, żeby luty nie wymagał wyjątku."
+              hint={t.billingDayHint}
             >
               <Input
                 {...fieldAria("billingDay", { error: errors.billingDay?.message })}
@@ -489,9 +494,9 @@ export function LeaseForm({
             */}
             <FormField
               id="billingStartsAt"
-              label="Nie naliczaj przed"
+              label={t.billingStart}
               error={errors.billingStartsAt?.message}
-              hint="Dla umów przeniesionych z innego programu. Wpisz pierwszy dzień miesiąca, od którego rozliczasz najemcę w Rentiksie. Puste = od początku umowy."
+              hint={t.billingStartHint}
             >
               <DateInput
                 {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}
@@ -502,7 +507,7 @@ export function LeaseForm({
 
             <FormField
               id="paymentTermDays"
-              label="Termin płatności (dni)"
+              label={t.paymentTerm}
               error={errors.paymentTermDays?.message}
             >
               <Input
@@ -522,13 +527,13 @@ export function LeaseForm({
             o papier — nie przy calym portfelu naraz.
           */}
           <CheckboxField
-            label="Wysyłaj rachunki mailem"
-            hint="Wyłącz, jeśli ten najemca ma dostawać dokumenty poza systemem. Ręczna wysyłka z widoku rachunku pozostaje dostępna."
+            label={t.sendByEmail}
+            hint={t.sendByEmailHint}
             disabled={isSubmitting}
             {...register("sendInvoicesByEmail")}
           />
 
-          <FormField id="notes" label="Ustalenia dodatkowe" error={errors.notes?.message}>
+          <FormField id="notes" label={t.extras} error={errors.notes?.message}>
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
               disabled={isSubmitting}
@@ -543,14 +548,14 @@ export function LeaseForm({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              Zapisywanie…
+              {t.saving}
             </>
           ) : (
-            "Utwórz umowę"
+            t.create
           )}
         </Button>
         <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => router.back()}>
-          Anuluj
+          {d.panel.common.cancel}
         </Button>
       </div>
     </form>

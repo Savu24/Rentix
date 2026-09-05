@@ -9,8 +9,12 @@ import {
 import { requireOwnerSession } from "@/lib/auth/session";
 import { formatAmount } from "@/lib/money";
 import { getProperty } from "@/lib/properties/service";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+import { fill } from "@/lib/i18n/format";
 
-export const metadata: Metadata = { title: "Ceny pokoi" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.panelMisc.roomPricingShort };
+}
 
 /**
  * Drugi krok zakładania nieruchomości: wpisanie cen za pokoje.
@@ -23,6 +27,8 @@ export default async function RoomPricingPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
+  const misc = d.panel.panelMisc;
   const session = await requireOwnerSession();
   const { id } = await params;
 
@@ -35,7 +41,7 @@ export default async function RoomPricingPage({
   const rooms: PricedRoom[] = property.rooms.map((room) => ({
     id: room.id,
     name: room.name,
-    rent: room.monthlyRentGrosze != null ? formatAmount(room.monthlyRentGrosze) : "",
+    rent: room.monthlyRentGrosze != null ? formatAmount(room.monthlyRentGrosze, locale) : "",
   }));
 
   return (
@@ -43,12 +49,14 @@ export default async function RoomPricingPage({
       <div className="flex flex-col gap-2">
         <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-good-soft px-2.5 py-1 text-xs font-medium text-good">
           <Check className="h-3 w-3" aria-hidden />
-          Nieruchomość „{property.name}” utworzona
+          {fill(misc.propertyCreated, { name: property.name })}
         </p>
 
-        <h1 className="r-display text-[26px] leading-tight text-fg">Ceny za pokoje</h1>
+        <h1 className="r-display text-[26px] leading-tight text-fg">
+          {misc.roomPricingTitle}
+        </h1>
         <p className="text-sm text-muted">
-          Nazwij pokoje i ustal stawki. Potem przypiszesz do nich najemców.
+          {misc.roomPricingLead}
         </p>
       </div>
 

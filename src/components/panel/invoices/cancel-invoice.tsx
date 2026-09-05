@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Anulowanie dokumentu.
@@ -16,6 +17,8 @@ import { api } from "@/lib/api/client";
  * do użytkownika zamiast być tłumaczony po raz drugi tutaj.
  */
 export function CancelInvoice({ invoiceId }: { invoiceId: string }) {
+  const { d } = useI18n();
+  const t = d.panel.panelMisc.cancelInvoice;
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -43,7 +46,7 @@ export function CancelInvoice({ invoiceId }: { invoiceId: string }) {
         {error ? <Alert tone="error">{error}</Alert> : null}
         <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
           <Ban className="h-4 w-4" aria-hidden />
-          Anuluj dokument
+          {t.button}
         </Button>
       </div>
     );
@@ -54,8 +57,7 @@ export function CancelInvoice({ invoiceId }: { invoiceId: string }) {
       {error ? <Alert tone="error">{error}</Alert> : null}
 
       <p className="text-xs text-muted">
-        Dokument zostanie oznaczony jako anulowany. Numer zostaje zajęty, żeby w rejestrze
-        nie powstała dziura.
+        {t.confirm}
       </p>
 
       <div className="flex flex-wrap gap-2.5">
