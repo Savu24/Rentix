@@ -528,6 +528,31 @@ export const pl = {
       chartNoValue: "brak",
     },
 
+    tenantPortal: {
+      title: "Twój najem",
+      signOut: "Wyloguj",
+      notLinkedTitle: "Twoje konto nie jest jeszcze powiązane z umową",
+      notLinkedLead:
+        "Poproś wynajmującego o przypisanie konta do Twojego profilu najemcy. Wtedy zobaczysz tu umowę i rozliczenia.",
+      lead: "Twoja umowa i rozliczenia u {landlord}.",
+      outstanding: "Do zapłaty: {amount}. Szczegóły w rozliczeniach poniżej.",
+      settled: "Nie masz zaległości. Wszystko rozliczone.",
+      noLeaseTitle: "Nie masz jeszcze żadnej umowy",
+      noLeaseLead: "Gdy wynajmujący wystawi umowę, pojawi się tutaj razem z rozliczeniami.",
+      rent: "Czynsz miesięczny",
+      period: "Okres najmu",
+      openEnded: "czas nieokreślony",
+      utilities: "Rozliczenie mediów",
+      utilitiesAdvance: "Zaliczka na media",
+      perMonthSuffix: "{amount} / mies.",
+      paymentTerm: "Termin płatności",
+      paymentTermDays: "{days} dni od wystawienia",
+      invoices: "Rozliczenia",
+      noInvoices: "Nie wystawiono jeszcze żadnego rozliczenia.",
+      dueOn: "termin {date}",
+      landlord: "Wynajmujący",
+    },
+
     dateInput: {
       placeholder: "dd.mm.rrrr",
       openCalendar: "Wybierz z kalendarza",
@@ -622,6 +647,54 @@ export const pl = {
       fields: {
         organizationName: "Nazwa",
         userName: "Imię i nazwisko",
+      },
+      pages: {
+        account: "Ustawienia konta",
+        notifications: "Ustawienia powiadomień",
+        messages: "Ustawienia wiadomości",
+        sellerIncomplete:
+          "Uzupełnij adres wystawcy. Bez niego rachunki i umowy wychodzą z samą nazwą, a to dokumenty, które trafiają do najemcy i do księgowości.",
+        messagesLead:
+          "Piszesz zwykłym tekstem. Układ, kolory i tabela z kwotą są po naszej stronie, żeby wiadomość nie rozsypała się w Outlooku. Puste pole zostawia tekst domyślny.",
+      },
+      profile: {
+        title: "Twój profil",
+        lead: "Widoczne tylko dla Ciebie w panelu.",
+        saved: "Zapisano profil.",
+        name: "Imię i nazwisko",
+        phone: "Telefon",
+        email: "E-mail",
+        emailHint: "Służy do logowania. Zmiana adresu wymaga kontaktu z pomocą.",
+      },
+      password: {
+        title: "Hasło",
+        changed: "Hasło zostało zmienione.",
+        current: "Obecne hasło",
+        new: "Nowe hasło",
+        newHint: "Co najmniej 10 znaków, w tym wielka litera, mała litera i cyfra.",
+      },
+      logo: {
+        title: "Logo na dokumentach",
+        lead: "Pojawia się w nagłówku rachunków i faktur. Nieobowiązkowe. Bez niego dokument wygląda tak jak teraz.",
+        alt: "Logo wystawcy",
+        empty: "Brak logo",
+        readError: "Nie udało się odczytać pliku. Spróbuj wybrać go jeszcze raz.",
+        change: "Zmień logo",
+        upload: "Wgraj logo",
+      },
+      notifications: {
+        title: "Nadawca i terminy",
+        lead: "Kiedy przypomnienia wychodzą i pod jaką nazwą widzi je najemca.",
+        saved: "Zapisano ustawienia powiadomień.",
+        senderName: "Nazwa nadawcy",
+        reminderDays: "Przypomnienie na ile dni przed terminem",
+        overdueDays: "Wezwanie po terminie co ile dni",
+        overdueHint: "Codzienne wezwania trafiają do spamu i przestają docierać.",
+        noContactEmail:
+          "Nie masz adresu kontaktowego. Odpowiedzi najemców nie mają dokąd trafić. Uzupełnij go w zakładce Organizacja.",
+        togglesTitle: "Co wychodzi automatycznie",
+        togglesLead:
+          "Wyłączone powiadomienie nie pójdzie nocnym przebiegiem. Ręcznej wysyłki dokumentu z listy rachunków nie blokuje. To osobne, świadome kliknięcie.",
       },
       seller: {
         title: "Dane wystawcy",

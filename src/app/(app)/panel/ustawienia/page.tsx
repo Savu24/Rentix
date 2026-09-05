@@ -9,6 +9,7 @@ import {
   getOrganizationLogo,
   isSellerComplete,
 } from "@/lib/organizations/service";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
 export default async function SettingsOrganizationPage() {
   const session = await requireOwnerSession("/panel/ustawienia");
@@ -23,8 +24,7 @@ export default async function SettingsOrganizationPage() {
     <div className="flex flex-col gap-5">
       {!isSellerComplete(organization) ? (
         <Alert tone="warning">
-          Uzupełnij adres wystawcy. Bez niego rachunki i umowy wychodzą z samą nazwą, a to
-          dokumenty, które trafiają do najemcy i do księgowości.
+          {(await panelDictionary()).panel.settings.pages.sellerIncomplete}
         </Alert>
       ) : null}
 

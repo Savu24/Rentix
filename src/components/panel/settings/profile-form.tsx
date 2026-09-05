@@ -17,7 +17,7 @@ import {
   type ProfileSettingsInput,
   type ProfileSettingsOutput,
 } from "@/lib/validations/settings";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export function ProfileForm({
   email,
   defaultValues,
@@ -25,6 +25,8 @@ export function ProfileForm({
   email: string;
   defaultValues: ProfileSettingsInput;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.settings.profile;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -64,16 +66,16 @@ export function ProfileForm({
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Twój profil</h2>
-          <p className="mt-0.5 text-sm text-muted">Widoczne tylko dla Ciebie w panelu.</p>
+          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
+          <p className="mt-0.5 text-sm text-muted">{t.lead}</p>
         </div>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
-        {saved ? <Alert tone="success">Zapisano profil.</Alert> : null}
+        {saved ? <Alert tone="success">{t.saved}</Alert> : null}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="profile-name" label="Imię i nazwisko" error={errors.name?.message}>
+            <FormField id="profile-name" label={t.name} error={errors.name?.message}>
               <Input
                 {...fieldAria("profile-name", { error: errors.name?.message })}
                 disabled={isSubmitting}
@@ -81,7 +83,7 @@ export function ProfileForm({
               />
             </FormField>
 
-            <FormField id="profile-phone" label="Telefon" error={errors.phone?.message}>
+            <FormField id="profile-phone" label={t.phone} error={errors.phone?.message}>
               <Input
                 {...fieldAria("profile-phone", { error: errors.phone?.message })}
                 disabled={isSubmitting}
@@ -94,8 +96,8 @@ export function ProfileForm({
               adresu, więc pokazujemy go tylko do odczytu. */}
           <FormField
             id="profile-email"
-            label="E-mail"
-            hint="Służy do logowania. Zmiana adresu wymaga kontaktu z pomocą."
+            label={t.email}
+            hint={t.emailHint}
           >
             <Input id="profile-email" value={email} readOnly disabled />
           </FormField>

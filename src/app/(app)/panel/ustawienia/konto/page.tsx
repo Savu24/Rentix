@@ -7,8 +7,11 @@ import { ProfileForm } from "@/components/panel/settings/profile-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { accountDeletionSummary } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
-export const metadata: Metadata = { title: "Ustawienia konta" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.settings.pages.account };
+}
 
 export default async function SettingsAccountPage() {
   const session = await requireOwnerSession("/panel/ustawienia/konto");

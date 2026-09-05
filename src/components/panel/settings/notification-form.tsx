@@ -17,7 +17,7 @@ import {
   type NotificationSettingsInput,
   type NotificationSettingsOutput,
 } from "@/lib/validations/settings";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 /**
  * Rytm przypominania i nazwa nadawcy.
  *
@@ -34,6 +34,8 @@ export function NotificationForm({
   organizationName: string;
   contactEmail: string | null;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.settings.notifications;
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
@@ -74,19 +76,19 @@ export function NotificationForm({
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Nadawca i terminy</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
             Kiedy przypomnienia wychodzą i pod jaką nazwą widzi je najemca.
           </p>
         </div>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
-        {saved ? <Alert tone="success">Zapisano ustawienia powiadomień.</Alert> : null}
+        {saved ? <Alert tone="success">{t.saved}</Alert> : null}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <FormField
             id="notif-senderName"
-            label="Nazwa nadawcy"
+            label={t.senderName}
             error={errors.senderName?.message}
             hint={`Widoczna w skrzynce najemcy. Puste pole = „${organizationName}".`}
           >
@@ -100,7 +102,7 @@ export function NotificationForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="notif-reminderDaysBefore"
-              label="Przypomnienie na ile dni przed terminem"
+              label={t.reminderDays}
               error={errors.reminderDaysBefore?.message}
             >
               <Input
@@ -118,9 +120,9 @@ export function NotificationForm({
 
             <FormField
               id="notif-overdueRepeatDays"
-              label="Wezwanie po terminie co ile dni"
+              label={t.overdueDays}
               error={errors.overdueRepeatDays?.message}
-              hint="Codzienne wezwania trafiają do spamu i przestają docierać."
+              hint={t.overdueHint}
             >
               <Input
                 {...fieldAria("notif-overdueRepeatDays", {

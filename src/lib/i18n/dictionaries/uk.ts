@@ -545,6 +545,31 @@ export const uk: Dictionary = {
       chartNoValue: "none",
     },
 
+    tenantPortal: {
+      title: "Your tenancy",
+      signOut: "Sign out",
+      notLinkedTitle: "Your account is not linked to a tenancy yet",
+      notLinkedLead:
+        "Ask your landlord to link this account to your tenant record. Your tenancy and invoices will show up here once they do.",
+      lead: "Your tenancy and invoices with {landlord}.",
+      outstanding: "Outstanding: {amount}. The detail is in the invoices below.",
+      settled: "Nothing outstanding. You are all settled.",
+      noLeaseTitle: "No tenancy yet",
+      noLeaseLead: "Once your landlord sets up the tenancy, it will appear here with the invoices.",
+      rent: "Monthly rent",
+      period: "Tenancy period",
+      openEnded: "no end date",
+      utilities: "Utilities",
+      utilitiesAdvance: "Utilities allowance",
+      perMonthSuffix: "{amount} / month",
+      paymentTerm: "Payment term",
+      paymentTermDays: "{days} days from the invoice date",
+      invoices: "Invoices",
+      noInvoices: "No invoices have been issued yet.",
+      dueOn: "due {date}",
+      landlord: "Landlord",
+    },
+
     dateInput: {
       /*
         Ten sam porządek co po polsku — dzień, miesiąc, rok — więc pomyłka
@@ -654,6 +679,54 @@ export const uk: Dictionary = {
       fields: {
         organizationName: "Name",
         userName: "Full name",
+      },
+      pages: {
+        account: "Account settings",
+        notifications: "Notification settings",
+        messages: "Message settings",
+        sellerIncomplete:
+          "Add your address. Without it, invoices go out with your name only — and those are the documents your tenant and your accountant see.",
+        messagesLead:
+          "Write in plain text. The layout, colours and the amounts table are on our side, so the message does not fall apart in Outlook. An empty field keeps the default text.",
+      },
+      profile: {
+        title: "Your profile",
+        lead: "Only you see this in the dashboard.",
+        saved: "Profile saved.",
+        name: "Full name",
+        phone: "Phone",
+        email: "Email",
+        emailHint: "This is your login. Changing it needs a word with support.",
+      },
+      password: {
+        title: "Password",
+        changed: "Your password has been changed.",
+        current: "Current password",
+        new: "New password",
+        newHint: "At least 10 characters, with an upper-case letter, a lower-case letter and a digit.",
+      },
+      logo: {
+        title: "Logo on documents",
+        lead: "Appears in the header of your rent invoices. Optional — without it the document looks exactly as it does now.",
+        alt: "Your logo",
+        empty: "No logo",
+        readError: "We could not read that file. Try picking it again.",
+        change: "Change logo",
+        upload: "Upload logo",
+      },
+      notifications: {
+        title: "Sender and timing",
+        lead: "When reminders go out, and the name the tenant sees them under.",
+        saved: "Notification settings saved.",
+        senderName: "Sender name",
+        reminderDays: "Days before the due date to remind",
+        overdueDays: "Days between chasers after the due date",
+        overdueHint: "Daily chasers end up in spam and stop getting through.",
+        noContactEmail:
+          "You have no contact address, so tenant replies have nowhere to go. Add one under Organisation.",
+        togglesTitle: "What goes out automatically",
+        togglesLead:
+          "A notification switched off will not go out in the nightly run. It does not block sending a document by hand from the invoice list — that is a separate, deliberate click.",
       },
       seller: {
         title: "Your details",

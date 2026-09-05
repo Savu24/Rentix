@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 import {
   NOTIFICATION_TYPE_HINTS,
   NOTIFICATION_TYPE_LABELS,
@@ -25,6 +26,8 @@ export function NotificationToggles({
 }: {
   templates: Array<{ type: EditableNotificationType; enabled: boolean }>;
 }) {
+  const { d } = useI18n();
+  const t = d.panel.settings.notifications;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [saving, setSaving] = useState<EditableNotificationType | null>(null);
@@ -57,7 +60,7 @@ export function NotificationToggles({
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Co wychodzi automatycznie</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.togglesTitle}</h2>
           <p className="mt-0.5 text-sm text-muted">
             Wyłączone powiadomienie nie pójdzie nocnym przebiegiem. Ręcznej wysyłki dokumentu
             z listy rachunków nie blokuje. To osobne, świadome kliknięcie.

@@ -5,8 +5,11 @@ import { TemplateEditor } from "@/components/panel/settings/template-editor";
 import { Alert } from "@/components/ui/alert";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getNotificationPanelData } from "@/lib/notifications/service";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
-export const metadata: Metadata = { title: "Ustawienia wiadomości" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.settings.pages.messages };
+}
 
 export default async function SettingsMessagesPage() {
   const session = await requireOwnerSession("/panel/ustawienia/wiadomosci");
@@ -19,8 +22,7 @@ export default async function SettingsMessagesPage() {
   return (
     <div className="flex flex-col gap-5">
       <Alert tone="info">
-        Piszesz zwykłym tekstem. Układ, kolory i tabela z kwotą są po naszej stronie, żeby
-        wiadomość nie rozsypała się w Outlooku. Puste pole zostawia tekst domyślny.
+        {(await panelDictionary()).panel.settings.pages.messagesLead}
       </Alert>
 
       {data.templates.map((template) => (

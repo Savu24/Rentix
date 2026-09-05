@@ -12,7 +12,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 import { passwordChangeSchema, type PasswordChangeInput } from "@/lib/validations/settings";
-import { useValidationContext } from "@/lib/i18n/client";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
 /**
  * Zmiana hasła.
  *
@@ -20,6 +20,8 @@ import { useValidationContext } from "@/lib/i18n/client";
  * stronie, a odświeżenie tylko mignęłoby układem bez powodu.
  */
 export function PasswordForm() {
+  const { d } = useI18n();
+  const t = d.panel.settings.password;
   const v = useValidationContext();
   const [formError, setFormError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
@@ -61,20 +63,20 @@ export function PasswordForm() {
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Hasło</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
             Co najmniej 10 znaków, w tym wielka litera, mała litera i cyfra.
           </p>
         </div>
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
-        {changed ? <Alert tone="success">Hasło zostało zmienione.</Alert> : null}
+        {changed ? <Alert tone="success">{t.changed}</Alert> : null}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="currentPassword"
-              label="Obecne hasło"
+              label={t.current}
               error={errors.currentPassword?.message}
             >
               <Input
@@ -86,7 +88,7 @@ export function PasswordForm() {
               />
             </FormField>
 
-            <FormField id="newPassword" label="Nowe hasło" error={errors.newPassword?.message}>
+            <FormField id="newPassword" label={t.new} error={errors.newPassword?.message}>
               <Input
                 {...fieldAria("newPassword", { error: errors.newPassword?.message })}
                 type="password"

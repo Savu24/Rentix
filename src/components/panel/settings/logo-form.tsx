@@ -8,6 +8,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
+import { useI18n } from "@/lib/i18n/client";
 import { LOGO_MIME_TYPES, MAX_LOGO_BYTES } from "@/lib/validations/settings";
 
 /**
@@ -21,6 +22,8 @@ import { LOGO_MIME_TYPES, MAX_LOGO_BYTES } from "@/lib/validations/settings";
  * krzyczy o uzupełnienie, w przeciwieństwie do adresu wystawcy.
  */
 export function LogoForm({ logo }: { logo: string | null }) {
+  const { d } = useI18n();
+  const t = d.panel.settings.logo;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -50,7 +53,7 @@ export function LogoForm({ logo }: { logo: string | null }) {
 
     if (!dataUrl) {
       setBusy(false);
-      setError("Nie udało się odczytać pliku. Spróbuj wybrać go jeszcze raz.");
+      setError(t.readError);
       return;
     }
 
@@ -84,7 +87,7 @@ export function LogoForm({ logo }: { logo: string | null }) {
     <Card>
       <CardContent className="flex flex-col gap-4">
         <div>
-          <h2 className="text-[15px] font-semibold text-fg">Logo na dokumentach</h2>
+          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
           <p className="mt-0.5 text-sm text-muted">
             Pojawia się w nagłówku rachunków i faktur. Nieobowiązkowe. Bez niego dokument
             wygląda tak jak teraz.
@@ -97,9 +100,9 @@ export function LogoForm({ logo }: { logo: string | null }) {
           <div className="flex h-20 w-40 items-center justify-center rounded-control border border-border bg-surface-alt p-2">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element -- data URI, nie ma czego optymalizować
-              <img src={logo} alt="Logo wystawcy" className="max-h-full max-w-full object-contain" />
+              <img src={logo} alt={t.alt} className="max-h-full max-w-full object-contain" />
             ) : (
-              <span className="text-xs text-muted">Brak logo</span>
+              <span className="text-xs text-muted">{t.empty}</span>
             )}
           </div>
 
@@ -131,7 +134,7 @@ export function LogoForm({ logo }: { logo: string | null }) {
               ) : (
                 <ImagePlus className="h-4 w-4" aria-hidden />
               )}
-              {logo ? "Zmień logo" : "Wgraj logo"}
+              {logo ? t.change : t.upload}
             </Button>
 
             {logo ? (

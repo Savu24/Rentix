@@ -13,18 +13,15 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/auth/routes";
 import { INVOICE_STATUS_META } from "@/lib/invoices/status";
-import { formatPLN } from "@/lib/money";
+import { fill, formatDateIn } from "@/lib/i18n/format";
+import { formatMoney } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getTenantPortal } from "@/lib/tenants/portal";
 import { leaseStatusLabels, utilitiesModeLabels } from "@/lib/validations/lease";
 import { clientDictionary, getDictionary } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
+import { requestLocale } from "@/lib/i18n/server";
 import { tenantPortalLocale } from "@/lib/panel/dictionary";
-
-export const metadata: Metadata = { title: "Twój najem" };
-
-const dateFormat = new Intl.DateTimeFormat("pl-PL", { dateStyle: "long" });
-const shortDate = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
 
 /**
  * Panel najemcy — widok tylko do odczytu.
@@ -37,6 +34,15 @@ const shortDate = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium" });
  * bez sensu — a część pozycji prowadziłaby do danych, których nie ma prawa
  * zobaczyć.
  */
+/**
+ * Tytuł karty w języku wynajmującego — tego samego, w którym najemca ogląda
+ * resztę portalu. Sesji tu nie ma, więc bierzemy preferencję z żądania;
+ * rozjazd dotyczy wyłącznie tytułu karty i naprawia się po pierwszym wejściu.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getDictionary(await requestLocale()).panel.tenantPortal.title };
+}
+
 export default async function TenantPortalPage() {
   const session = await requireSession(ROUTES.tenantDashboard);
 
@@ -52,6 +58,7 @@ export default async function TenantPortalPage() {
   */
   const locale = tenantPortalLocale(portal?.landlord.locale);
   const d = getDictionary(locale);
+  const t = d.panel.tenantPortal;
 
   return (
     <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
@@ -64,7 +71,7 @@ export default async function TenantPortalPage() {
           <form action={signOutAction}>
             <Button type="submit" variant="secondary" size="sm">
               <LogOut className="h-4 w-4" aria-hidden />
-              <span className="hidden sm:inline">Wyloguj</span>
+              <span className="hidden sm:inline">{t.signOut}</span>
             </Button>
           </form>
         </div>
@@ -76,8 +83,8 @@ export default async function TenantPortalPage() {
           // Nie zgadujemy po adresie e-mail — powiązanie robi właściciel.
           <EmptyState
             icon={Home}
-            title="Twoje konto nie jest jeszcze powiązane z umową"
-            description="Poproś wynajmującego o przypisanie konta do Twojego profilu najemcy. Wtedy zobaczysz tu umowę i rozliczenia."
+            title={t.notLinkedTitle}
+            description={t.notLinkedLead}
           />
         ) : (
           <>
@@ -86,24 +93,25 @@ export default async function TenantPortalPage() {
                 Cześć, {portal.tenant.firstName}
               </h1>
               <p className="text-sm text-muted">
-                Twoja umowa i rozliczenia u {portal.landlord.name}.
+                {fill(t.lead, { landlord: portal.landlord.name })}
               </p>
             </div>
 
             {portal.outstandingGrosze > 0 ? (
               <Alert tone="warning">
-                Do zapłaty: <strong>{formatPLN(portal.outstandingGrosze)}</strong>. Szczegóły
-                w rozliczeniach poniżej.
+                {fill(t.outstanding, {
+                  amount: formatMoney(portal.outstandingGrosze, locale),
+                })}
               </Alert>
             ) : (
-              <Alert tone="success">Nie masz zaległości. Wszystko rozliczone.</Alert>
+              <Alert tone="success">{t.settled}</Alert>
             )}
 
             {portal.leases.length === 0 ? (
               <EmptyState
                 icon={Home}
-                title="Nie masz jeszcze żadnej umowy"
-                description="Gdy wynajmujący wystawi umowę, pojawi się tutaj razem z rozliczeniami."
+                title={t.noLeaseTitle}
+                description={t.noLeaseLead}
               />
             ) : (
               portal.leases.map((lease) => (
@@ -123,40 +131,44 @@ export default async function TenantPortalPage() {
                       </p>
 
                       <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">
-                        <Term label="Czynsz miesięczny" value={formatPLN(lease.rentGrosze)} />
+                        <Term label={t.rent} value={formatMoney(lease.rentGrosze, locale)} />
                         <Term
-                          label="Okres najmu"
-                          value={`${dateFormat.format(lease.startDate)} – ${
-                            lease.endDate ? dateFormat.format(lease.endDate) : "czas nieokreślony"
+                          label={t.period}
+                          value={`${formatDateIn(lease.startDate, locale, "long")} – ${
+                            lease.endDate
+                              ? formatDateIn(lease.endDate, locale, "long")
+                              : t.openEnded
                           }`}
                         />
                         <Term
-                          label="Rozliczenie mediów"
+                          label={t.utilities}
                           value={utilitiesModeLabels(d)[lease.utilitiesMode]}
                         />
                         {lease.utilitiesAdvanceGrosze > 0 ? (
                           <Term
-                            label="Zaliczka na media"
-                            value={`${formatPLN(lease.utilitiesAdvanceGrosze)} / mies.`}
+                            label={t.utilitiesAdvance}
+                            value={fill(t.perMonthSuffix, {
+                              amount: formatMoney(lease.utilitiesAdvanceGrosze, locale),
+                            })}
                           />
                         ) : null}
                         <Term
-                          label="Termin płatności"
-                          value={`${lease.paymentTermDays} dni od wystawienia`}
+                          label={t.paymentTerm}
+                          value={fill(t.paymentTermDays, { days: lease.paymentTermDays })}
                         />
                       </dl>
                     </CardContent>
                   </Card>
 
                   <h3 className="text-sm font-semibold text-fg">
-                    Rozliczenia{" "}
+                    {t.invoices}{" "}
                     <span className="font-normal text-muted">({lease.invoices.length})</span>
                   </h3>
 
                   {lease.invoices.length === 0 ? (
                     <Card>
                       <CardContent className="p-4 text-sm text-muted">
-                        Nie wystawiono jeszcze żadnego rozliczenia.
+                        {t.noInvoices}
                       </CardContent>
                     </Card>
                   ) : (
@@ -175,12 +187,14 @@ export default async function TenantPortalPage() {
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-fg">{invoice.number}</p>
                                 <p className="text-xs text-muted">
-                                  termin {shortDate.format(invoice.dueDate)}
+                                  {fill(t.dueOn, {
+                                    date: formatDateIn(invoice.dueDate, locale, "short"),
+                                  })}
                                 </p>
                               </div>
                               <Badge tone={meta.tone}>{meta.label}</Badge>
                               <p className="tabular w-24 text-right font-mono text-sm text-fg">
-                                {formatPLN(invoice.totalGrossGrosze)}
+                                {formatMoney(invoice.totalGrossGrosze, locale)}
                               </p>
                             </div>
                           );
@@ -194,7 +208,7 @@ export default async function TenantPortalPage() {
 
             <Card className="bg-surface-alt">
               <CardContent className="flex flex-col gap-1 p-4 text-xs">
-                <p className="text-[13px] font-semibold text-fg">Wynajmujący</p>
+                <p className="text-[13px] font-semibold text-fg">{t.landlord}</p>
                 <p className="text-muted">{portal.landlord.name}</p>
                 {portal.landlord.street ? (
                   <p className="text-muted">

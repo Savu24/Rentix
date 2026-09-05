@@ -5,8 +5,11 @@ import { NotificationForm } from "@/components/panel/settings/notification-form"
 import { NotificationToggles } from "@/components/panel/settings/notification-toggles";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getNotificationPanelData } from "@/lib/notifications/service";
+import { panelDictionary } from "@/lib/panel/dictionary";
 
-export const metadata: Metadata = { title: "Ustawienia powiadomień" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: (await panelDictionary()).panel.settings.pages.notifications };
+}
 
 export default async function SettingsNotificationsPage() {
   const session = await requireOwnerSession("/panel/ustawienia/powiadomienia");
