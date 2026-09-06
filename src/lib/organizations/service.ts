@@ -1,3 +1,4 @@
+import type { MembershipRole } from "@/generated/prisma/enums";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -108,47 +109,128 @@ export async function updateProfile(userId: string, data: ProfileSettingsOutput)
 }
 
 /**
- * Co dokładnie zniknie razem z kontem.
+ * Które organizacje znikają razem z kontem.
  *
- * Pokazujemy liczby przed usunięciem, a nie ogólne „stracisz swoje dane":
+ * Reguła jest jedna i mieszka tutaj, bo czyta ją i ostrzeżenie w panelu,
+ * i samo usuwanie: **organizację kasuje wyłącznie jej właściciel, i tylko
+ * wtedy, gdy nie zostaje w niej nikt inny**.
+ *
+ * Rola jest tu ważniejsza niż liczba osób. Bez niej współpracownik, który
+ * został sam w cudzej organizacji (właściciel skasował swoje konto
+ * wcześniej), zabierałby ze sobą cały cudzy najem — pięć lat dokumentów za
+ * cenę kliknięcia „usuń konto". Dane należą do organizacji, a nie do osoby,
+ * która akurat odchodzi.
+ */
+async function membershipsForDeletion(userId: string) {
+  return prisma.membership.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: {
+      role: true,
+      organization: {
+        select: { id: true, name: true, _count: { select: { members: true } } },
+      },
+    },
+  });
+}
+
+/** Czy to członkostwo zabiera organizację ze sobą — patrz komentarz wyżej. */
+function takesOrganizationDown(membership: {
+  role: MembershipRole;
+  organization: { _count: { members: number } };
+}): boolean {
+  return membership.role === "OWNER" && membership.organization._count.members <= 1;
+}
+
+/** Ile czego zniknie razem z organizacją. */
+export type DeletionCounts = {
+  properties: number;
+  tenants: number;
+  leases: number;
+  invoices: number;
+  payments: number;
+  expenses: number;
+};
+
+export type OrganizationDeletion = {
+  id: string;
+  name: string;
+  /** Znika razem z kontem. */
+  deleted: boolean;
+  /**
+   * Dlaczego zostaje. NULL, gdy znika.
+   *
+   * Dwa różne powody, dwa różne zdania: „ma innych członków" mówi, że dane
+   * mają dalej właściciela, a „nie jesteś jej właścicielem" — że nie Twoje
+   * i nie Tobie je kasować.
+   */
+  keptReason: "OTHER_MEMBERS" | "NOT_OWNER" | null;
+  /** Liczby tylko dla organizacji, która znika. */
+  counts: DeletionCounts | null;
+};
+
+/**
+ * Co dokładnie zniknie razem z kontem — dla ostrzeżenia przed usunięciem.
+ *
+ * Wypisujemy wszystkie organizacje konta, nie tylko tę, w której użytkownik
+ * akurat pracuje: odkąd jedno konto bywa w kilku, „stracisz swoje dane" nie
+ * mówi już, czyje dane i które. Przy tych, które znikają, idą liczby —
  * „5 nieruchomości, 29 dokumentów" zatrzymuje rękę, a zdanie ogólne nie.
  */
-export async function accountDeletionSummary(organizationId: string) {
-  const [organization, counts] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { name: true, _count: { select: { members: true } } },
-    }),
-    prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: {
-        _count: {
-          select: {
-            properties: true,
-            tenants: true,
-            leases: true,
-            invoices: true,
-            payments: true,
-            expenses: true,
-          },
+export async function accountDeletionSummary(
+  userId: string,
+): Promise<OrganizationDeletion[]> {
+  const memberships = await membershipsForDeletion(userId);
+
+  const doomed = memberships.filter(takesOrganizationDown);
+
+  // Liczby tylko dla znikających — reszta zostaje nietknięta, więc nie ma
+  // czego przy niej wypisywać.
+  const counts = await prisma.organization.findMany({
+    where: { id: { in: doomed.map((membership) => membership.organization.id) } },
+    select: {
+      id: true,
+      _count: {
+        select: {
+          properties: true,
+          tenants: true,
+          leases: true,
+          invoices: true,
+          payments: true,
+          expenses: true,
         },
       },
-    }),
-  ]);
+    },
+  });
 
-  if (!organization || !counts) return null;
+  const countsById = new Map(counts.map((row) => [row.id, row._count]));
 
-  return {
-    organizationName: organization.name,
-    /** Konto z innymi członkami usuwa tylko siebie — organizacja zostaje. */
-    isLastMember: organization._count.members <= 1,
-    properties: counts._count.properties,
-    tenants: counts._count.tenants,
-    leases: counts._count.leases,
-    invoices: counts._count.invoices,
-    payments: counts._count.payments,
-    expenses: counts._count.expenses,
-  };
+  return memberships.map((membership) => {
+    const deleted = takesOrganizationDown(membership);
+    const counted = countsById.get(membership.organization.id);
+
+    return {
+      id: membership.organization.id,
+      name: membership.organization.name,
+      deleted,
+      keptReason: deleted
+        ? null
+        : membership.organization._count.members > 1
+          ? ("OTHER_MEMBERS" as const)
+          : ("NOT_OWNER" as const),
+      counts:
+        deleted && counted
+          ? {
+              properties: counted.properties,
+              tenants: counted.tenants,
+              leases: counted.leases,
+              invoices: counted.invoices,
+              payments: counted.payments,
+              expenses: counted.expenses,
+            }
+          : null,
+    };
+  });
 }
 
 export type DeleteAccountResult =
@@ -158,13 +240,12 @@ export type DeleteAccountResult =
   | { ok: false; reason: "WRONG_PASSWORD" };
 
 /**
- * Usuwa konto wraz z każdą organizacją, w której jest ostatnim członkiem.
+ * Usuwa konto wraz z organizacjami, które prowadziło samo.
  *
- * Organizacji bywa kilka: jedno konto prowadzi własny najem i pomaga dwóm
- * innym wynajmującym. Te, w których zostaje ktoś jeszcze, tracą wyłącznie
- * to jedno członkostwo — dane należą do organizacji, nie do osoby, która
- * właśnie odchodzi. Te, w których nie zostaje nikt, znikają w całości:
- * inaczej po skasowaniu konta wisiałaby w bazie organizacja bez wejścia.
+ * Które to są, rozstrzyga `takesOrganizationDown` — ta sama funkcja, która
+ * wypisuje ostrzeżenie w panelu, żeby zapowiedź i skutek nie mogły się
+ * rozjechać. Krótko: własna organizacja bez innych członków znika,
+ * a wszędzie indziej znika samo członkostwo.
  *
  * Kasujemy jawnie, tabela po tabeli, zamiast liczyć na kaskadę z organizacji.
  * Powód jest twardy: `leases.propertyId` i `lease_tenants.tenantId` mają
@@ -190,23 +271,13 @@ export async function deleteAccount(
   const matches = await verifyPassword(data.currentPassword, user.passwordHash);
   if (!matches) return { ok: false, reason: "WRONG_PASSWORD" };
 
-  const memberships = await prisma.membership.findMany({
-    where: { userId },
-    select: { organizationId: true },
-  });
-
-  const counts = await prisma.membership.groupBy({
-    by: ["organizationId"],
-    where: { organizationId: { in: memberships.map((one) => one.organizationId) } },
-    _count: { _all: true },
-  });
-
-  const orphaned = counts
-    .filter((row) => row._count._all <= 1)
-    .map((row) => row.organizationId);
+  const memberships = await membershipsForDeletion(userId);
+  const doomed = memberships
+    .filter(takesOrganizationDown)
+    .map((membership) => membership.organization.id);
 
   await prisma.$transaction(async (tx) => {
-    for (const organizationId of orphaned) {
+    for (const organizationId of doomed) {
       const scope = { where: { organizationId } };
 
       // Kolejność: od liści do korzenia. Pozycje faktur i zdjęcia znikają
@@ -235,7 +306,7 @@ export async function deleteAccount(
     await tx.user.delete({ where: { id: userId } });
   });
 
-  return { ok: true, deletedOrganization: orphaned.length > 0 };
+  return { ok: true, deletedOrganization: doomed.length > 0 };
 }
 
 export type ChangePasswordResult =

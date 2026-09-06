@@ -1345,9 +1345,19 @@ export const pl = {
         title: "Usunięcie konta",
         lead: "Operacja nieodwracalna. Nie ma kosza ani kopii, z której dałoby się to cofnąć.",
         button: "Usuń konto",
-        organizationGoesToo: "Razem z kontem zniknie organizacja",
-        organizationStays:
-          "zostanie, bo ma innych członków. Usuwamy wyłącznie Twoje konto i dostęp do niej.",
+        /** Nagłówek listy organizacji — po jednym wierszu na każdą. */
+        organizationsHeading: "Co się stanie z Twoimi organizacjami",
+        /** Organizacja, którą prowadzisz sam: znika w całości. */
+        organizationGoes: "zniknie razem z kontem",
+        organizationGoesWith: "zniknie razem z kontem, a z nią: {losses}",
+        /** Zostaje, bo pracuje w niej ktoś jeszcze. */
+        organizationStaysMembers:
+          "zostanie, bo pracują w niej inne osoby. Znika tylko Twój dostęp.",
+        /** Zostaje, bo nie jest Twoja. */
+        organizationStaysNotOwner:
+          "zostanie, bo nie jesteś jej właścicielem. Znika tylko Twój dostęp — dane wynajmującego zostają nietknięte.",
+        /** Zdanie zamykające ostrzeżenie, gdy cokolwiek znika. */
+        noWayBack: "Tego nie da się cofnąć ani odzyskać.",
         password: "Hasło",
         confirmation: "Potwierdzenie",
       },
@@ -1442,7 +1452,6 @@ export const pl = {
       noInvoicesBefore: ", ale nie za okresy zaczynające się przed {date}.",
       dueOn: "termin {date}",
       paymentsCount: ["wpłata", "wpłaty", "wpłat"],
-      deleteAccountLosses: " i wszystko, co do niej należy: {losses}.",
       deleteAccountForever: "Usuń konto na zawsze",
       deleteAccountPhraseHint: "Przepisz: {phrase}",
       deleteAccountItems: {

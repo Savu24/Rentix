@@ -1369,9 +1369,13 @@ export const uk: Dictionary = {
         title: "Delete account",
         lead: "This cannot be undone. There is no bin and no copy to restore from.",
         button: "Delete account",
-        organizationGoesToo: "The organisation goes with the account",
-        organizationStays:
-          "stays, because it has other members. We only remove your account and your access to it.",
+        organizationsHeading: "What happens to your organisations",
+        organizationGoes: "goes with the account",
+        organizationGoesWith: "goes with the account, and with it: {losses}",
+        organizationStaysMembers: "stays, because other people work in it. Only your access goes.",
+        organizationStaysNotOwner:
+          "stays, because you are not its owner. Only your access goes; the landlord's data is untouched.",
+        noWayBack: "This cannot be undone or recovered.",
         password: "Password",
         confirmation: "Confirmation",
       },
@@ -1467,7 +1471,6 @@ export const uk: Dictionary = {
       noInvoicesBefore: ", but not for periods starting before {date}.",
       dueOn: "due {date}",
       paymentsCount: ["payment", "payments"],
-      deleteAccountLosses: " and everything belonging to it: {losses}.",
       deleteAccountForever: "Delete the account for good",
       deleteAccountPhraseHint: "Type it out: {phrase}",
       deleteAccountItems: {

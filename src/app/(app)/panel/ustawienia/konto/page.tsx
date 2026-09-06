@@ -18,12 +18,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SettingsAccountPage() {
   const session = await requireOwnerSession("/panel/ustawienia/konto");
 
-  const [user, deletion, plan] = await Promise.all([
+  const [user, organizations, plan] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { email: true, name: true, phone: true, passwordHash: true },
     }),
-    accountDeletionSummary(session.user.organizationId),
+    accountDeletionSummary(session.user.id),
     organizationPlan(session.user.organizationId),
   ]);
 
@@ -43,7 +43,7 @@ export default async function SettingsAccountPage() {
       {user.passwordHash ? <PasswordForm /> : null}
 
       {/* Usunięcie konta na końcu strony: nie sąsiaduje z żadnym „Zapisz". */}
-      {user.passwordHash && deletion ? <DeleteAccount summary={deletion} /> : null}
+      {user.passwordHash ? <DeleteAccount organizations={organizations} /> : null}
     </div>
   );
 }

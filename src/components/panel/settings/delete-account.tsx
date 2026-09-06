@@ -10,20 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
+import type { OrganizationDeletion } from "@/lib/organizations/service";
 import { accountDeletePhrase } from "@/lib/validations/settings";
 import { useI18n, useValidationContext } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
-export type DeletionSummary = {
-  organizationName: string;
-  isLastMember: boolean;
-  properties: number;
-  tenants: number;
-  leases: number;
-  invoices: number;
-  payments: number;
-  expenses: number;
-};
-
 /**
  * Usunięcie konta.
  *
@@ -33,8 +23,17 @@ export type DeletionSummary = {
  * Przed potwierdzeniem pokazujemy, co dokładnie zniknie, z liczbami. Ogólne
  * „stracisz swoje dane" nikogo nie zatrzymuje; „29 dokumentów rozliczeniowych"
  * zatrzymuje.
+ *
+ * Odkąd jedno konto bywa w kilku organizacjach, ostrzeżenie wypisuje je
+ * wszystkie, po jednym wierszu na każdą: która znika, a która zostaje i
+ * dlaczego. Jedno zdanie o „swojej organizacji" byłoby przy trzech kontach
+ * zwyczajnie nieprawdziwe.
  */
-export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
+export function DeleteAccount({
+  organizations,
+}: {
+  organizations: OrganizationDeletion[];
+}) {
   const { d, plural } = useI18n();
   const t = d.panel.panelMisc.deleteAccount;
   const misc = d.panel.panelMisc;
@@ -46,18 +45,37 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
   const [confirmation, setConfirmation] = useState("");
 
   const nouns = misc.deleteAccountItems;
-  const items: Array<[number, readonly string[]]> = [
-    [summary.properties, nouns.properties],
-    [summary.tenants, nouns.tenants],
-    [summary.leases, nouns.leases],
-    [summary.invoices, nouns.invoices],
-    [summary.payments, nouns.payments],
-    [summary.expenses, nouns.expenses],
-  ];
 
-  const losses = items
-    .filter(([count]) => count > 0)
-    .map(([count, forms]) => `${count} ${plural(count, forms)}`);
+  /** „5 nieruchomości, 29 dokumentów rozliczeniowych" — bez pustych pozycji. */
+  function lossesOf(counts: NonNullable<OrganizationDeletion["counts"]>): string {
+    const items: Array<[number, readonly string[]]> = [
+      [counts.properties, nouns.properties],
+      [counts.tenants, nouns.tenants],
+      [counts.leases, nouns.leases],
+      [counts.invoices, nouns.invoices],
+      [counts.payments, nouns.payments],
+      [counts.expenses, nouns.expenses],
+    ];
+
+    return items
+      .filter(([count]) => count > 0)
+      .map(([count, forms]) => `${count} ${plural(count, forms)}`)
+      .join(", ");
+  }
+
+  /** Co się stanie z jedną organizacją — zdanie stojące za jej nazwą. */
+  function fateOf(organization: OrganizationDeletion): string {
+    if (!organization.deleted) {
+      return organization.keptReason === "OTHER_MEMBERS"
+        ? t.organizationStaysMembers
+        : t.organizationStaysNotOwner;
+    }
+
+    const losses = organization.counts ? lossesOf(organization.counts) : "";
+    return losses ? fill(t.organizationGoesWith, { losses }) : t.organizationGoes;
+  }
+
+  const anythingGoes = organizations.some((organization) => organization.deleted);
 
   async function submit() {
     setBusy(true);
@@ -101,20 +119,21 @@ export function DeleteAccount({ summary }: { summary: DeletionSummary }) {
             {error ? <Alert tone="error">{error}</Alert> : null}
 
             <Alert tone="error">
-              {summary.isLastMember ? (
-                <>
-                  {t.organizationGoesToo} <strong>{summary.organizationName}</strong>
-                  {losses.length > 0 ? (
-                    <>{fill(misc.deleteAccountLosses, { losses: losses.join(", ") })}</>
-                  ) : (
-                    "."
-                  )}
-                </>
-              ) : (
-                <>
-                  <strong>{summary.organizationName}</strong> {t.organizationStays}
-                </>
-              )}
+              <p className="font-semibold">{t.organizationsHeading}</p>
+
+              {/* Wiersz na organizację, w kolejności dołączania. Lista, a nie
+                  zdanie: przy trzech organizacjach zdanie robi się nie do
+                  przeczytania, a to jest ekran, na którym trzeba zrozumieć
+                  wszystko za pierwszym razem. */}
+              <ul className="mt-1.5 flex flex-col gap-1">
+                {organizations.map((organization) => (
+                  <li key={organization.id}>
+                    <strong>{organization.name}</strong> — {fateOf(organization)}
+                  </li>
+                ))}
+              </ul>
+
+              {anythingGoes ? <p className="mt-1.5">{t.noWayBack}</p> : null}
             </Alert>
 
             <div className="grid gap-4 sm:grid-cols-2">
