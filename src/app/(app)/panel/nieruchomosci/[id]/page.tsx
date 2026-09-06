@@ -27,7 +27,6 @@ import type { Locale } from "@/lib/i18n/config";
 import { fill, formatDateIn } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
-import { formatDistance, mapsUrl } from "@/lib/properties/details";
 import { getProperty } from "@/lib/properties/service";
 import {
   heatingTypeLabels,
@@ -88,7 +87,6 @@ export default async function PropertyDetailPage({ params }: Params) {
   // z kreskami odsuwałaby tylko pokoje i koszty w dół.
   const hasAccess = Boolean(
     property.intercomCode ||
-      property.checkoutTime ||
       property.storageUnit ||
       property.bikeStorage ||
       property.wasteDisposal,
@@ -108,21 +106,8 @@ export default async function PropertyDetailPage({ params }: Params) {
       property.wifiPassword ||
       property.internetContractEndsAt,
   );
-  const hasPapers = Boolean(
-    property.landRegistryNumber ||
-      property.energyCertificateEp ||
-      property.energyCertificateExpiresAt ||
-      property.boilerModel ||
-      property.boilerInspectionAt ||
-      property.technicalInspectionAt,
-  );
-  const hasNeighbourhood = Boolean(
-    property.gpsCoordinates ||
-      property.transitLines ||
-      property.transitStopDistanceM !== null ||
-      property.universityDistanceM !== null ||
-      property.nearbyPlaces,
-  );
+  const hasPapers = Boolean(property.landRegistryNumber);
+  const hasNeighbourhood = Boolean(property.transitLines || property.nearbyPlaces);
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -267,7 +252,6 @@ export default async function PropertyDetailPage({ params }: Params) {
           icon={<KeyRound className="h-4 w-4 text-muted" aria-hidden />}
         >
           <DetailItem label={t.intercom} value={property.intercomCode} />
-          <DetailItem label={t.checkoutTime} value={property.checkoutTime} />
           <DetailItem label={t.storage} value={property.storageUnit} />
           <DetailItem label={t.bikeStorage} value={property.bikeStorage} />
           <DetailItem label={t.waste} value={property.wasteDisposal} />
@@ -319,41 +303,6 @@ export default async function PropertyDetailPage({ params }: Params) {
           icon={<ClipboardCheck className="h-4 w-4 text-muted" aria-hidden />}
         >
           <DetailItem label={t.landRegistry} value={property.landRegistryNumber} />
-          <DetailItem
-            label={t.energyIndex}
-            value={
-              property.energyCertificateEp
-                ? fill(t.energyUnit, {
-                    value:
-                      locale === "pl"
-                        ? property.energyCertificateEp.toFixed(2).replace(".", ",")
-                        : property.energyCertificateEp.toFixed(2),
-                  })
-                : null
-            }
-          />
-          <DateItem
-            label={t.certificateValidUntil}
-            date={property.energyCertificateExpiresAt}
-            now={now}
-            locale={locale}
-            overdueSuffix={t.overdue}
-          />
-          <DetailItem label={t.boilerModel} value={property.boilerModel} />
-          <DateItem
-            label={t.boilerInspection}
-            date={property.boilerInspectionAt}
-            now={now}
-            locale={locale}
-            overdueSuffix={t.overdue}
-          />
-          <DateItem
-            label={t.technicalInspection}
-            date={property.technicalInspectionAt}
-            now={now}
-            locale={locale}
-            overdueSuffix={t.overdue}
-          />
         </DetailSection>
       ) : null}
 
@@ -362,38 +311,7 @@ export default async function PropertyDetailPage({ params }: Params) {
           title={t.area}
           icon={<TreePine className="h-4 w-4 text-muted" aria-hidden />}
         >
-          {property.gpsCoordinates ? (
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <p className="text-xs text-muted">{t.gps}</p>
-              {/* Link do map, bo same liczby są tu bezużyteczne — z karty
-                  wychodzi się prosto do nawigacji. */}
-              <a
-                href={mapsUrl(property.gpsCoordinates)}
-                target="_blank"
-                rel="noreferrer"
-                className="truncate text-sm font-medium text-accent hover:underline"
-              >
-                {property.gpsCoordinates}
-              </a>
-            </div>
-          ) : null}
           <DetailItem label={t.transitLines} value={property.transitLines} />
-          <DetailItem
-            label={t.toTransit}
-            value={
-              property.transitStopDistanceM !== null
-                ? formatDistance(property.transitStopDistanceM)
-                : null
-            }
-          />
-          <DetailItem
-            label={t.toUniversity}
-            value={
-              property.universityDistanceM !== null
-                ? formatDistance(property.universityDistanceM)
-                : null
-            }
-          />
           <DetailItem label={t.nearbyPlaces} value={property.nearbyPlaces} />
         </DetailSection>
       ) : null}

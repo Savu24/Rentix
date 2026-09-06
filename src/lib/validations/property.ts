@@ -49,84 +49,6 @@ export function heatingTypeLabels(d: Pick<Dictionary, "panel">): Record<HeatingT
   return d.panel.properties.heating;
 }
 
-/**
- * Godzina zdania lokalu — „HH:MM" po normalizacji.
- *
- * Przyjmujemy też „9:00" i „9.00", bo tak się to wpisuje, a zapisujemy
- * zawsze „09:00": ta godzina trafia do wiadomości dla najemcy i do umowy,
- * więc nie może raz wyglądać tak, a raz inaczej.
- */
-const checkoutTimeSchema = (c: ValidationContext) =>
-  z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value, ctx) => {
-        const match = /^(\d{1,2})[:.](\d{2})$/.exec(value);
-        if (!match) {
-          ctx.addIssue({ code: "custom", message: c.d.panel.properties.checkoutTimeFormat });
-          return z.NEVER;
-        }
-
-        const [, hour, minute] = match.map(Number) as [never, number, number];
-        if (hour > 23 || minute > 59) {
-          ctx.addIssue({ code: "custom", message: c.d.panel.properties.checkoutTimeInvalid });
-          return z.NEVER;
-        }
-
-        return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-      }),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
-
-/**
- * Współrzędne GPS w jednym polu: „52.2297, 21.0122".
- *
- * Rozdzielamy po przecinku, średniku albo spacji i wymagamy dokładnie dwóch
- * liczb — dokładnie tego, co wychodzi z „kopiuj współrzędne" w mapach.
- * Kropka, nie przecinek dziesiętny: przy przecinku „52,2297, 21,0122" nie da
- * się odróżnić separatora liczb od separatora części dziesiętnej.
- */
-const coordinatesSchema = (c: ValidationContext) =>
-  z
-  .union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .transform((value, ctx) => {
-        const parts = value.split(/[,;\s]+/).filter(Boolean);
-        const invalid = () => {
-          ctx.addIssue({
-            code: "custom",
-            message: c.d.panel.properties.coordinatesFormat,
-          });
-          return z.NEVER;
-        };
-
-        if (parts.length !== 2) return invalid();
-        if (!parts.every((part) => /^-?\d{1,3}(\.\d{1,8})?$/.test(part))) return invalid();
-
-        const [lat, lng] = parts.map(Number) as [number, number];
-        if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
-          ctx.addIssue({
-            code: "custom",
-            message: c.d.panel.properties.coordinatesRange,
-          });
-          return z.NEVER;
-        }
-
-        return `${lat}, ${lng}`;
-      }),
-  ])
-  .transform((value) => (value === "" ? null : value))
-  .nullable()
-  .optional();
-
 /** Ile pokoi wolno utworzyć jednym ruchem — zabezpieczenie przed literówką. */
 export const MAX_ROOMS_PER_PROPERTY = 30;
 
@@ -166,7 +88,6 @@ export const propertyFormSchema = (c: ValidationContext) =>
 
   // Dostęp do lokalu — to, co przekazuje się przy wydaniu kluczy.
   intercomCode: optionalText(c, 40),
-  checkoutTime: checkoutTimeSchema(c),
   storageUnit: optionalText(c, 200),
   bikeStorage: optionalText(c, 200),
   wasteDisposal: optionalText(c, 200),
@@ -189,20 +110,11 @@ export const propertyFormSchema = (c: ValidationContext) =>
   wifiPassword: optionalText(c, 120),
   internetContractEndsAt: optionalDateInput(c, c.d.panel.properties.fields.internetContractEnd),
 
-  // Przeglądy i dokumenty.
+  // Dokumenty lokalu.
   landRegistryNumber: optionalText(c, 60),
-  energyCertificateEp: optionalDecimalInput(c, c.d.panel.properties.fields.energyIndex, { max: 9999, scale: 2 }),
-  energyCertificateExpiresAt: optionalDateInput(c, c.d.panel.properties.fields.certificateValidUntil),
-  boilerModel: optionalText(c, 120),
-  boilerInspectionAt: optionalDateInput(c, c.d.panel.properties.fields.boilerInspection),
-  technicalInspectionAt: optionalDateInput(c, c.d.panel.properties.fields.technicalInspection),
 
-  // Okolica i dojazd. Odległości w metrach — 100 km to sufit z zapasem,
-  // powyżej tego „w okolicy" przestaje cokolwiek znaczyć.
-  gpsCoordinates: coordinatesSchema(c),
+  // Okolica i dojazd.
   transitLines: optionalText(c, 200),
-  transitStopDistanceM: optionalInt(c, c.d.panel.properties.fields.transitDistance, { min: 0, max: 100_000 }),
-  universityDistanceM: optionalInt(c, c.d.panel.properties.fields.universityDistance, { min: 0, max: 100_000 }),
   nearbyPlaces: optionalText(c, 1000),
 
   description: optionalText(c, 2000),

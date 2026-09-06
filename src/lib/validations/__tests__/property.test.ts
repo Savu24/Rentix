@@ -188,77 +188,17 @@ describe("roomsBulkUpdateSchema", () => {
 });
 
 describe("propertyFormSchema — szczegóły lokalu", () => {
-  it("normalizuje godzinę zdania lokalu do GG:MM", () => {
-    // Ta godzina trafia do wiadomości dla najemcy, więc nie może raz wyglądać
-    // jak „9:00", a raz jak „09.00".
-    expect(propertyFormSchema(C).parse({ ...VALID_PROPERTY, checkoutTime: "9:00" }).checkoutTime).toBe(
-      "09:00",
-    );
-    expect(propertyFormSchema(C).parse({ ...VALID_PROPERTY, checkoutTime: "9.30" }).checkoutTime).toBe(
-      "09:30",
-    );
-  });
-
-  it("odrzuca godzinę, której nie ma w dobie", () => {
-    expect(propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, checkoutTime: "25:00" }).success).toBe(
-      false,
-    );
-    expect(propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, checkoutTime: "11:70" }).success).toBe(
-      false,
-    );
-    expect(propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, checkoutTime: "rano" }).success).toBe(
-      false,
-    );
-  });
-
-  it("przyjmuje współrzędne wklejone z map i sprowadza je do jednego zapisu", () => {
-    expect(
-      propertyFormSchema(C).parse({ ...VALID_PROPERTY, gpsCoordinates: "52.2297, 21.0122" })
-        .gpsCoordinates,
-    ).toBe("52.2297, 21.0122");
-    // Bez przecinka — mapy kopiują czasem same liczby rozdzielone spacją.
-    expect(
-      propertyFormSchema(C).parse({ ...VALID_PROPERTY, gpsCoordinates: "  52.2297   21.0122 " })
-        .gpsCoordinates,
-    ).toBe("52.2297, 21.0122");
-  });
-
-  it("odrzuca współrzędne poza globem i zapis z przecinkiem dziesiętnym", () => {
-    expect(
-      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, gpsCoordinates: "95.0, 21.0" }).success,
-    ).toBe(false);
-    expect(
-      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, gpsCoordinates: "52.2297" }).success,
-    ).toBe(false);
-    // „52,2297, 21,0122" jest nierozstrzygalne — nie wiadomo, który przecinek
-    // rozdziela liczby, a który jest częścią dziesiętną.
-    expect(
-      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, gpsCoordinates: "52,2297, 21,0122" })
-        .success,
-    ).toBe(false);
-  });
-
   it("puste pola szczegółów dają null, nie pusty string", () => {
     const result = propertyFormSchema(C).parse({
       ...VALID_PROPERTY,
       intercomCode: "",
-      checkoutTime: "",
       heatingType: "",
       wifiPassword: "",
-      gpsCoordinates: "",
-      transitStopDistanceM: "",
-      energyCertificateEp: "",
-      boilerInspectionAt: "",
     });
 
     expect(result.intercomCode).toBeNull();
-    expect(result.checkoutTime).toBeNull();
     expect(result.heatingType).toBeNull();
     expect(result.wifiPassword).toBeNull();
-    expect(result.gpsCoordinates).toBeNull();
-    expect(result.transitStopDistanceM).toBeNull();
-    expect(result.energyCertificateEp).toBeNull();
-    expect(result.boilerInspectionAt).toBeNull();
   });
 
   it("czyta rodzaj ogrzewania i odrzuca nieznany", () => {
@@ -270,28 +210,17 @@ describe("propertyFormSchema — szczegóły lokalu", () => {
     ).toBe(false);
   });
 
-  it("odległości i prędkość łącza przyjmuje jako liczby całkowite", () => {
+  it("prędkość łącza przyjmuje jako liczbę całkowitą", () => {
     const result = propertyFormSchema(C).parse({
       ...VALID_PROPERTY,
-      transitStopDistanceM: "350",
-      universityDistanceM: 2400,
       internetSpeedMbps: "600",
     });
 
-    expect(result.transitStopDistanceM).toBe(350);
-    expect(result.universityDistanceM).toBe(2400);
     expect(result.internetSpeedMbps).toBe(600);
 
     expect(
-      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, transitStopDistanceM: "350,5" }).success,
+      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, internetSpeedMbps: "600,5" }).success,
     ).toBe(false);
-  });
-
-  it("wskaźnik EP przyjmuje w polskim zapisie i trzyma dwa miejsca", () => {
-    expect(
-      propertyFormSchema(C).parse({ ...VALID_PROPERTY, energyCertificateEp: "78,5" })
-        .energyCertificateEp,
-    ).toBe("78.50");
   });
 
   it("sprawdza telefon i e-mail administracji tak samo jak pozostałe kontakty", () => {
@@ -308,15 +237,16 @@ describe("propertyFormSchema — szczegóły lokalu", () => {
     ).toBeNull();
   });
 
-  it("daty przeglądów czyta z pola typu date", () => {
+  it("daty czyta z pola typu date", () => {
     const result = propertyFormSchema(C).parse({
       ...VALID_PROPERTY,
-      boilerInspectionAt: "2027-03-15",
+      internetContractEndsAt: "2027-03-15",
     });
 
-    expect(result.boilerInspectionAt?.toISOString()).toBe("2027-03-15T00:00:00.000Z");
+    expect(result.internetContractEndsAt?.toISOString()).toBe("2027-03-15T00:00:00.000Z");
     expect(
-      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, boilerInspectionAt: "15.03.2027" }).success,
+      propertyFormSchema(C).safeParse({ ...VALID_PROPERTY, internetContractEndsAt: "15.03.2027" })
+        .success,
     ).toBe(false);
   });
 });

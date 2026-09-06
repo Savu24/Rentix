@@ -54,7 +54,6 @@ const EMPTY: PropertyCreateInput = {
   // pustką skasowałoby czynsz wpisany, zanim pole zniknęło.
   askingRentGrosze: "",
   intercomCode: "",
-  checkoutTime: "",
   storageUnit: "",
   bikeStorage: "",
   wasteDisposal: "",
@@ -70,15 +69,7 @@ const EMPTY: PropertyCreateInput = {
   wifiPassword: "",
   internetContractEndsAt: "",
   landRegistryNumber: "",
-  energyCertificateEp: "",
-  energyCertificateExpiresAt: "",
-  boilerModel: "",
-  boilerInspectionAt: "",
-  technicalInspectionAt: "",
-  gpsCoordinates: "",
   transitLines: "",
-  transitStopDistanceM: "",
-  universityDistanceM: "",
   nearbyPlaces: "",
   description: "",
   notes: "",
@@ -395,23 +386,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             </FormField>
 
             <FormField
-              id="checkoutTime"
-              label={t.checkoutTime}
-              error={errors.checkoutTime?.message}
-              hint={t.checkoutTimeHint}
-            >
-              <Input
-                {...fieldAria("checkoutTime", {
-                  error: errors.checkoutTime?.message,
-                })}
-                placeholder="11:00"
-                inputMode="numeric"
-                disabled={isSubmitting}
-                {...register("checkoutTime")}
-              />
-            </FormField>
-
-            <FormField
               id="storageUnit"
               label={t.storage}
               error={errors.storageUnit?.message}
@@ -657,77 +631,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 {...register("landRegistryNumber")}
               />
             </FormField>
-
-            <FormField
-              id="energyCertificateEp"
-              label={t.energyIndex}
-              error={errors.energyCertificateEp?.message}
-              hint={t.energyIndexHint}
-            >
-              <Input
-                {...fieldAria("energyCertificateEp", {
-                  error: errors.energyCertificateEp?.message,
-                })}
-                inputMode="decimal"
-                disabled={isSubmitting}
-                {...register("energyCertificateEp")}
-              />
-            </FormField>
-
-            <FormField
-              id="energyCertificateExpiresAt"
-              label={t.certificateValidUntil}
-              error={errors.energyCertificateExpiresAt?.message}
-            >
-              <DateInput
-                {...fieldAria("energyCertificateExpiresAt", {
-                  error: errors.energyCertificateExpiresAt?.message,
-                })}
-
-                disabled={isSubmitting}
-                {...register("energyCertificateExpiresAt")}
-              />
-            </FormField>
-
-            <FormField id="boilerModel" label={t.boilerModel} error={errors.boilerModel?.message}>
-              <Input
-                {...fieldAria("boilerModel", {
-                  error: errors.boilerModel?.message,
-                })}
-                disabled={isSubmitting}
-                {...register("boilerModel")}
-              />
-            </FormField>
-
-            <FormField
-              id="boilerInspectionAt"
-              label={t.boilerInspection}
-              error={errors.boilerInspectionAt?.message}
-            >
-              <DateInput
-                {...fieldAria("boilerInspectionAt", {
-                  error: errors.boilerInspectionAt?.message,
-                })}
-
-                disabled={isSubmitting}
-                {...register("boilerInspectionAt")}
-              />
-            </FormField>
-
-            <FormField
-              id="technicalInspectionAt"
-              label={t.technicalInspection}
-              error={errors.technicalInspectionAt?.message}
-            >
-              <DateInput
-                {...fieldAria("technicalInspectionAt", {
-                  error: errors.technicalInspectionAt?.message,
-                })}
-
-                disabled={isSubmitting}
-                {...register("technicalInspectionAt")}
-              />
-            </FormField>
           </div>
         </CardContent>
       </Card>
@@ -741,22 +644,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
-              id="gpsCoordinates"
-              label={t.gps}
-              error={errors.gpsCoordinates?.message}
-              hint={t.gpsHint}
-              className="sm:col-span-2"
-            >
-              <Input
-                {...fieldAria("gpsCoordinates", {
-                  error: errors.gpsCoordinates?.message,
-                })}
-                disabled={isSubmitting}
-                {...register("gpsCoordinates")}
-              />
-            </FormField>
-
-            <FormField
               id="transitLines"
               label={t.transitLines}
               error={errors.transitLines?.message}
@@ -769,36 +656,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 })}
                 disabled={isSubmitting}
                 {...register("transitLines")}
-              />
-            </FormField>
-
-            <FormField
-              id="transitStopDistanceM"
-              label={t.transitDistance}
-              error={errors.transitStopDistanceM?.message}
-            >
-              <Input
-                {...fieldAria("transitStopDistanceM", {
-                  error: errors.transitStopDistanceM?.message,
-                })}
-                inputMode="numeric"
-                disabled={isSubmitting}
-                {...register("transitStopDistanceM")}
-              />
-            </FormField>
-
-            <FormField
-              id="universityDistanceM"
-              label={t.universityDistance}
-              error={errors.universityDistanceM?.message}
-            >
-              <Input
-                {...fieldAria("universityDistanceM", {
-                  error: errors.universityDistanceM?.message,
-                })}
-                inputMode="numeric"
-                disabled={isSubmitting}
-                {...register("universityDistanceM")}
               />
             </FormField>
 
