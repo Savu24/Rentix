@@ -69,6 +69,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
               locale={locale}
               organizations={organizations}
               activeOrganizationId={session.user.organizationId}
+              isAdmin={session.user.role === "ADMIN"}
             />
 
             <main className="flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">{children}</main>

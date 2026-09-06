@@ -1,9 +1,10 @@
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, ShieldCheck } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
 import { OrganizationSwitcher } from "@/components/panel/organization-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { signOutAction } from "@/app/(app)/actions";
 import { getDictionary, type Locale } from "@/lib/i18n";
 
@@ -12,12 +13,21 @@ export function Topbar({
   locale,
   organizations,
   activeOrganizationId,
+  isAdmin,
 }: {
   initials: string;
   locale: Locale;
   /** Organizacje konta — przełącznik pojawia się dopiero od dwóch. */
   organizations: { id: string; name: string }[];
   activeOrganizationId: string;
+  /**
+   * Czy pokazać wejście do panelu administratora platformy.
+   *
+   * Rola bierze się z tokenu sesji, więc bywa o odświeżenie spóźniona — i to
+   * wystarcza, bo decyduje wyłącznie o widoczności odnośnika. Kto na niego
+   * kliknie bez uprawnień, dostanie 404 z `requireAdminSession`.
+   */
+  isAdmin?: boolean;
 }) {
   const t = getDictionary(locale).panel.shell;
 
@@ -34,6 +44,15 @@ export function Topbar({
       <OrganizationSwitcher organizations={organizations} activeId={activeOrganizationId} />
 
       <div className="ml-auto flex items-center gap-2">
+        {isAdmin ? (
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/admin">
+              <ShieldCheck className="h-4 w-4" aria-hidden />
+              <span className="hidden sm:inline">Administracja</span>
+            </Link>
+          </Button>
+        ) : null}
+
         <ThemeToggle />
 
         <button

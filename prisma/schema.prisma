@@ -1537,3 +1537,61 @@ model Subscription {
   @@index([status])
   @@map("subscriptions")
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Panel administratora platformy
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Co zrobił administrator platformy. Lista zamknięta, bo dziennik ma się dać
+/// przefiltrować — wolny tekst rozjechałby się na „zmiana planu", „plan" i
+/// „podniesienie planu" oznaczające to samo.
+enum AdminAction {
+  PLAN_CHANGED
+  LEASE_LIMIT_CHANGED
+  BILLING_EXEMPT_CHANGED
+  SUBSCRIPTION_STATUS_CHANGED
+  USER_ROLE_CHANGED
+  USER_EMAIL_VERIFIED
+}
+
+enum AdminTargetType {
+  ORGANIZATION
+  USER
+}
+
+/// Ślad po każdej zmianie wykonanej z panelu administratora.
+///
+/// Administrator sięga ponad organizacje: podnosi limit umów, zwalnia konto
+/// z opłat, nadaje komuś własne uprawnienia. Bez zapisu takiej zmiany nie da
+/// się później odpowiedzieć na pytanie „dlaczego to konto ma trzydzieści umów
+/// w planie na dziesięć" — a to pytanie zadaje się przy każdej reklamacji
+/// rozliczeniowej.
+///
+/// Celowo bez relacji do `users` i `organizations`: wpis ma przeżyć skasowanie
+/// obu stron, bo najciekawsze pytania padają właśnie o konta, których już nie
+/// ma. Stąd `actorEmail` i `targetLabel` kopiowane na sztywno w chwili zapisu,
+/// a nie doczytywane złączeniem.
+model AdminAuditLog {
+  id String @id @default(cuid())
+
+  actorId    String
+  actorEmail String
+
+  action AdminAction
+
+  targetType AdminTargetType
+  targetId   String
+  /// Nazwa organizacji albo e-mail konta — tak, jak brzmiały przy zmianie.
+  targetLabel String
+
+  /// Wartość przed i po, zapisane tekstem. Akcje zmieniają pola różnych typów
+  /// (enum, liczba, flaga), a dziennik i tak wyświetla je jako tekst.
+  before String?
+  after  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+  @@map("admin_audit_logs")
+}

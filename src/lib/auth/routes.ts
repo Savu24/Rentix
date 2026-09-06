@@ -37,6 +37,11 @@ export const ROUTES = {
   /** Uproszczony panel najemcy. */
   tenantDashboard: "/najemca",
   /**
+   * Panel administratora platformy — poza `/panel`, bo tamten layout wymaga
+   * członkostwa w organizacji, a administrator patrzy na wszystkie naraz.
+   */
+  adminDashboard: "/admin",
+  /**
    * Adresy bez prefiksu kraju. Nie renderują strony — middleware odsyła z nich
    * na wersję odwiedzającego. Trzyma je konfiguracja NextAuth, która przyjmuje
    * jedną ścieżkę, a nie funkcję zależną od żądania.
@@ -61,7 +66,17 @@ export function loginPathWithReturn(locale: Locale, returnTo: string): string {
 }
 
 /** Prefiksy wymagające zalogowania. */
-export const PROTECTED_PREFIXES: string[] = [ROUTES.ownerDashboard, ROUTES.tenantDashboard];
+export const PROTECTED_PREFIXES: string[] = [
+  ROUTES.ownerDashboard,
+  ROUTES.tenantDashboard,
+  /*
+    Middleware pilnuje tu wyłącznie zalogowania — o rolę pyta layout `/admin`,
+    bo Edge nie ma dostępu do bazy, a rola z tokenu bywa o miesiąc spóźniona.
+    Bez tego wpisu niezalogowany dostawałby przekierowanie na logowanie dopiero
+    z Server Componentu, czyli po pobraniu całej strony.
+  */
+  ROUTES.adminDashboard,
+];
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(

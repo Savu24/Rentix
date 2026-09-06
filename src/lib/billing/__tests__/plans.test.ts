@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_PLAN, PLAN_LEASE_LIMIT, planUsage } from "@/lib/billing/plans";
+import { DEFAULT_PLAN, PLAN_LEASE_LIMIT, PLAN_PRICE, planUsage } from "@/lib/billing/plans";
+import { getDictionary } from "@/lib/i18n";
+import { LOCALES } from "@/lib/i18n/config";
 
 /**
  * Testujemy samą decyzję o limicie, bez Prismy: liczba umów wchodzi
@@ -71,5 +73,39 @@ describe("próg zapisany w subskrypcji", () => {
 
     expect(usage.limit).toBe(0);
     expect(usage.hasCapacity).toBe(false);
+  });
+});
+
+/**
+ * Cennik żyje w dwóch miejscach: jako tekst na karcie planu (słownik) i jako
+ * liczba do sumowania (`PLAN_PRICE`). Bez tego testu podniesienie ceny w jednym
+ * z nich przechodziłoby bez drugiego, a panel administratora liczyłby przychód
+ * po starym cenniku — i nikt by tego nie zauważył.
+ */
+describe("cena planu", () => {
+  const PLAN_ORDER = ["FREE", "START", "PRO", "PORTFOLIO"] as const;
+
+  /** „39 zł" → 3900, „£24" → 2400, „0 zł" → 0. */
+  function toMinorUnits(price: string): number {
+    return Math.round(Number(price.replace(/[^\d.,]/g, "").replace(",", ".")) * 100);
+  }
+
+  it.each(LOCALES)("zgadza się z cennikiem pokazywanym klientowi (%s)", (locale) => {
+    const cards = getDictionary(locale).marketing.pricing.plans;
+
+    expect(cards).toHaveLength(PLAN_ORDER.length);
+
+    PLAN_ORDER.forEach((plan, index) => {
+      expect(toMinorUnits(cards[index]!.price)).toBe(PLAN_PRICE[locale][plan]);
+    });
+  });
+
+  it("plan darmowy nic nie kosztuje, a każdy kolejny kosztuje więcej", () => {
+    for (const locale of LOCALES) {
+      const prices = PLAN_ORDER.map((plan) => PLAN_PRICE[locale][plan]);
+
+      expect(prices[0]).toBe(0);
+      expect(prices).toEqual([...prices].sort((a, b) => a - b));
+    }
   });
 });
