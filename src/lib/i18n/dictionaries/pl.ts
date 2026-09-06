@@ -85,46 +85,23 @@ export const pl = {
       kosztował najwięcej. Umowę wynajmujący liczy też sam, więc rachunek da
       się sprawdzić bez zaglądania w panel.
 
-      Plany różnią się wyłącznie progiem — funkcje ma każdy te same. To decyzja
-      produktowa, nie skrót: dzielenie panelu na płatne kawałki kazałoby
-      wynajmującemu z dwoma mieszkaniami wystawiać dokumenty bez logo, a limit
-      umów i tak jest jedyną rzeczą, którą egzekwuje kod.
+      Plany różnią się progiem umów i zakresem panelu. Kod egzekwuje na razie
+      wyłącznie limit umów — podział funkcji między progi to zapowiedź, nie
+      stan wdrożenia.
     */
     pricing: {
       heading: "Prosty cennik, bez pułapek",
-      lead: "Każdy plan ma wszystkie funkcje. Różni się tylko liczba umów.",
+      lead: "Zaczynasz za darmo. Płacisz dopiero, gdy przybywa umów.",
       badge: "NAJCZĘŚCIEJ WYBIERANY",
       note: "Ceny netto, płatne miesięcznie. Przy rozliczeniu rocznym płacisz za dziesięć miesięcy.",
 
       /*
-        Lista tego, co dostaje każdy plan — wypisana raz, pod kartami.
+        Karty wypisują wprost, co dostaje dany plan.
 
-        Powtórzenie jej na czterech kartach zrobiłoby z cennika ścianę tekstu
-        i i tak nie odpowiedziałoby na pytanie, które zadaje wynajmujący
-        patrzący na darmowy plan: „czego mi tu zabraknie". Wypisana osobno
-        odpowiada wprost: niczego, poza liczbą umów.
-
-        Wpisujemy tu wyłącznie to, co panel naprawdę robi. Portalu najemcy
-        i zapraszania współpracowników nie ma w kodzie, więc nie ma ich też
-        w cenniku.
+        Każdy wyższy próg zaczyna się od „wszystko z niższego", więc lista na
+        karcie mówi tylko o tym, co dochodzi — bez powtarzania czterech razy
+        tego samego wyliczenia.
       */
-      included: {
-        title: "W każdym planie, także darmowym",
-        lead: "Żadna z tych funkcji nie jest dodatkowo płatna ani zarezerwowana dla wyższego progu.",
-        items: [
-          "Nieruchomości, pokoje i kartoteka najemców",
-          "Umowy najmu z gotowym PDF-em do podpisu",
-          "Naliczanie czynszu w dniu z umowy, statusy opłacone i zaległe",
-          "Rachunki i faktury PDF z Twoim logo",
-          "Wysyłka dokumentów i przypomnień mailem do najemcy",
-          "Własne szablony wiadomości",
-          "Koszty najmu: kredyt, wspólnota, remonty, ubezpieczenie",
-          "Raporty: przychód, koszty i wynik wg nieruchomości",
-          "Zestawienie roczne i eksport CSV dla księgowego",
-          "Konta właścicieli — dla zarządców obsługujących cudze mieszkania",
-        ],
-      },
-
       plans: [
         {
           name: "Free",
@@ -132,7 +109,13 @@ export const pl = {
           period: "",
           note: "2 umowy",
           featured: false,
-          items: ["Komplet funkcji z listy niżej", "Bez terminu i bez karty"],
+          items: [
+            "Nieruchomości, pokoje i kartoteka najemców",
+            "Umowy najmu z gotowym PDF-em do podpisu",
+            "Naliczanie czynszu w dniu z umowy",
+            "Przypomnienia mailem do najemcy",
+            "Koszty najmu: kredyt, wspólnota, remonty, ubezpieczenie",
+          ],
           cta: "Zacznij za darmo",
         },
         {
@@ -141,7 +124,12 @@ export const pl = {
           period: "/mies.",
           note: "do 10 umów",
           featured: false,
-          items: ["Komplet funkcji z listy niżej", "Wsparcie mailem"],
+          items: [
+            "Wszystko z planu Free",
+            "Twoje logo na dokumentach",
+            "Wysyłka dokumentów mailem",
+            "Zestawienie roczne",
+          ],
           cta: "Wybierz Start",
         },
         {
@@ -150,7 +138,13 @@ export const pl = {
           period: "/mies.",
           note: "do 30 umów",
           featured: true,
-          items: ["Komplet funkcji z listy niżej", "Wsparcie w 24 godziny"],
+          items: [
+            "Wszystko z planu Start",
+            "Wielu użytkowników",
+            "Eksport księgowy",
+            "Portal najemcy",
+            "Własne szablony wiadomości",
+          ],
           cta: "Wybierz Pro",
         },
         {
@@ -159,7 +153,11 @@ export const pl = {
           period: "/mies.",
           note: "bez limitu umów",
           featured: false,
-          items: ["Komplet funkcji z listy niżej", "Próg ustalany indywidualnie"],
+          items: [
+            "Wszystko z planu Pro",
+            "Konta właścicieli",
+            "Wsparcie priorytetowe",
+          ],
           cta: "Wybierz Portfel",
         },
       ],
