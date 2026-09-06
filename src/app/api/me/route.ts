@@ -90,7 +90,8 @@ export async function PATCH(request: NextRequest) {
 }
 
 /**
- * DELETE /api/me — usunięcie konta wraz z organizacją.
+ * DELETE /api/me — usunięcie konta wraz z organizacjami, w których było
+ * ostatnim członkiem.
  *
  * Nieodwracalne, więc wymaga hasła i przepisanej frazy potwierdzenia.
  * Limit prób jak przy zmianie hasła: przejęty, niezablokowany komputer nie
@@ -126,7 +127,7 @@ export async function DELETE(request: NextRequest) {
   const parsed = accountDeleteSchema(context).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
-  const deleted = await deleteAccount(session.user.id, organizationId, parsed.data);
+  const deleted = await deleteAccount(session.user.id, parsed.data);
 
   if (deleted.ok) return ok({ deleted: true, deletedOrganization: deleted.deletedOrganization });
 

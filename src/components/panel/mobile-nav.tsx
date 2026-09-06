@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { PlanLockMark } from "@/components/panel/plan-lock-mark";
 import { useI18n } from "@/lib/i18n/client";
 import {
   isNavItemActive,
@@ -95,6 +96,9 @@ export function MobileNav() {
                       aria-hidden
                     />
                     {navLabel(item, d.panel.nav)}
+                    {item.feature ? (
+                      <PlanLockMark feature={item.feature} className="ml-auto" />
+                    ) : null}
                   </Link>
                 );
               })}

@@ -187,6 +187,16 @@ export const LIMITS = {
    * na przejętym, niezablokowanym komputerze.
    */
   passwordChange: { limit: 5, windowSeconds: 15 * 60 },
+  /**
+   * Zaproszenia: 20 na godzinę na organizację.
+   *
+   * Limit nie chroni tu konta, tylko cudze skrzynki: adres zaproszonego wpisuje
+   * wynajmujący, więc endpoint wysyła wiadomość pod dowolny adres z naszego
+   * serwera. Bez ograniczenia jedno przejęte konto wystarczyłoby do rozsyłki,
+   * a rachunek za nią zapłaciłaby reputacja domeny. Próg jest wysoko ponad
+   * realnym użyciem — nikt nie zatrudnia dwudziestu osób w ciągu godziny.
+   */
+  invitations: { limit: 20, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, RateLimitOptions>;
 
 /**

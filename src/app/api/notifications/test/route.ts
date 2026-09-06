@@ -3,7 +3,7 @@ import { fill } from "@/lib/i18n/format";
 import { z } from "zod";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
-import { requireApiOwner } from "@/lib/auth/session";
+import { requireApiFeature } from "@/lib/auth/session";
 import { mailTransport } from "@/lib/email/client";
 import { sendTestEmail } from "@/lib/notifications/service";
 import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
@@ -26,7 +26,9 @@ const testSendSchema = z.object({ type: z.enum(EDITABLE_NOTIFICATION_TYPES) });
 
 /** POST /api/notifications/test */
 export async function POST(request: NextRequest) {
-  const auth = await requireApiOwner();
+  // Test siedzi w edytorze szablonów i wysyła zapisany szablon, więc wchodzi
+  // z tym samym progiem co on.
+  const auth = await requireApiFeature("MESSAGE_TEMPLATES");
   if ("response" in auth) return auth.response;
 
   if (!mailTransport()) {

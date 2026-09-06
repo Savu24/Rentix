@@ -198,8 +198,9 @@ export async function getInvoice(organizationId: string, invoiceId: string) {
       payments: { orderBy: { paidAt: "desc" } },
       // Logo wchodzi jawnie, bo `organization: true` bierze same kolumny —
       // a obrazek leży w osobnej tabeli właśnie po to, żeby nie doklejał się
-      // do zapytań, które go nie potrzebują.
-      organization: { include: { logo: true } },
+      // do zapytań, które go nie potrzebują. Plan idzie obok, bo logo drukuje
+      // się dopiero od progu Start i decyduje o tym renderer, nie zapytanie.
+      organization: { include: { logo: true, subscription: { select: { plan: true } } } },
       tenant: true,
       lease: {
         include: {
@@ -233,7 +234,7 @@ export async function getInvoicesForBatch(organizationId: string, ids: readonly 
     include: {
       lines: { orderBy: { position: "asc" } },
       payments: { orderBy: { paidAt: "desc" } },
-      organization: { include: { logo: true } },
+      organization: { include: { logo: true, subscription: { select: { plan: true } } } },
       // Ten sam ksztalt co `getInvoice` — renderer PDF-a przyjmuje jeden typ,
       // wiec rozjazd miedzy zapytaniami psulby paczke, a nie pojedynczy dokument.
       tenant: true,

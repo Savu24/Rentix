@@ -168,9 +168,17 @@ export function collectionStats(invoices: readonly CollectionInput[]): Collectio
   };
 }
 
-/** Wiersz CSV z polskim przecinkiem dziesiętnym i średnikiem jako separatorem. */
-export function toCsvAmount(grosze: number): string {
-  return (grosze / 100).toFixed(2).replace(".", ",");
+/**
+ * Kwota w komórce CSV.
+ *
+ * Separator dziesiętny idzie za krajem konta, bo arkusz czyta go po swojemu:
+ * polski Excel z kropką pokazałby „1234.50" jako tekst, brytyjski z przecinkiem
+ * — jako dwie kolumny. Separatorem pól jest średnik w obu przypadkach, więc
+ * przecinek dziesiętny nie rozbija wiersza (patrz `buildCsv`).
+ */
+export function toCsvAmount(grosze: number, locale: Locale = "pl"): string {
+  const value = (grosze / 100).toFixed(2);
+  return locale === "pl" ? value.replace(".", ",") : value;
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import type { PlanFeature } from "@/lib/billing/features";
 import type { Dictionary } from "@/lib/i18n/types";
 
 type NavLabels = Dictionary["panel"]["nav"];
@@ -21,6 +22,14 @@ export type NavItem = {
   /** Klucz skróconej etykiety na dolny pasek mobilny, gdzie nie ma miejsca. */
   shortId?: keyof NavLabels;
   icon: LucideIcon;
+  /**
+   * Funkcja, od której zależy ta pozycja.
+   *
+   * Link zostaje klikalny także bez niej — obok nazwy staje kłódka, a strona
+   * tłumaczy, co tam jest i od którego progu. Ukrycie pozycji zostawiałoby
+   * pytanie „czy tego nie ma, czy tego nie znalazłem".
+   */
+  feature?: PlanFeature;
   /** Moduł jeszcze nie zbudowany — link jest nieaktywny zamiast prowadzić w 404. */
   soon?: boolean;
 };
@@ -41,7 +50,7 @@ export const PANEL_NAV: NavItem[] = [
   // telefonem, więc moduł dublowałby kanał, z którego i tak nikt by nie
   // korzystał. Tabele w bazie zostają — nic nie kosztują, a odwrócenie tej
   // decyzji nie wymagałoby wtedy migracji.
-  { href: "/panel/raporty", id: "reports", icon: BarChart3 },
+  { href: "/panel/raporty", id: "reports", icon: BarChart3, feature: "ANNUAL_REPORT" },
   { href: "/panel/ustawienia", id: "settings", shortId: "settingsShort", icon: Settings },
 ];
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Lock, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import { usePlanAllows } from "@/lib/billing/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
 
@@ -17,6 +18,10 @@ import { fill } from "@/lib/i18n/format";
  * wiadomości nie da się cofnąć. Nocny przebieg i tak rozsyła świeżo
  * wystawione dokumenty; ten przycisk jest po to, żeby nie czekać do rana
  * albo żeby ponowić wysyłkę po poprawieniu adresu.
+ *
+ * Wysyłka mailem wchodzi z planem Start. Bez niej w miejscu przycisku stoi
+ * kłódka z jednym zdaniem wyjaśnienia — PDF nadal da się pobrać obok
+ * i wysłać własną pocztą.
  */
 export function SendInvoice({
   invoiceId,
@@ -30,6 +35,7 @@ export function SendInvoice({
 }) {
   const { d } = useI18n();
   const t = d.panel.financePage.send;
+  const allowed = usePlanAllows("EMAIL_DELIVERY");
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -59,6 +65,19 @@ export function SendInvoice({
 
   if (sentTo) {
     return <Alert tone="success">{fill(d.panel.panelMisc.sentTo, { email: sentTo })}</Alert>;
+  }
+
+  /*
+    Kłódka przed komunikatami o brakującym adresie: „uzupełnij adres najemcy"
+    kazałoby poprawiać kartotekę, po czym przycisk i tak by się nie pojawił.
+  */
+  if (!allowed) {
+    return (
+      <p className="flex items-start gap-2 text-xs text-muted">
+        <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+        {t.locked}
+      </p>
+    );
   }
 
   /*

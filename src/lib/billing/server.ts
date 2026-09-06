@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
 
+import { planAllows, planFeatures, type PlanFeature } from "./features";
 import { DEFAULT_PLAN, planUsage, type PlanUsage } from "./plans";
 
 /**
@@ -45,3 +46,31 @@ export const organizationPlan = cache(async (organizationId: string): Promise<Pl
 
   return planUsage(subscription?.plan ?? DEFAULT_PLAN, subscription?.leaseLimit, used);
 });
+
+/**
+ * Czy konto ma dostęp do funkcji bramkowanej planem.
+ *
+ * Idzie przez `organizationPlan`, więc korzysta z tego samego `cache` — strona
+ * i endpoint pytają o plan raz na żądanie, choćby sprawdzały trzy funkcje.
+ */
+export async function organizationAllows(
+  organizationId: string,
+  feature: PlanFeature,
+): Promise<boolean> {
+  const { plan } = await organizationPlan(organizationId);
+  return planAllows(plan, feature);
+}
+
+/**
+ * Wszystkie funkcje, które konto ma w swoim planie.
+ *
+ * Panel potrzebuje całego zestawu naraz, a nie odpowiedzi na jedno pytanie:
+ * pasek boczny, zakładki ustawień i przyciski w formularzach rysują kłódkę
+ * u siebie, a każdy z nich siedzi po stronie przeglądarki. Zestaw wchodzi tam
+ * raz, przez `PlanFeaturesProvider` z layoutu panelu, zamiast siedmiu
+ * osobnych propsów przepychanych przez kilkanaście komponentów.
+ */
+export async function organizationFeatures(organizationId: string): Promise<PlanFeature[]> {
+  const { plan } = await organizationPlan(organizationId);
+  return planFeatures(plan);
+}

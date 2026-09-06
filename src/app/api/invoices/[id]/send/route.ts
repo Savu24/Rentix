@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { apiError, ok } from "@/lib/api/response";
-import { requireApiOwner } from "@/lib/auth/session";
+import { requireApiFeature } from "@/lib/auth/session";
 import { sendInvoiceToTenant } from "@/lib/notifications/send-invoice";
 
 export const runtime = "nodejs";
@@ -13,9 +13,12 @@ export const runtime = "nodejs";
  * dokumencie wystawionym ręcznie czekanie do rana bywa bez sensu. To ta sama
  * ścieżka wysyłki, więc wynik ląduje w `notifications` i przebieg cronowy
  * nie wyśle tego drugi raz.
+ *
+ * Wysyłka dokumentu mailem wchodzi z planem Start. Przypomnień o płatności
+ * to nie dotyczy — te ma każde konto i chodzą nocnym przebiegiem.
  */
 export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireApiOwner();
+  const auth = await requireApiFeature("EMAIL_DELIVERY");
   if ("response" in auth) return auth.response;
 
   const { id } = await params;

@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 
-import { requireApiOwner } from "@/lib/auth/session";
+import { requireApiFeature } from "@/lib/auth/session";
 import { buildCsv, toCsvAmount } from "@/lib/reports/aggregate";
 import { annualReport } from "@/lib/reports/service";
 import { expenseCategoryLabels } from "@/lib/validations/expense";
@@ -14,9 +14,11 @@ export const runtime = "nodejs";
  * CSV, a nie PDF: to plik do dalszej obróbki w arkuszu, a nie dokument
  * do podpisania. Trzy sekcje w jednym pliku (miesiące, nieruchomości,
  * kategorie kosztów) zamiast trzech plików — księgowy dostaje jeden załącznik.
+ *
+ * Zestawienie roczne wchodzi z planem Start, tak samo jak sama strona raportów.
  */
 export async function GET(request: NextRequest) {
-  const auth = await requireApiOwner();
+  const auth = await requireApiFeature("ANNUAL_REPORT");
   if ("response" in auth) return auth.response;
 
   const requested = Number(request.nextUrl.searchParams.get("rok"));
@@ -36,16 +38,16 @@ export async function GET(request: NextRequest) {
   for (const month of report.months) {
     rows.push([
       month.label,
-      toCsvAmount(month.incomeGrosze),
-      toCsvAmount(month.expenseGrosze),
-      toCsvAmount(month.profitGrosze),
+      toCsvAmount(month.incomeGrosze, auth.locale),
+      toCsvAmount(month.expenseGrosze, auth.locale),
+      toCsvAmount(month.profitGrosze, auth.locale),
     ]);
   }
   rows.push([
     t.csv.total,
-    toCsvAmount(report.totals.incomeGrosze),
-    toCsvAmount(report.totals.expenseGrosze),
-    toCsvAmount(report.totals.profitGrosze),
+    toCsvAmount(report.totals.incomeGrosze, auth.locale),
+    toCsvAmount(report.totals.expenseGrosze, auth.locale),
+    toCsvAmount(report.totals.profitGrosze, auth.locale),
   ]);
 
   rows.push([]);
@@ -53,16 +55,16 @@ export async function GET(request: NextRequest) {
   for (const property of report.properties) {
     rows.push([
       property.name,
-      toCsvAmount(property.incomeGrosze),
-      toCsvAmount(property.expenseGrosze),
-      toCsvAmount(property.profitGrosze),
+      toCsvAmount(property.incomeGrosze, auth.locale),
+      toCsvAmount(property.expenseGrosze, auth.locale),
+      toCsvAmount(property.profitGrosze, auth.locale),
     ]);
   }
 
   rows.push([]);
   rows.push([t.csv.category, t.csv.amount]);
   for (const bucket of report.expensesByCategory) {
-    rows.push([expenseCategoryLabels(auth.d)[bucket.category], toCsvAmount(bucket.totalGrosze)]);
+    rows.push([expenseCategoryLabels(auth.d)[bucket.category], toCsvAmount(bucket.totalGrosze, auth.locale)]);
   }
 
   const csv = buildCsv([fill(t.csv.heading, { year })], rows);

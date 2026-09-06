@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
+import { usePlanAllows } from "@/lib/billing/client";
 import { calculateInvoiceTotals } from "@/lib/invoices/totals";
 import { VAT_PERCENT, vatLabels } from "@/lib/invoices/vat";
 import { formatAmount, formatMoney, parseMoney } from "@/lib/money";
@@ -84,6 +85,14 @@ export function ManualInvoiceForm({
   */
   const [sendEmail, setSendEmail] = useState(false);
 
+  /*
+    Wysyłka mailem wchodzi z planem Start. Bez niej pole znika, a nie stoi
+    wyszarzone: zaznaczyć się go i tak nie da, a puste pole z kłódką przy
+    formularzu wystawiania dokumentu tłumaczyłoby cennik w złym miejscu —
+    od tego jest kłódka przy gotowym dokumencie.
+  */
+  const canSendEmail = usePlanAllows("EMAIL_DELIVERY");
+
   const {
     register,
     control,
@@ -149,7 +158,7 @@ export function ManualInvoiceForm({
       wystawiony już dokument, albo zostać przemilczany. Osobno wolno nam
       powiedzieć wprost: dokument jest, poczta nie poszła.
     */
-    if (sendEmail) {
+    if (sendEmail && canSendEmail) {
       const sent = await api.post<{ toEmail: string }>(
         `/api/invoices/${result.data.id}/send`,
         {},
@@ -440,18 +449,20 @@ export function ManualInvoiceForm({
             </span>
           </div>
 
-          <CheckboxField
-            label={fill(d.panel.panelMisc.sendByEmailTo, { tenant: tenantName })}
-            hint={t.sendHint}
-            checked={sendEmail}
-            disabled={isSubmitting}
-            onChange={(event) => setSendEmail(event.target.checked)}
-          />
+          {canSendEmail ? (
+            <CheckboxField
+              label={fill(d.panel.panelMisc.sendByEmailTo, { tenant: tenantName })}
+              hint={t.sendHint}
+              checked={sendEmail}
+              disabled={isSubmitting}
+              onChange={(event) => setSendEmail(event.target.checked)}
+            />
+          ) : null}
 
           <div className="flex flex-wrap gap-2.5">
             <Button type="submit" size="sm" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {sendEmail ? t.issueAndSend : t.issue}
+              {sendEmail && canSendEmail ? t.issueAndSend : t.issue}
             </Button>
             <Button
               type="button"

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Logo } from "@/components/brand/logo";
+import { PlanLockMark } from "@/components/panel/plan-lock-mark";
 import { useI18n } from "@/lib/i18n/client";
 import { isNavItemActive, navLabel, PANEL_NAV } from "@/lib/panel/nav";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ export function Sidebar({
                 aria-hidden
               />
               <span className="truncate">{navLabel(item, d.panel.nav)}</span>
+              {item.feature ? <PlanLockMark feature={item.feature} className="ml-auto" /> : null}
             </Link>
           );
         })}

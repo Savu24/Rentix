@@ -1,4 +1,6 @@
 import type { VatRate } from "@/generated/prisma/enums";
+import { planAllows } from "@/lib/billing/features";
+import { DEFAULT_PLAN } from "@/lib/billing/plans";
 import { getDictionary } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/config";
 import { fill } from "@/lib/i18n/format";
@@ -65,7 +67,17 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
       city: invoice.organization.city,
     },
 
-    logoDataUrl: invoice.organization.logo?.dataUrl ?? null,
+    /*
+      Logo na dokumentach wchodzi z planem Start. Bramka stoi także tutaj,
+      a nie tylko przy wgrywaniu: konto, które spadło na niższy próg, ma
+      wgrany obrazek w bazie, a dokument nie może go dalej drukować.
+    */
+    logoDataUrl: planAllows(
+      invoice.organization.subscription?.plan ?? DEFAULT_PLAN,
+      "DOCUMENT_LOGO",
+    )
+      ? invoice.organization.logo?.dataUrl ?? null
+      : null,
 
     buyer: {
       name: invoice.buyerName,

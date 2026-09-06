@@ -1,12 +1,24 @@
 import { Bell, LogOut } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { OrganizationSwitcher } from "@/components/panel/organization-switcher";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/app/(app)/actions";
 import { getDictionary, type Locale } from "@/lib/i18n";
 
-export function Topbar({ initials, locale }: { initials: string; locale: Locale }) {
+export function Topbar({
+  initials,
+  locale,
+  organizations,
+  activeOrganizationId,
+}: {
+  initials: string;
+  locale: Locale;
+  /** Organizacje konta — przełącznik pojawia się dopiero od dwóch. */
+  organizations: { id: string; name: string }[];
+  activeOrganizationId: string;
+}) {
   const t = getDictionary(locale).panel.shell;
 
   return (
@@ -15,6 +27,11 @@ export function Topbar({ initials, locale }: { initials: string; locale: Locale 
       <div className="lg:hidden">
         <Logo size="sm" />
       </div>
+
+      {/* Przełącznik stoi po lewej, przy logo: mówi, czyje dane widać niżej,
+          więc należy do tej samej okolicy co nazwa aplikacji, a nie do
+          przycisków konta po prawej. */}
+      <OrganizationSwitcher organizations={organizations} activeId={activeOrganizationId} />
 
       <div className="ml-auto flex items-center gap-2">
         <ThemeToggle />

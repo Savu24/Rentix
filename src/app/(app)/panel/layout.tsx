@@ -1,9 +1,11 @@
+import { AccessRevoked } from "@/components/panel/access-revoked";
 import { MobileNav } from "@/components/panel/mobile-nav";
 import { PanelLocaleSync } from "@/components/panel/panel-locale";
 import { Sidebar } from "@/components/panel/sidebar";
 import { Topbar } from "@/components/panel/topbar";
-import { requireOwnerSession } from "@/lib/auth/session";
-import { organizationPlan } from "@/lib/billing/server";
+import { membershipRole, requireOwnerSession, userOrganizations } from "@/lib/auth/session";
+import { PlanFeaturesProvider } from "@/lib/billing/client";
+import { organizationFeatures, organizationPlan } from "@/lib/billing/server";
 import { clientDictionary, getDictionary } from "@/lib/i18n";
 import { I18nProvider } from "@/lib/i18n/client";
 import { organizationLocale } from "@/lib/i18n/server";
@@ -24,9 +26,22 @@ import { initials } from "@/lib/utils";
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const session = await requireOwnerSession("/panel");
 
-  const [plan, locale] = await Promise.all([
+  /*
+    Odkąd w organizacji bywa więcej niż jedna osoba, samo posiadanie ważnego
+    tokenu przestało wystarczać: po usunięciu z zespołu sesja zostaje ważna,
+    ale członkostwa już nie ma. Endpointy sprawdzają to same
+    (`requireApiOwner`), a tutaj chodzi o widok — inaczej usunięty
+    współpracownik oglądałby cudze dane do wygaśnięcia tokenu.
+  */
+  if (!(await membershipRole(session.user.id, session.user.organizationId))) {
+    return <AccessRevoked />;
+  }
+
+  const [plan, locale, features, organizations] = await Promise.all([
     organizationPlan(session.user.organizationId),
     organizationLocale(session.user.organizationId),
+    organizationFeatures(session.user.organizationId),
+    userOrganizations(session.user.id),
   ]);
 
   const dictionary = getDictionary(locale);
@@ -37,19 +52,31 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
-      <PanelLocaleSync locale={locale} />
+      {/*
+        Zestaw funkcji planu wchodzi tu raz, tak samo jak słownik: kłódkę
+        rysuje ten komponent, który zna przycisk, a wszystkie siedzą po stronie
+        przeglądarki i żaden nie może zapytać bazy.
+      */}
+      <PlanFeaturesProvider features={features}>
+        <PanelLocaleSync locale={locale} />
 
-      <div className="flex min-h-dvh bg-bg">
-        <Sidebar userName={userName} planLabel={planLabel} initials={userInitials} />
+        <div className="flex min-h-dvh bg-bg">
+          <Sidebar userName={userName} planLabel={planLabel} initials={userInitials} />
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar initials={userInitials} locale={locale} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar
+              initials={userInitials}
+              locale={locale}
+              organizations={organizations}
+              activeOrganizationId={session.user.organizationId}
+            />
 
-          <main className="flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">{children}</main>
+            <main className="flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">{children}</main>
 
-          <MobileNav />
+            <MobileNav />
+          </div>
         </div>
-      </div>
+      </PlanFeaturesProvider>
     </I18nProvider>
   );
 }

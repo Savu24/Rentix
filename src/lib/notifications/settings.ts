@@ -1,4 +1,6 @@
 import type { NotificationType } from "@/generated/prisma/enums";
+import { planAllows } from "@/lib/billing/features";
+import { DEFAULT_PLAN } from "@/lib/billing/plans";
 import type { TemplateFields } from "@/lib/email/templates";
 import { prisma } from "@/lib/prisma";
 
@@ -51,6 +53,9 @@ export async function organizationMailSettings(organizationId: string): Promise<
         contactEmail: true,
         reminderDaysBefore: true,
         overdueRepeatDays: true,
+        // Plan idzie tym samym zapytaniem: własne teksty wchodzą z progiem Pro,
+        // a nocny przebieg pyta o ustawienia raz na organizację.
+        subscription: { select: { plan: true } },
       },
     }),
     prisma.emailTemplate.findMany({
@@ -62,8 +67,21 @@ export async function organizationMailSettings(organizationId: string): Promise<
   const enabled = new Set<NotificationType>(EDITABLE_NOTIFICATION_TYPES);
   const byType = new Map<NotificationType, TemplateFields>();
 
+  /*
+    Własne teksty wchodzą z planem Pro; niższy próg dostaje wiadomości
+    domyślne. Przełącznik automatycznej wysyłki obowiązuje niezależnie od
+    planu — rytm przypominania ma każde konto, a wyłączony automat musi
+    zostać wyłączony także po spadku na niższy próg.
+  */
+  const ownTemplates = planAllows(
+    organization?.subscription?.plan ?? DEFAULT_PLAN,
+    "MESSAGE_TEMPLATES",
+  );
+
   for (const template of templates) {
     if (!template.enabled) enabled.delete(template.type);
+    if (!ownTemplates) continue;
+
     byType.set(template.type, {
       subject: template.subject,
       heading: template.heading,

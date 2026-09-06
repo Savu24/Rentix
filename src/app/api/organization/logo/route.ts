@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
-import { requireApiOwner } from "@/lib/auth/session";
+import { requireApiFeature, requireApiOwner } from "@/lib/auth/session";
 import { deleteOrganizationLogo, saveOrganizationLogo } from "@/lib/organizations/service";
 import { organizationLogoSchema } from "@/lib/validations/settings";
 
@@ -13,11 +13,16 @@ export const runtime = "nodejs";
  * Obrazek przychodzi jako data URI w JSON-ie, a nie jako multipart: jest jeden
  * na organizację i ląduje w bazie, więc cała reszta panelu może korzystać
  * z tego samego klienta REST, bez osobnej ścieżki na pliki.
+ *
+ * Logo na dokumentach wchodzi z planem Start — bramka stoi przy wgrywaniu,
+ * nie przy kasowaniu. Konto, które spadło na niższy próg, ma prawo usunąć
+ * obrazek, którego i tak już nie drukujemy; odmowa zostawiałaby je z wpisem
+ * w bazie, którego nie da się ruszyć.
  */
 
 /** PUT /api/organization/logo — wgranie podmienia poprzednie. */
 export async function PUT(request: NextRequest) {
-  const auth = await requireApiOwner();
+  const auth = await requireApiFeature("DOCUMENT_LOGO");
   if ("response" in auth) return auth.response;
 
   let body: unknown;

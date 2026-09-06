@@ -209,6 +209,57 @@ export const uk: Dictionary = {
       emailTakenField: "This address is already taken",
     },
 
+    /**
+     * The invitation page. It sits in `auth` because it is a pre-sign-in
+     * screen and speaks in the same voice as sign-in and sign-up.
+     */
+    invitation: {
+      metaTitle: "Invitation",
+      metaDescription: "Accept your invitation to Rentix.",
+      team: {
+        heading: "Invitation to the team",
+        lead: "{organization} invites you to work with them in Rentix as {role}.",
+      },
+      tenant: {
+        heading: "Tenant portal",
+        lead: "{organization} is opening access to your tenancy and invoices.",
+      },
+      email: "Invitation sent to",
+      expires: "The link is valid until {date}.",
+      create: {
+        heading: "Create your account",
+        lead: "The email address comes from the invitation. That leaves your name and a password.",
+        name: "Full name",
+        password: "Password",
+        passwordHint: "At least 10 characters, with an upper-case letter, a lower-case letter and a digit.",
+        submit: "Create account and continue",
+        submitting: "Creating your account…",
+      },
+      existing: {
+        heading: "This address already has an account",
+        lead: "Sign in as {email}. You will come back here and finish in one click.",
+        login: "Go to sign-in",
+      },
+      ready: {
+        heading: "All set",
+        lead: "You are signed in as {email}.",
+        accept: "Accept invitation",
+        accepting: "Accepting…",
+      },
+      errors: {
+        notFound: "This invitation is gone. Ask for a new one.",
+        expired: "The link has expired. Ask for a new invitation.",
+        accepted: "This invitation has already been accepted. Sign in to your account.",
+        wrongAccount:
+          "You are signed in with a different address than the invitation. Sign out and open the link again.",
+        needsLogin: "This address already has an account. Sign in, then open the link again.",
+        wrongAccountType:
+          "This account is a different kind from the one the invitation needs. One account cannot be a tenant and a colleague at once.",
+        alreadyLinked: "That tenant record is already linked to another account.",
+        generic: "The invitation could not be accepted. Try again.",
+      },
+    },
+
     errors: {
       rateLimited: "Too many login attempts. Wait 15 minutes and try again.",
       invalidCredentials: "Wrong email address or password.",
@@ -282,6 +333,7 @@ export const uk: Dictionary = {
       settingsOrganization: "Organisation",
       settingsNotifications: "Notifications",
       settingsMessages: "Messages",
+      settingsTeam: "Team",
       settingsAccount: "Account",
     },
 
@@ -955,6 +1007,8 @@ export const uk: Dictionary = {
         confirm:
           "The message goes to {email}, with the PDF attached. A sent email cannot be recalled.",
         button: "Send to tenant",
+        locked:
+          "Emailing a document comes with the Start plan. You can still download it and send it yourself, and payment reminders work on every plan.",
       },
       generate: {
         title: "Invoice the rent",
@@ -1054,6 +1108,10 @@ export const uk: Dictionary = {
     reportsPage: {
       title: "Reports",
       lead: "Cash basis. What counts is the day the money came in or went out.",
+      locked: {
+        title: "The annual summary comes with the Start plan",
+        lead: "Income, costs and the result month by month, plus how much of the rent was actually collected over the year — in the dashboard and as a CSV for your accountant. Your payments and costs are already recorded; the report will add them up the day you move to the Start plan.",
+      },
       downloadCsv: "Download CSV",
       noData:
         "There are no payments or costs recorded for {year} yet. The report fills itself in as you record payments and add costs.",
@@ -1125,6 +1183,185 @@ export const uk: Dictionary = {
       noInvoices: "No invoices have been issued yet.",
       dueOn: "due {date}",
       landlord: "Landlord",
+      downloadPdf: "PDF",
+      downloadPdfAria: "Download invoice {number} as PDF",
+      paymentTitle: "How to pay",
+      bankAccount: "Account details",
+      transferTitle: "Payment reference",
+      transferTitleValue: "Rent — {address}",
+      noBankAccount:
+        "Your landlord has not put bank details here. Ask them where to send the payment.",
+      contact: "Contact",
+      unavailableTitle: "The portal is switched off",
+      unavailableLead:
+        "Your landlord does not run the tenant portal at the moment. Your tenancy and invoices will come by email — nothing is lost, it is just not shown here.",
+    },
+
+    /** The team: who can get into the organisation account. */
+    team: {
+      title: "Team",
+      accessRevokedTitle: "You no longer have access",
+      lead: "Who can get into this account, and on what terms.",
+      locked: {
+        title: "Multiple users come with the Pro plan",
+        lead: "On this plan one person runs the account. The Pro plan lets you invite colleagues and split the permissions between them.",
+      },
+      members: {
+        title: "People with access",
+        you: "that is you",
+        joined: "in the team since {date}",
+        lastLogin: "last signed in {date}",
+        neverLoggedIn: "has not signed in yet",
+        role: "Role",
+        remove: "Remove access",
+        removeConfirm:
+          "Remove access for {name}? It goes immediately. Their account stays — only the link to your organisation goes.",
+        roleSaved: "Role saved.",
+      },
+      invite: {
+        title: "Invite to the team",
+        lead: "We send a link the invited person uses to set their own password. The link is valid for fourteen days.",
+        email: "Email address",
+        role: "Role",
+        submit: "Send invitation",
+        submitting: "Sending…",
+        sent: "The invitation went to {email}.",
+        notDelivered:
+          "The invitation is saved, but the email did not go out: {error}. Check your email settings and send again.",
+      },
+      pending: {
+        title: "Pending invitations",
+        empty: "No pending invitations.",
+        invitedBy: "invited by {name}",
+        expires: "valid until {date}",
+        expired: "expired",
+        cancel: "Cancel",
+        cancelConfirm: "Cancel the invitation for {email}? The link stops working straight away.",
+      },
+      /** Role names — keys match the `MembershipRole` enum. */
+      roles: {
+        OWNER: "Account owner",
+        ADMIN: "Administrator",
+        MEMBER: "Colleague",
+      },
+      roleHints: {
+        ADMIN: "Full day-to-day access plus managing the team. Cannot delete the account or change its owner.",
+        MEMBER: "Day-to-day work in the panel: properties, tenants, tenancies, invoices. No team management, no deleting the account.",
+      },
+      validation: {
+        roleRequired: "Pick a role from the list",
+      },
+      errors: {
+        alreadyMember: "This address already has access to the account.",
+        tenantAccount:
+          "This address belongs to a tenant account. One account cannot be a tenant and a colleague at the same time.",
+        notFound: "That person is not in the team.",
+        ownerProtected: "The account owner cannot be changed or removed from the team.",
+        self: "You cannot change your own permissions.",
+      },
+    },
+
+    /** Tenant portal access — the card on the tenant record. */
+    tenantPortalAccess: {
+      title: "Tenant portal",
+      lead: "A tenant with an account sees their tenancy, their invoices and how to pay. Nothing outside their own tenancy.",
+      locked: {
+        title: "The tenant portal comes with the Pro plan",
+        lead: "On this plan documents go to the tenant by email. The Pro plan gives them their own account with the tenancy and invoices in it.",
+      },
+      hasAccount: "The tenant has an account and can sign in.",
+      pendingBadge: "Invitation sent",
+      noAccount: "The tenant has no portal account yet.",
+      pending: "Invitation sent to {email}. The link is valid until {date}.",
+      noEmailHint:
+        "This record has no email address, so there is nowhere to send the invitation. Add one first.",
+      invite: "Invite to the portal",
+      resend: "Send again",
+      revoke: "Remove access",
+      revokeConfirm:
+        "Remove the tenant's portal access? Their account stays, but they stop seeing the tenancy and the invoices.",
+      sending: "Sending…",
+      sent: "The invitation went to {email}.",
+      notDelivered: "The invitation is saved, but the email did not go out: {error}.",
+      revoked: "Access removed.",
+      errors: {
+        noEmail: "The tenant has no email address. Add one on the record.",
+        alreadyLinked: "This tenant already has a portal account.",
+        ownerAccount:
+          "This address belongs to a landlord account. One account cannot sit on both sides of a tenancy.",
+      },
+    },
+
+    /** Accounting export — the section on the reports page and the sheet headers. */
+    accountingExport: {
+      title: "Accounting export",
+      lead: "A register of documents, payments and costs for a period you choose — line by line, ready for your accountant.",
+      locked: {
+        title: "The accounting export comes with the Pro plan",
+        lead: "The annual summary comes with the Start plan. The line-by-line extract, with document numbers and customer details, comes with the Pro plan.",
+      },
+      from: "From",
+      to: "To",
+      scope: "Contents",
+      scopes: {
+        all: "Everything",
+        documents: "Document register",
+        payments: "Payments",
+        expenses: "Costs",
+      },
+      download: "Download CSV",
+      note: "Documents are counted by issue date, payments and costs by the date the money moved. Those are two different bases, which is why the summary does not add them into one figure.",
+      csv: {
+        heading: "Rentix — accounting export {period}",
+        fileNameBase: "rentix-accounting",
+        documentsTitle: "DOCUMENT REGISTER (by issue date)",
+        documentsColumns: [
+          "Number",
+          "Type",
+          "Issue date",
+          "Supply date",
+          "Payment due",
+          "Customer",
+          "VAT number",
+          "Property",
+          "Net",
+          "VAT",
+          "Gross",
+          "Paid",
+          "Outstanding",
+          "Status",
+        ],
+        paymentsTitle: "PAYMENTS (by payment date)",
+        paymentsColumns: ["Date", "Document", "Paid by", "Amount", "Method", "Reference"],
+        expensesTitle: "COSTS (by date paid)",
+        expensesColumns: [
+          "Date",
+          "Category",
+          "Description",
+          "Supplier",
+          "Document number",
+          "Property",
+          "Amount",
+        ],
+        summary: {
+          title: "SUMMARY",
+          invoicedNet: "Sales net",
+          invoicedVat: "VAT",
+          invoiced: "Sales gross",
+          received: "Money in",
+          expenses: "Costs",
+          result: "Cash result",
+        },
+        unassigned: "unassigned",
+        /** Stored document statuses — different from the ones shown in the panel. */
+        statuses: {
+          DRAFT: "Draft",
+          ISSUED: "Issued",
+          PARTIALLY_PAID: "Part paid",
+          PAID: "Paid",
+          CANCELLED: "Cancelled",
+        },
+      },
     },
 
     panelMisc: {
@@ -1273,6 +1510,16 @@ export const uk: Dictionary = {
       notifications: "Notifications",
       signOut: "Sign out",
       fallbackAccountName: "Account",
+      lockedHint: "Comes with the {plan}",
+      organizations: {
+        switchAria: "The organisation you are working in",
+      },
+      planNames: {
+        FREE: "Free",
+        START: "Start",
+        PRO: "Pro",
+        PORTFOLIO: "Portfolio",
+      },
       plans: {
         FREE: "Free plan",
         START: "Start plan",
@@ -1375,6 +1622,10 @@ export const uk: Dictionary = {
           "Add your address. Without it, invoices go out with your name only — and those are the documents your tenant and your accountant see.",
         messagesLead:
           "Write in plain text. The layout, colours and the amounts table are on our side, so the message does not fall apart in Outlook. An empty field keeps the default text.",
+        messagesLocked: {
+          title: "Your own message templates come with the Pro plan",
+          lead: "On this plan reminders and overdue notices go out in our wording — correct and ready to send. The Pro plan lets you write them in your own words.",
+        },
       },
       profile: {
         title: "Your profile",
@@ -1398,7 +1649,8 @@ export const uk: Dictionary = {
         usage: "{used} of {limit} {noun}",
         usageUnlimited: "{used} {noun}, no limit",
         tiers: "What each plan covers",
-        sameFeatures: "Every plan has every feature. Only the number of tenancies changes.",
+        tiersLead:
+          "A higher tier means more tenancies, and from the Pro plan also the team, the accounting export and the tenant portal.",
         tierLimit: "{limit} {noun}",
         tierUnlimited: "no limit",
         current: "Your plan",
@@ -1413,6 +1665,10 @@ export const uk: Dictionary = {
         readError: "We could not read that file. Try picking it again.",
         change: "Change logo",
         upload: "Upload logo",
+        locked: {
+          title: "Your logo on documents comes with the Start plan",
+          lead: "On this plan rent invoices go out with your name only. The Start plan prints your logo in the header.",
+        },
       },
       notifications: {
         title: "Sender and timing",
@@ -1503,6 +1759,7 @@ export const uk: Dictionary = {
         account: "Account not found.",
         invoices: "No documents found.",
         selectedTenant: "The selected tenant was not found.",
+        invitation: "The invitation was not found.",
         roomInProperty: "That room was not found in this property.",
         propertyRooms: "No rooms found for this property.",
       },
@@ -1559,6 +1816,11 @@ export const uk: Dictionary = {
         "This account signs in through an external provider and has no password to change.",
       sendFailed: "Could not send: {error}",
       ownerOnly: "This resource is for the account owner only.",
+      planFeatureRequired: "This feature comes with the {plan} plan. Your plan does not include it.",
+      teamManagerOnly:
+        "The team is managed by the account owner and administrators. Ask one of them.",
+      accessRevoked:
+        "You no longer have access to this account. If that is a mistake, ask the owner to invite you again.",
       rateLimited: "Too many attempts. Try again in a moment.",
       networkError: "No connection to the server. Check your internet and try again.",
       unknownError: "Something went wrong. Try again.",
@@ -1884,6 +2146,29 @@ export const uk: Dictionary = {
     attachmentNote: "The PDF is attached to this message.",
     attachmentPlain: "The PDF is attached to this message.",
     automaticFooter: "sent automatically by Rentix",
+
+    /** Invitation emails. The landlord does not edit these. */
+    invitations: {
+      expires: "The link is valid until {date}.",
+      team: {
+        subject: "Invitation to the {organization} team",
+        heading: "Invitation to the team",
+        intro:
+          "{organization} invites you to work with them in Rentix as {role}. Use the button below to set a password and get into the panel.",
+        outro: "If you do not know what this is about, ignore it. Nothing happens until you click.",
+        cta: "Accept invitation",
+      },
+      tenant: {
+        subject: "Access to your tenancy with {organization}",
+        heading: "Tenant portal",
+        intro:
+          "Hello {name}. {organization} is opening a portal for you, where you can see your tenancy, your invoices and how to pay.",
+        outro: "If you do not know what this is about, ignore it. Nothing happens until you click.",
+        cta: "Activate access",
+        /** When the record has no first name. */
+        fallbackName: "there",
+      },
+    },
 
     rows: {
       number: "Invoice number",

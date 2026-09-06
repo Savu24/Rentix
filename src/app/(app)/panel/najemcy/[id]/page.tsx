@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 
 import { ArchiveAction } from "@/components/panel/archive/archive-action";
+import { PlanLock } from "@/components/panel/plan-lock";
+import { TenantPortalAccess } from "@/components/panel/tenants/portal-access";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { organizationAllows } from "@/lib/billing/server";
+import { tenantPortalAccess } from "@/lib/invitations/service";
 import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { ManualInvoiceForm } from "@/components/panel/invoices/manual-invoice-form";
 import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
@@ -58,6 +62,14 @@ export default async function TenantDetailPage({ params }: Params) {
 
   const tenant = await getTenant(session.user.organizationId, id);
   if (!tenant) notFound();
+
+  // Dostęp do portalu pytamy dopiero tutaj, a nie w `getTenant`: kartoteka
+  // wchodzi też do listy najemców, gdzie ta informacja nikogo nie interesuje,
+  // a kosztowałaby dwa zapytania na wiersz.
+  const [portalAllowed, portal] = await Promise.all([
+    organizationAllows(session.user.organizationId, "TENANT_PORTAL"),
+    tenantPortalAccess(session.user.organizationId, tenant.id),
+  ]);
 
   const leases = tenant.leases.map((entry) => entry.lease);
   const activeLeases = leases.filter((lease) => lease.status === "ACTIVE");
@@ -201,6 +213,30 @@ export default async function TenantDetailPage({ params }: Params) {
         <SummaryTile label={t.paidTotal} value={formatMoney(totalPaid, locale)} />
         <SummaryTile label={t.leases} value={String(leases.length)} />
       </div>
+
+      {portalAllowed ? (
+        <TenantPortalAccess
+          tenantId={tenant.id}
+          email={tenant.email}
+          hasAccount={portal.hasAccount}
+          /* Data przez ISO, bo komponent jest kliencki — `Date` i tak
+             przechodzi przez serializację, więc lepiej jawnie. */
+          pending={
+            portal.pending
+              ? {
+                  email: portal.pending.email,
+                  expiresAt: portal.pending.expiresAt.toISOString(),
+                }
+              : null
+          }
+        />
+      ) : (
+        <PlanLock
+          feature="TENANT_PORTAL"
+          title={d.panel.tenantPortalAccess.locked.title}
+          lead={d.panel.tenantPortalAccess.locked.lead}
+        />
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-[15px] font-semibold text-fg">{t.leases}</h2>

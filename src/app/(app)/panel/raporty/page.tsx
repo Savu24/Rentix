@@ -1,12 +1,15 @@
 import { Download } from "lucide-react";
 import type { Metadata } from "next";
 
+import { PlanLock } from "@/components/panel/plan-lock";
+import { AccountingExport } from "@/components/panel/reports/accounting-export";
 import { CashflowChart } from "@/components/panel/reports/cashflow-chart";
 import { YearPicker } from "@/components/panel/reports/year-picker";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { organizationAllows } from "@/lib/billing/server";
 // Kwoty w tabeli idą bez sufiksu waluty — trzy razy „zł" w jednym wierszu
 // nie mieści się na telefonie, więc jednostka stoi raz, w nagłówku sekcji.
 import { LOCALE_META } from "@/lib/i18n/config";
@@ -30,16 +33,38 @@ export default async function ReportsPage({
   const organizationId = session.user.organizationId;
   const params = await searchParams;
 
+  /*
+    Cała strona jest zestawieniem rocznym, a to wchodzi z planem Start —
+    dlatego bramka stoi przed liczeniem raportu, a nie przy samym przycisku
+    pobierania. Nagłówek zostaje: użytkownik ma zobaczyć, że tu jest sekcja
+    raportów, i przeczytać, co się w niej pojawi.
+  */
+  if (!(await organizationAllows(organizationId, "ANNUAL_REPORT"))) {
+    return (
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+        <div className="flex flex-col gap-1">
+          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
+          <p className="text-sm text-muted">{t.lead}</p>
+        </div>
+
+        <PlanLock feature="ANNUAL_REPORT" title={t.locked.title} lead={t.locked.lead} />
+      </div>
+    );
+  }
+
   const years = await reportYears(organizationId);
   const requested = Number(params.rok);
   // Rok z URL-a musi być na liście — inaczej „?rok=1999" wygenerowałby pusty
   // raport wyglądający jak awaria.
   const year = years.includes(requested) ? requested : years[0]!;
 
-  const report = await annualReport(organizationId, year, locale, {
-    deletedProperty: t.deletedProperty,
-    generalCosts: t.generalCosts,
-  });
+  const [report, exportAllowed] = await Promise.all([
+    annualReport(organizationId, year, locale, {
+      deletedProperty: t.deletedProperty,
+      generalCosts: t.generalCosts,
+    }),
+    organizationAllows(organizationId, "ACCOUNTING_EXPORT"),
+  ]);
   const { totals, collection } = report;
   const profitable = totals.profitGrosze >= 0;
 
@@ -226,6 +251,18 @@ export default async function ReportsPage({
           </dl>
         </CardContent>
       </Card>
+
+      {/* Eksport stoi pod raportem, a nie nad nim: najpierw wynajmujący widzi
+          swoje liczby, a dopiero potem wysyła je dalej. */}
+      {exportAllowed ? (
+        <AccountingExport year={year} />
+      ) : (
+        <PlanLock
+          feature="ACCOUNTING_EXPORT"
+          title={d.panel.accountingExport.locked.title}
+          lead={d.panel.accountingExport.locked.lead}
+        />
+      )}
 
       <p className="text-xs text-muted">
         {t.disclaimer}

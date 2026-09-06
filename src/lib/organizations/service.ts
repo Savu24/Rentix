@@ -158,7 +158,13 @@ export type DeleteAccountResult =
   | { ok: false; reason: "WRONG_PASSWORD" };
 
 /**
- * Usuwa konto wraz z organizacją, gdy jest jej ostatnim członkiem.
+ * Usuwa konto wraz z każdą organizacją, w której jest ostatnim członkiem.
+ *
+ * Organizacji bywa kilka: jedno konto prowadzi własny najem i pomaga dwóm
+ * innym wynajmującym. Te, w których zostaje ktoś jeszcze, tracą wyłącznie
+ * to jedno członkostwo — dane należą do organizacji, nie do osoby, która
+ * właśnie odchodzi. Te, w których nie zostaje nikt, znikają w całości:
+ * inaczej po skasowaniu konta wisiałaby w bazie organizacja bez wejścia.
  *
  * Kasujemy jawnie, tabela po tabeli, zamiast liczyć na kaskadę z organizacji.
  * Powód jest twardy: `leases.propertyId` i `lease_tenants.tenantId` mają
@@ -171,7 +177,6 @@ export type DeleteAccountResult =
  */
 export async function deleteAccount(
   userId: string,
-  organizationId: string,
   data: AccountDeleteOutput,
 ): Promise<DeleteAccountResult> {
   const user = await prisma.user.findUnique({
@@ -185,11 +190,23 @@ export async function deleteAccount(
   const matches = await verifyPassword(data.currentPassword, user.passwordHash);
   if (!matches) return { ok: false, reason: "WRONG_PASSWORD" };
 
-  const memberCount = await prisma.membership.count({ where: { organizationId } });
-  const deleteOrganization = memberCount <= 1;
+  const memberships = await prisma.membership.findMany({
+    where: { userId },
+    select: { organizationId: true },
+  });
+
+  const counts = await prisma.membership.groupBy({
+    by: ["organizationId"],
+    where: { organizationId: { in: memberships.map((one) => one.organizationId) } },
+    _count: { _all: true },
+  });
+
+  const orphaned = counts
+    .filter((row) => row._count._all <= 1)
+    .map((row) => row.organizationId);
 
   await prisma.$transaction(async (tx) => {
-    if (deleteOrganization) {
+    for (const organizationId of orphaned) {
       const scope = { where: { organizationId } };
 
       // Kolejność: od liści do korzenia. Pozycje faktur i zdjęcia znikają
@@ -211,14 +228,14 @@ export async function deleteAccount(
       await tx.tenant.deleteMany(scope);
       await tx.membership.deleteMany(scope);
       await tx.organization.delete({ where: { id: organizationId } });
-    } else {
-      await tx.membership.deleteMany({ where: { organizationId, userId } });
     }
 
+    // Członkostwa w organizacjach, w których zostaje ktoś jeszcze, znikają
+    // kaskadą razem z kontem.
     await tx.user.delete({ where: { id: userId } });
   });
 
-  return { ok: true, deletedOrganization: deleteOrganization };
+  return { ok: true, deletedOrganization: orphaned.length > 0 };
 }
 
 export type ChangePasswordResult =

@@ -125,6 +125,9 @@ model Organization {
   emailTemplates      EmailTemplate[]
   subscription        Subscription?
   logo                OrganizationLogo?
+  invitations         Invitation[]
+  /// Konta, które mają tę organizację ustawioną jako bieżącą.
+  activeForUsers      User[]            @relation("ActiveOrganization")
 
   @@index([createdAt])
   @@map("organizations")
@@ -191,9 +194,23 @@ model User {
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
-  memberships   Membership[]
-  accounts      Account[]
-  sessions      Session[]
+  /// Organizacja, w której konto właśnie pracuje.
+  ///
+  /// Jedno konto bywa dziś w kilku organizacjach: ktoś prowadzi własny najem
+  /// i pomaga jeszcze dwóm wynajmującym. Token sesji niesie jedną wartość,
+  /// ustaloną przy logowaniu, więc wybór musi mieszkać w bazie — inaczej
+  /// przełączenie działałoby do najbliższego odświeżenia tokenu i rozjeżdżało
+  /// się między urządzeniami.
+  ///
+  /// NULL albo wskazanie organizacji, w której nie ma już członkostwa, znaczy
+  /// „pierwsza z brzegu" — patrz `activeOrganizationId()` w `auth/session.ts`.
+  /// Dlatego usunięcie z zespołu nie musi tego pola sprzątać.
+  activeOrganizationId String?
+
+  memberships        Membership[]
+  activeOrganization Organization? @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
+  accounts           Account[]
+  sessions           Session[]
   /// Profil najemcy, jeśli to konto należy do najemcy.
   tenantProfile Tenant?
 
@@ -202,8 +219,10 @@ model User {
   sentMessages      Message[]
   uploadedDocuments Document[]
   notifications     Notification[]
+  sentInvitations   Invitation[]         @relation("InvitationSender")
 
   @@index([role])
+  @@index([activeOrganizationId])
   @@map("users")
 }
 
@@ -253,6 +272,64 @@ model VerificationToken {
   @@unique([identifier, token])
   @@index([expires])
   @@map("verification_tokens")
+}
+
+/// Kogo wpuszcza zaproszenie.
+///
+/// Jedna tabela na oba przypadki, nie dwie. Mechanika jest tu w całości
+/// wspólna — token jednorazowy, termin ważności, strona akceptacji, założenie
+/// konta i zalogowanie — a różni się wyłącznie to, co zapisujemy na końcu:
+/// członkostwo w organizacji albo dowiązanie do kartoteki najemcy. Dwie tabele
+/// znaczyłyby dwa razy ten sam kod wygaszania, ponawiania i sprzątania.
+enum InvitationKind {
+  TEAM // współpracownik z dostępem do panelu organizacji
+  TENANT // najemca z dostępem do własnego portalu
+}
+
+/// Zaproszenie do organizacji albo do portalu najemcy.
+model Invitation {
+  id             String         @id @default(cuid())
+  organizationId String
+  kind           InvitationKind
+
+  /// Adres, na który poszedł link. Dla najemcy kopia z kartoteki: zmiana
+  /// adresu w kartotece nie może przekierować już wysłanego zaproszenia.
+  email String
+
+  /// Rola w organizacji po przyjęciu — tylko dla `TEAM`.
+  role MembershipRole?
+
+  /// Kartoteka, do której podepniemy konto — tylko dla `TENANT`.
+  tenantId String?
+
+  /// SHA-256 tokenu z linku, nigdy sam token.
+  ///
+  /// Link idzie mailem i ląduje w cudzej skrzynce, a wyciek bazy nie ma
+  /// dawać wejścia na cudze konto. Hasła trzymamy tak samo i z tego samego
+  /// powodu; tutaj wystarczy SHA-256 zamiast bcrypta, bo token ma 32 losowe
+  /// bajty — nie ma czego zgadywać słownikiem.
+  tokenHash String @unique
+
+  /// Kto zaprosił. NULL po skasowaniu tego konta — zaproszenie zostaje ważne,
+  /// bo wpuszcza do organizacji, a nie do konta osoby zapraszającej.
+  invitedById String?
+
+  expiresAt  DateTime
+  /// Wypełnione w chwili przyjęcia. Wiersz zostaje jako ślad, kto i kiedy
+  /// dostał dostęp — lista zespołu pokazuje wtedy członka, a nie zaproszenie.
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedBy    User?        @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  // Główne zapytanie obu list: oczekujące zaproszenia danego rodzaju.
+  @@index([organizationId, kind, acceptedAt])
+  @@index([tenantId])
+  @@index([expiresAt])
+  @@map("invitations")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -633,6 +710,7 @@ model Tenant {
   messageThreads      MessageThread[]
   maintenanceRequests MaintenanceRequest[]
   documents           Document[]
+  invitations         Invitation[]
 
   @@index([organizationId])
   @@index([organizationId, status])

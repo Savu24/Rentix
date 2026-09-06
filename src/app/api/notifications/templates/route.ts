@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
-import { requireApiOwner } from "@/lib/auth/session";
+import { requireApiFeature, requireApiOwner } from "@/lib/auth/session";
 import { saveEmailTemplate, setTemplateEnabled } from "@/lib/notifications/service";
 import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
 import { emailTemplateSchema } from "@/lib/validations/settings";
@@ -16,11 +16,14 @@ export const runtime = "nodejs";
  * podmianą zawartości pod znanym adresem, a nie tworzeniem kolejnego zasobu.
  * Powtórzone żądanie daje ten sam stan — po dwukrotnym kliknięciu „Zapisz"
  * nie robi się drugi szablon.
+ *
+ * Własne teksty wchodzą z planem Pro. Przełącznik automatycznej wysyłki
+ * (PATCH niżej) nie — to rytm przypominania, a ten ma każde konto.
  */
 
 /** PUT /api/notifications/templates */
 export async function PUT(request: NextRequest) {
-  const auth = await requireApiOwner();
+  const auth = await requireApiFeature("MESSAGE_TEMPLATES");
   if ("response" in auth) return auth.response;
 
   let body: unknown;

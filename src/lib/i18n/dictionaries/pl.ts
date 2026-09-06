@@ -212,6 +212,57 @@ export const pl = {
       emailTakenField: "Ten adres jest już zajęty",
     },
 
+    /**
+     * Strona przyjmowania zaproszenia. Siedzi w sekcji `auth`, bo to ekran
+     * przed zalogowaniem i mówi tym samym głosem co logowanie i rejestracja.
+     */
+    invitation: {
+      metaTitle: "Zaproszenie",
+      metaDescription: "Przyjmij zaproszenie do Rentiksa.",
+      team: {
+        heading: "Zaproszenie do zespołu",
+        lead: "{organization} zaprasza Cię do wspólnej pracy w Rentiksie w roli: {role}.",
+      },
+      tenant: {
+        heading: "Portal najemcy",
+        lead: "{organization} otwiera Ci dostęp do Twojej umowy i rozliczeń.",
+      },
+      email: "Zaproszenie na adres",
+      expires: "Link jest ważny do {date}.",
+      create: {
+        heading: "Załóż konto",
+        lead: "Adres masz już z zaproszenia. Zostaje imię i hasło.",
+        name: "Imię i nazwisko",
+        password: "Hasło",
+        passwordHint: "Co najmniej 10 znaków, w tym wielka litera, mała litera i cyfra.",
+        submit: "Załóż konto i wejdź",
+        submitting: "Zakładanie konta…",
+      },
+      existing: {
+        heading: "Na ten adres jest już konto",
+        lead: "Zaloguj się jako {email}. Wrócisz tutaj i dokończysz przyjęcie jednym kliknięciem.",
+        login: "Przejdź do logowania",
+      },
+      ready: {
+        heading: "Wszystko gotowe",
+        lead: "Jesteś zalogowany jako {email}.",
+        accept: "Przyjmij zaproszenie",
+        accepting: "Przyjmowanie…",
+      },
+      errors: {
+        notFound: "Tego zaproszenia już nie ma. Poproś o nowe.",
+        expired: "Link stracił ważność. Poproś o nowe zaproszenie.",
+        accepted: "To zaproszenie zostało już przyjęte. Zaloguj się na swoje konto.",
+        wrongAccount:
+          "Jesteś zalogowany innym adresem niż ten z zaproszenia. Wyloguj się i otwórz link ponownie.",
+        needsLogin: "Na ten adres jest już konto. Zaloguj się, a potem otwórz link jeszcze raz.",
+        wrongAccountType:
+          "To konto jest innego rodzaju, niż wymaga zaproszenie. Jedno konto nie może być naraz najemcą i współpracownikiem.",
+        alreadyLinked: "Ta kartoteka jest już powiązana z innym kontem.",
+        generic: "Nie udało się przyjąć zaproszenia. Spróbuj ponownie.",
+      },
+    },
+
     errors: {
       rateLimited: "Zbyt wiele prób logowania. Odczekaj 15 minut i spróbuj ponownie.",
       invalidCredentials: "Nieprawidłowy e-mail lub hasło.",
@@ -287,6 +338,7 @@ export const pl = {
       settingsOrganization: "Organizacja",
       settingsNotifications: "Powiadomienia",
       settingsMessages: "Wiadomości",
+      settingsTeam: "Zespół",
       settingsAccount: "Konto",
     },
 
@@ -931,6 +983,8 @@ export const pl = {
         confirm:
           "Wiadomość pójdzie na {email}, z dokumentem PDF w załączniku. Wysłanego e-maila nie da się cofnąć.",
         button: "Wyślij najemcy",
+        locked:
+          "Wysyłka dokumentu mailem wchodzi z planem Start. Dokument pobierzesz i wyślesz sam, a przypomnienia o płatności działają na każdym planie.",
       },
       generate: {
         title: "Naliczenie czynszu",
@@ -1031,6 +1085,10 @@ export const pl = {
     reportsPage: {
       title: "Raporty",
       lead: "Rozliczenie kasowe. Liczy się dzień, w którym pieniądze wpłynęły albo wyszły.",
+      locked: {
+        title: "Zestawienie roczne wchodzi z planem Start",
+        lead: "Przychody, koszty, wynik miesiąc po miesiącu i ściągalność czynszu za cały rok — w panelu i w pliku CSV dla księgowego. Twoje wpłaty i koszty są zapisane; raport policzy się z nich w dniu, w którym przejdziesz na plan Start.",
+      },
       downloadCsv: "Pobierz CSV",
       noData:
         "Za {year} rok nie ma jeszcze żadnych wpłat ani kosztów. Raport wypełni się sam, gdy zaczniesz księgować wpłaty i wpisywać wydatki.",
@@ -1100,6 +1158,186 @@ export const pl = {
       noInvoices: "Nie wystawiono jeszcze żadnego rozliczenia.",
       dueOn: "termin {date}",
       landlord: "Wynajmujący",
+      downloadPdf: "PDF",
+      downloadPdfAria: "Pobierz dokument {number} w formacie PDF",
+      paymentTitle: "Jak zapłacić",
+      bankAccount: "Numer rachunku",
+      transferTitle: "Tytuł przelewu",
+      transferTitleValue: "Czynsz — {address}",
+      noBankAccount:
+        "Wynajmujący nie podał tu numeru rachunku. Zapytaj go, na jakie konto płacić.",
+      contact: "Kontakt",
+      unavailableTitle: "Portal jest teraz wyłączony",
+      unavailableLead:
+        "Twój wynajmujący nie ma w tej chwili aktywnego portalu najemcy. Umowę i rozliczenia dostaniesz od niego mailem — nic nie znika, po prostu nie widać ich tutaj.",
+    },
+
+    /** Zespół: kto ma dostęp do konta organizacji. */
+    team: {
+      title: "Zespół",
+      /** Ekran konta, któremu odebrano dostęp — patrz `AccessRevoked`. */
+      accessRevokedTitle: "Nie masz już dostępu",
+      lead: "Kto ma dostęp do tego konta i na jakich zasadach.",
+      locked: {
+        title: "Wielu użytkowników wchodzi z planem Pro",
+        lead: "Na tym planie kontem zarządza jedna osoba. Plan Pro pozwala zaprosić współpracowników i rozdzielić im uprawnienia.",
+      },
+      members: {
+        title: "Osoby z dostępem",
+        you: "to Ty",
+        joined: "w zespole od {date}",
+        lastLogin: "ostatnie logowanie {date}",
+        neverLoggedIn: "jeszcze się nie logował",
+        role: "Rola",
+        remove: "Odbierz dostęp",
+        removeConfirm:
+          "Odebrać dostęp: {name}? Straci go natychmiast. Konto tej osoby zostaje — znika tylko przypisanie do Twojej organizacji.",
+        roleSaved: "Zapisano rolę.",
+      },
+      invite: {
+        title: "Zaproś do zespołu",
+        lead: "Wyślemy link, po którym zaproszona osoba ustawi sobie hasło. Link jest ważny czternaście dni.",
+        email: "Adres e-mail",
+        role: "Rola",
+        submit: "Wyślij zaproszenie",
+        submitting: "Wysyłanie…",
+        sent: "Zaproszenie poszło na adres {email}.",
+        notDelivered:
+          "Zaproszenie zapisane, ale wiadomość nie wyszła: {error}. Sprawdź ustawienia poczty i wyślij ponownie.",
+      },
+      pending: {
+        title: "Zaproszenia oczekujące",
+        empty: "Nie ma oczekujących zaproszeń.",
+        invitedBy: "zaprosił: {name}",
+        expires: "ważne do {date}",
+        expired: "termin minął",
+        cancel: "Cofnij",
+        cancelConfirm: "Cofnąć zaproszenie dla {email}? Link od razu przestanie działać.",
+      },
+      /** Nazwy ról — klucze zgodne z enumem `MembershipRole`. */
+      roles: {
+        OWNER: "Właściciel konta",
+        ADMIN: "Administrator",
+        MEMBER: "Współpracownik",
+      },
+      roleHints: {
+        ADMIN: "Pełny dostęp operacyjny plus zarządzanie zespołem. Nie usunie konta ani nie zmieni właściciela.",
+        MEMBER: "Codzienna praca w panelu: nieruchomości, najemcy, umowy, rozliczenia. Bez zespołu i bez usuwania konta.",
+      },
+      validation: {
+        roleRequired: "Wybierz rolę z listy",
+      },
+      errors: {
+        alreadyMember: "Ten adres ma już dostęp do konta.",
+        tenantAccount:
+          "Ten adres należy do konta najemcy. Jedno konto nie może być naraz najemcą i współpracownikiem.",
+        notFound: "Nie znaleziono tej osoby w zespole.",
+        ownerProtected: "Właściciela konta nie da się przestawić ani usunąć z zespołu.",
+        self: "Uprawnień nie zmienia się samemu sobie.",
+      },
+    },
+
+    /** Dostęp najemcy do portalu — karta w kartotece najemcy. */
+    tenantPortalAccess: {
+      title: "Portal najemcy",
+      lead: "Najemca z kontem widzi swoją umowę, rozliczenia i dane do przelewu. Niczego spoza własnego najmu.",
+      locked: {
+        title: "Portal najemcy wchodzi z planem Pro",
+        lead: "Na tym planie dokumenty idą do najemcy mailem. Plan Pro daje mu własne konto z podglądem umowy i rozliczeń.",
+      },
+      hasAccount: "Najemca ma konto i może się zalogować.",
+      pendingBadge: "Zaproszenie wysłane",
+      noAccount: "Najemca nie ma jeszcze konta w portalu.",
+      pending: "Zaproszenie wysłane na {email}. Link ważny do {date}.",
+      noEmailHint:
+        "Kartoteka nie ma adresu e-mail, więc nie ma dokąd wysłać zaproszenia. Uzupełnij go najpierw.",
+      invite: "Zaproś do portalu",
+      resend: "Wyślij ponownie",
+      revoke: "Odbierz dostęp",
+      revokeConfirm:
+        "Odebrać najemcy dostęp do portalu? Jego konto zostaje, ale przestanie widzieć umowę i rozliczenia.",
+      sending: "Wysyłanie…",
+      sent: "Zaproszenie poszło na adres {email}.",
+      notDelivered: "Zaproszenie zapisane, ale wiadomość nie wyszła: {error}.",
+      revoked: "Dostęp odebrany.",
+      errors: {
+        noEmail: "Najemca nie ma adresu e-mail. Uzupełnij go w kartotece.",
+        alreadyLinked: "Ten najemca ma już konto w portalu.",
+        ownerAccount:
+          "Ten adres należy do konta wynajmującego. Jedno konto nie może stać po obu stronach umowy.",
+      },
+    },
+
+    /** Eksport księgowy — sekcja na stronie raportów i nagłówki arkusza. */
+    accountingExport: {
+      title: "Eksport księgowy",
+      lead: "Rejestr dokumentów, wpłat i kosztów za wybrany okres — pozycja po pozycji, do wczytania w księgowości.",
+      locked: {
+        title: "Eksport księgowy wchodzi z planem Pro",
+        lead: "Zestawienie roczne masz od planu Start. Wyciąg pozycja po pozycji, z numerami dokumentów i danymi nabywcy, wchodzi z planem Pro.",
+      },
+      from: "Od",
+      to: "Do",
+      scope: "Zakres",
+      scopes: {
+        all: "Wszystko",
+        documents: "Rejestr dokumentów",
+        payments: "Wpłaty",
+        expenses: "Koszty",
+      },
+      download: "Pobierz CSV",
+      note: "Dokumenty liczymy po dacie wystawienia, wpłaty i koszty po dacie przepływu pieniędzy. To dwie różne podstawy, dlatego podsumowanie nie skleja ich w jedną kwotę.",
+      csv: {
+        heading: "Rentix — eksport księgowy {period}",
+        fileNameBase: "rentix-ksiegowosc",
+        documentsTitle: "REJESTR DOKUMENTÓW (wg daty wystawienia)",
+        documentsColumns: [
+          "Numer",
+          "Rodzaj",
+          "Data wystawienia",
+          "Data sprzedaży",
+          "Termin płatności",
+          "Nabywca",
+          "NIP",
+          "Nieruchomość",
+          "Netto",
+          "VAT",
+          "Brutto",
+          "Zapłacono",
+          "Pozostało",
+          "Status",
+        ],
+        paymentsTitle: "WPŁATY (wg daty wpłaty)",
+        paymentsColumns: ["Data", "Dokument", "Wpłacający", "Kwota", "Forma", "Tytuł / referencja"],
+        expensesTitle: "KOSZTY (wg daty poniesienia)",
+        expensesColumns: [
+          "Data",
+          "Kategoria",
+          "Opis",
+          "Dostawca",
+          "Nr dokumentu",
+          "Nieruchomość",
+          "Kwota",
+        ],
+        summary: {
+          title: "PODSUMOWANIE",
+          invoicedNet: "Sprzedaż netto",
+          invoicedVat: "VAT",
+          invoiced: "Sprzedaż brutto",
+          received: "Wpływy",
+          expenses: "Koszty",
+          result: "Wynik kasowy",
+        },
+        unassigned: "bez przypisania",
+        /** Statusy dokumentu z bazy — inne niż statusy wyświetlane w panelu. */
+        statuses: {
+          DRAFT: "Szkic",
+          ISSUED: "Wystawiony",
+          PARTIALLY_PAID: "Opłacony częściowo",
+          PAID: "Opłacony",
+          CANCELLED: "Anulowany",
+        },
+      },
     },
 
     panelMisc: {
@@ -1247,6 +1485,26 @@ export const pl = {
       notifications: "Powiadomienia",
       signOut: "Wyloguj",
       fallbackAccountName: "Konto",
+      /** Podpowiedź pod kłódką przy pozycji spoza planu konta. */
+      lockedHint: "Wchodzi z planem {plan}",
+      /** Przełącznik organizacji — widoczny dopiero od dwóch. */
+      organizations: {
+        switchAria: "Organizacja, w której pracujesz",
+      },
+      /**
+       * Nazwy planów w zdaniu — bez słowa „plan".
+       *
+       * Osobno od `plans` niżej, bo tamte są etykietami samodzielnymi („Plan
+       * Start" w stopce paska i na plakietce kłódki), a te wchodzą w zdanie,
+       * które słowo „plan" już ma. Jeden zestaw dawał „wchodzi z planem Plan
+       * Start".
+       */
+      planNames: {
+        FREE: "Free",
+        START: "Start",
+        PRO: "Pro",
+        PORTFOLIO: "Portfel",
+      },
       /** Nazwy planów — klucze zgodne z enumem `SubscriptionPlan`. */
       plans: {
         FREE: "Plan Free",
@@ -1340,6 +1598,10 @@ export const pl = {
           "Uzupełnij adres wystawcy. Bez niego rachunki i umowy wychodzą z samą nazwą, a to dokumenty, które trafiają do najemcy i do księgowości.",
         messagesLead:
           "Piszesz zwykłym tekstem. Układ, kolory i tabela z kwotą są po naszej stronie, żeby wiadomość nie rozsypała się w Outlooku. Puste pole zostawia tekst domyślny.",
+        messagesLocked: {
+          title: "Własne szablony wiadomości wchodzą z planem Pro",
+          lead: "Przypomnienia i wezwania wychodzą na tym planie w naszej treści — poprawnej i gotowej. Plan Pro pozwala napisać je własnymi słowami.",
+        },
       },
       profile: {
         title: "Twój profil",
@@ -1364,8 +1626,14 @@ export const pl = {
         usage: "{used} z {limit} {noun}",
         usageUnlimited: "{used} {noun}, bez limitu",
         tiers: "Progi planów",
-        /** To samo zdanie co w cenniku — progi różnią się liczbą umów, nie funkcjami. */
-        sameFeatures: "Każdy plan ma komplet funkcji. Różni się tylko liczba umów.",
+        /**
+         * Zdanie musi zgadzać się z cennikiem na stronie głównej. Do niedawna
+         * mówiło „każdy plan ma komplet funkcji", a cennik obiecywał trzy
+         * rzeczy dopiero od progu Pro — rozjazd widziała każda osoba, która
+         * przeszła z oferty do ustawień.
+         */
+        tiersLead:
+          "Wyższy próg to więcej umów, a od planu Pro także zespół, eksport księgowy i portal najemcy.",
         tierLimit: "{limit} {noun}",
         tierUnlimited: "bez limitu",
         current: "Twój plan",
@@ -1381,6 +1649,10 @@ export const pl = {
         readError: "Nie udało się odczytać pliku. Spróbuj wybrać go jeszcze raz.",
         change: "Zmień logo",
         upload: "Wgraj logo",
+        locked: {
+          title: "Logo na dokumentach wchodzi z planem Start",
+          lead: "Na tym planie rachunki i faktury wychodzą z samą nazwą wystawcy. Plan Start drukuje w nagłówku Twój znak.",
+        },
       },
       notifications: {
         title: "Nadawca i terminy",
@@ -1468,6 +1740,7 @@ export const pl = {
         account: "Nie znaleziono konta.",
         invoices: "Nie znaleziono dokumentów.",
         selectedTenant: "Nie znaleziono wskazanego najemcy.",
+        invitation: "Nie znaleziono zaproszenia.",
         roomInProperty: "Nie znaleziono pokoju w tej nieruchomości.",
         propertyRooms: "Nie znaleziono pokoi tej nieruchomości.",
       },
@@ -1524,6 +1797,12 @@ export const pl = {
         "To konto loguje się przez zewnętrznego dostawcę i nie ma hasła do zmiany.",
       sendFailed: "Nie udało się wysłać: {error}",
       ownerOnly: "Ten zasób jest dostępny tylko dla właściciela konta.",
+      /** Funkcja spoza planu konta — nazwa progu wchodzi z `FEATURE_MIN_PLAN`. */
+      planFeatureRequired: "Ta funkcja wchodzi z planem {plan}. Twój plan jej nie obejmuje.",
+      teamManagerOnly:
+        "Zespołem zarządza właściciel konta i administratorzy. Poproś jedną z tych osób.",
+      accessRevoked:
+        "Nie masz już dostępu do tego konta. Jeśli to pomyłka, poproś właściciela o ponowne zaproszenie.",
       rateLimited: "Zbyt wiele prób. Spróbuj ponownie za chwilę.",
       networkError: "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.",
       unknownError: "Coś poszło nie tak. Spróbuj ponownie.",
@@ -1787,6 +2066,31 @@ export const pl = {
     attachmentNote: "Dokument w formacie PDF znajdziesz w załączniku tej wiadomości.",
     attachmentPlain: "Dokument PDF jest w załączniku tej wiadomości.",
     automaticFooter: "wiadomość wysłana automatycznie z systemu Rentix",
+
+    /** Wiadomości z linkiem do przyjęcia zaproszenia. Wynajmujący ich nie edytuje. */
+    invitations: {
+      expires: "Link jest ważny do {date}.",
+      team: {
+        subject: "Zaproszenie do zespołu: {organization}",
+        heading: "Zaproszenie do zespołu",
+        intro:
+          "{organization} zaprasza Cię do wspólnej pracy w Rentiksie w roli: {role}. Kliknij poniżej, żeby ustawić hasło i wejść do panelu.",
+        outro:
+          "Jeśli nie wiesz, czego dotyczy ta wiadomość, zignoruj ją. Bez kliknięcia nic się nie stanie.",
+        cta: "Przyjmij zaproszenie",
+      },
+      tenant: {
+        subject: "Dostęp do Twojego najmu: {organization}",
+        heading: "Portal najemcy",
+        intro:
+          "Cześć {name}. {organization} otwiera Ci dostęp do portalu, w którym zobaczysz swoją umowę, rozliczenia i dane do przelewu.",
+        outro:
+          "Jeśli nie wiesz, czego dotyczy ta wiadomość, zignoruj ją. Bez kliknięcia nic się nie stanie.",
+        cta: "Aktywuj dostęp",
+        /** Gdy kartoteka nie ma imienia — wołacz, bo zdanie zaczyna się od „Cześć". */
+        fallbackName: "najemco",
+      },
+    },
 
     rows: {
       number: "Numer",
