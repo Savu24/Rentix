@@ -697,6 +697,7 @@ export const uk: Dictionary = {
         perMonth: "{amount}/month",
         invoices: "Invoices",
         noInvoices: "No invoices issued.",
+        previewInvoiceAria: "Preview document {number} as a PDF",
         messages: "Messages",
         noThreads: "No message threads with this tenant.",
         threadWithoutSubject: "Thread without a subject",

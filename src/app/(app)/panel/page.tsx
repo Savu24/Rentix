@@ -93,12 +93,23 @@ export default async function OwnerDashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <StatTile label={t.statProperties} value={String(propertyCount)} />
-            <StatTile label={t.statRooms} value={String(roomCount)} />
+            <StatTile
+              label={t.statProperties}
+              value={String(propertyCount)}
+              href="/panel/nieruchomosci"
+            />
+            <StatTile label={t.statRooms} value={String(roomCount)} href="/panel/nieruchomosci" />
             <StatTile
               label={t.statOccupancy}
               value={`${occupancy}%`}
               hint={fill(t.statOccupancyHint, { occupied: occupiedCount, total: roomCount })}
+              /* Przy pełnym obłożeniu filtr „z wolnymi" dałby pustą listę,
+                 więc wtedy kafelek prowadzi po prostu do wszystkich obiektów. */
+              href={
+                occupiedCount < roomCount
+                  ? "/panel/nieruchomosci?occupancy=vacant"
+                  : "/panel/nieruchomosci"
+              }
             />
             <StatTile
               label={t.statArrears}
@@ -111,6 +122,7 @@ export default async function OwnerDashboardPage() {
                   : t.allSettled
               }
               tone={overdueGrosze > 0 ? "critical" : "good"}
+              href="/panel/finanse?status=OVERDUE"
             />
           </div>
 
@@ -134,39 +146,48 @@ export default async function OwnerDashboardPage() {
   );
 }
 
+/**
+ * Kafelek pulpitu. Liczba na nim jest pytaniem („sto procent — czyli co?"),
+ * więc każdy prowadzi do listy, na której widać odpowiedź: kafelki bez
+ * odnośnika kazały szukać tego samego jeszcze raz w menu.
+ */
 function StatTile({
   label,
   value,
   hint,
   tone = "neutral",
+  href,
 }: {
   label: string;
   value: string;
   hint?: string;
   tone?: "neutral" | "good" | "critical";
+  href: string;
 }) {
   const hintColor =
     tone === "critical" ? "text-bad" : tone === "good" ? "text-good" : "text-muted";
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-1 p-4">
-        <p className="text-xs text-muted">{label}</p>
-        {/*
-          tabular-nums, żeby kwoty w sąsiednich kafelkach nie skakały.
+    <Card className="transition-colors hover:border-muted">
+      <Link href={href} className="block rounded-card">
+        <CardContent className="flex flex-col gap-1 p-4">
+          <p className="text-xs text-muted">{label}</p>
+          {/*
+            tabular-nums, żeby kwoty w sąsiednich kafelkach nie skakały.
 
-          Rozmiar skaluje się z szerokością ekranu, bo kafelki stoją po dwa
-          w rzędzie już od najwęższego telefonu. Stałe 22px sprawiało, że
-          „5 900,00 zł" w monospace nie mieściło się w kafelku i rozpychało
-          siatkę, a przez nią całą stronę w poziomie — pasek przewijania
-          pojawiał się na pulpicie. Kwoty nie wolno zawijać ani przycinać,
-          więc zmienia się typografia, a nie treść.
-        */}
-        <p className="font-mono text-[clamp(15px,4.6vw,22px)] font-medium tabular text-fg">
-          {value}
-        </p>
-        {hint ? <p className={`text-xs ${hintColor}`}>{hint}</p> : null}
-      </CardContent>
+            Rozmiar skaluje się z szerokością ekranu, bo kafelki stoją po dwa
+            w rzędzie już od najwęższego telefonu. Stałe 22px sprawiało, że
+            „5 900,00 zł" w monospace nie mieściło się w kafelku i rozpychało
+            siatkę, a przez nią całą stronę w poziomie — pasek przewijania
+            pojawiał się na pulpicie. Kwoty nie wolno zawijać ani przycinać,
+            więc zmienia się typografia, a nie treść.
+          */}
+          <p className="font-mono text-[clamp(15px,4.6vw,22px)] font-medium tabular text-fg">
+            {value}
+          </p>
+          {hint ? <p className={`text-xs ${hintColor}`}>{hint}</p> : null}
+        </CardContent>
+      </Link>
     </Card>
   );
 }

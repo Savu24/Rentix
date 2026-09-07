@@ -684,6 +684,7 @@ export const pl = {
         perMonth: "{amount}/mies.",
         invoices: "Rozliczenia",
         noInvoices: "Brak wystawionych faktur.",
+        previewInvoiceAria: "Podejrzyj dokument {number} w PDF",
         messages: "Komunikacja",
         noThreads: "Brak wątków rozmów z tym najemcą.",
         threadWithoutSubject: "Wątek bez tematu",
