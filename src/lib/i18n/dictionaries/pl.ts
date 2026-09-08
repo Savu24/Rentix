@@ -2011,11 +2011,12 @@ export const pl = {
       batchTitle: "Dokumenty rozliczeniowe ({count})",
       cancelled: " (ANULOWANY)",
       /*
-        Sam numer, bez słowa „nr" przed nim. Numer stoi pod nazwą dokumentu
-        wyróżniony wielkością i kolorem, więc podpis „nr" niczego nie
-        rozstrzyga — a zabiera miejsce w wierszu, który ma się rzucać w oczy.
+        „numer", nie skrót „nr": wiersz czyta się wtedy pełnym zdaniem —
+        „Faktura numer 8/09/2026" — i tak samo brzmi w stopce każdej strony.
+        Numer faktury nie ma juz liter serii, wiec to jedyne slowo, ktore
+        mowi, na co się patrzy.
       */
-      numberPrefix: "",
+      numberPrefix: "numer ",
       issueDate: "Data wystawienia",
       saleDate: "Data sprzedaży",
       dueDate: "Termin płatności",

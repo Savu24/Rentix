@@ -149,13 +149,17 @@ describe("podstawa zwolnienia z VAT", () => {
 });
 
 describe("naglowek dokumentu", () => {
-  it("nazwa dokumentu bez dopisku VAT, numer bez slowa nr", () => {
+  it("czyta sie: Faktura numer 8/09/2026", () => {
     const d = getDictionary("pl");
 
     // Oznaczenia „faktura VAT" ustawa nie wymaga od 2013 roku, a obok numeru
     // z prefiksem „FV" bylo to samo powiedziane dwa razy.
     expect(d.panel.invoices.kind.VAT_INVOICE).toBe("Faktura");
-    expect(d.documents.invoice.numberPrefix).toBe("");
+    // Pelne slowo zamiast skrotu „nr".
+    expect(d.documents.invoice.numberPrefix).toBe("numer ");
+    expect(
+      `${d.panel.invoices.kind.VAT_INVOICE} ${d.documents.invoice.numberPrefix}8/09/2026`,
+    ).toBe("Faktura numer 8/09/2026");
   });
 
   it("wersja brytyjska zostaje przy swoim zapisie", () => {
