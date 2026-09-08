@@ -1848,7 +1848,13 @@ export const pl = {
       },
       kind: {
         BILL: "Rachunek",
-        VAT_INVOICE: "Faktura VAT",
+        /*
+          „Faktura", nie „Faktura VAT". Oznaczenia „faktura VAT" ustawa nie
+          wymaga od 2013 roku — art. 106e wylicza, co ma być na dokumencie,
+          i nazwy w tym wykazie nie ma. Zapis został z poprzedniego stanu prawnego
+          i dziś tylko dubluje „FV" stojące obok w numerze.
+        */
+        VAT_INVOICE: "Faktura",
         PROFORMA: "Proforma",
         CHARGE: "Naliczenie",
       },
@@ -2004,7 +2010,12 @@ export const pl = {
     invoice: {
       batchTitle: "Dokumenty rozliczeniowe ({count})",
       cancelled: " (ANULOWANY)",
-      numberPrefix: "nr ",
+      /*
+        Sam numer, bez słowa „nr" przed nim. Numer stoi pod nazwą dokumentu
+        wyróżniony wielkością i kolorem, więc podpis „nr" niczego nie
+        rozstrzyga — a zabiera miejsce w wierszu, który ma się rzucać w oczy.
+      */
+      numberPrefix: "",
       issueDate: "Data wystawienia",
       saleDate: "Data sprzedaży",
       dueDate: "Termin płatności",

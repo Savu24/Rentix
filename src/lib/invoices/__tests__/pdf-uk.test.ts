@@ -148,6 +148,21 @@ describe("podstawa zwolnienia z VAT", () => {
   });
 });
 
+describe("naglowek dokumentu", () => {
+  it("nazwa dokumentu bez dopisku VAT, numer bez slowa nr", () => {
+    const d = getDictionary("pl");
+
+    // Oznaczenia „faktura VAT" ustawa nie wymaga od 2013 roku, a obok numeru
+    // z prefiksem „FV" bylo to samo powiedziane dwa razy.
+    expect(d.panel.invoices.kind.VAT_INVOICE).toBe("Faktura");
+    expect(d.documents.invoice.numberPrefix).toBe("");
+  });
+
+  it("wersja brytyjska zostaje przy swoim zapisie", () => {
+    expect(getDictionary("uk").documents.invoice.numberPrefix).toBe("no. ");
+  });
+});
+
 describe("teksty dokumentu", () => {
   it("nie zostawia polskich pozycji w wersji brytyjskiej", () => {
     const t = getDictionary("uk").documents.invoice;
