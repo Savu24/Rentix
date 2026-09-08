@@ -4,9 +4,8 @@ import type { NextRequest } from "next/server";
 import { apiError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
 import { InvoiceDocument } from "@/lib/invoices/pdf";
-import { toInvoicePdfData } from "@/lib/invoices/pdf-data";
+import { invoicePdfFilename, toInvoicePdfData } from "@/lib/invoices/pdf-data";
 import { getInvoice } from "@/lib/invoices/service";
-import { slugify } from "@/lib/utils";
 
 // Osadzanie fontu czyta plik TTF z dysku — to wymaga runtime'u Node.
 export const runtime = "nodejs";
@@ -32,7 +31,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${slugify(invoice.number)}.pdf"`,
+      "Content-Disposition": `inline; filename="${invoicePdfFilename(invoice)}"`,
       "Cache-Control": "no-store",
     },
   });

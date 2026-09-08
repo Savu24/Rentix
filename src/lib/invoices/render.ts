@@ -1,9 +1,11 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 
-import { slugify } from "@/lib/utils";
-
 import { InvoiceDocument } from "./pdf";
-import { toInvoicePdfData, type InvoiceWithRelations } from "./pdf-data";
+import {
+  invoicePdfFilename,
+  toInvoicePdfData,
+  type InvoiceWithRelations,
+} from "./pdf-data";
 
 /**
  * Dokument jako plik PDF gotowy do załączenia w e-mailu.
@@ -18,6 +20,6 @@ export async function renderInvoicePdf(invoice: InvoiceWithRelations) {
 
   return {
     buffer,
-    filename: `${slugify(invoice.number)}.pdf`,
+    filename: invoicePdfFilename(invoice),
   };
 }

@@ -7,9 +7,8 @@ import { organizationAllows } from "@/lib/billing/server";
 import { getDictionary } from "@/lib/i18n";
 import { requestLocale } from "@/lib/i18n/server";
 import { InvoiceDocument } from "@/lib/invoices/pdf";
-import { toInvoicePdfData } from "@/lib/invoices/pdf-data";
+import { invoicePdfFilename, toInvoicePdfData } from "@/lib/invoices/pdf-data";
 import { getTenantInvoice } from "@/lib/tenants/portal";
-import { slugify } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
@@ -51,7 +50,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return new Response(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${slugify(invoice.number)}.pdf"`,
+      "Content-Disposition": `inline; filename="${invoicePdfFilename(invoice)}"`,
       "Cache-Control": "no-store",
     },
   });
