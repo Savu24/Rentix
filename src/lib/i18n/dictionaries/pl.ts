@@ -2042,6 +2042,16 @@ export const pl = {
       remaining: "Pozostaje do zapłaty",
       chargeDisclaimer:
         "Naliczenie ma charakter informacyjny. Wskazuje kwotę i termin płatności. Nie jest fakturą ani rachunkiem w rozumieniu przepisów o rachunkowości i nie stanowi podstawy do księgowania ani odliczenia podatku. Dokument księgowy wystawiamy na życzenie.",
+      /**
+       * Podstawa zwolnienia z VAT, drukowana pod treścią dokumentu.
+       *
+       * Faktura ze stawką „zw." musi powiedzieć, z czego to zwolnienie wynika —
+       * bez tego księgowa najemcy odsyła dokument z pytaniem, a przy kontroli
+       * to wystawca tłumaczy się z braku. Dla najmu mieszkaniowego podstawą
+       * jest art. 43 ust. 1 pkt 36 ustawy o VAT.
+       */
+      exemptionBasis:
+        "Podstawa prawna zwolnienia (najem lokalu mieszkalnego) – art. 43 ust. 1 pkt 36 Ustawy o podatku od towarów i usług",
       signedBy: "Wystawił",
       receivedBy: "Odebrał",
     },

@@ -102,6 +102,50 @@ describe("rachunek brytyjski kontra polska faktura", () => {
     expect(uk({ paidGrosze: 50000 }).showSettlement).toBe(true);
     expect(uk({ paidGrosze: 165000 }).showSettlement).toBe(false);
   });
+
+  it("nie powołuje się na polską ustawę o VAT", () => {
+    // Podstawa zwolnienia to cytat z art. 43 ustawy o VAT — przepisu, który
+    // w Wielkiej Brytanii nie obowiązuje.
+    expect(uk().showExemptionBasis).toBe(false);
+    expect(pl().showExemptionBasis).toBe(true);
+  });
+});
+
+describe("podstawa zwolnienia z VAT", () => {
+  const commercialLine = {
+    ...BASE.lines[0]!,
+    vatRate: "RATE_23" as const,
+    vatGrosze: 37950,
+    grossGrosze: 202950,
+  };
+
+  it("stoi pod każdym polskim dokumentem ze stawką zwolnioną", () => {
+    // Rachunek, faktura, proforma i naliczenie — wszędzie tam, gdzie na
+    // pozycji stoi „zw.", dokument musi powiedzieć, skąd to zwolnienie.
+    for (const kind of ["BILL", "VAT_INVOICE", "PROFORMA", "CHARGE"] as const) {
+      expect(pl({ kind }).showExemptionBasis).toBe(true);
+    }
+  });
+
+  it("nie stoi pod dokumentem z podatkiem", () => {
+    // Lokal użytkowy i miejsce postojowe idą ze stawką 23% (`rentVatRate`),
+    // a powołanie się tam na zwolnienie byłoby po prostu nieprawdą.
+    expect(pl({ lines: [commercialLine] }).showExemptionBasis).toBe(false);
+  });
+
+  it("wystarczy jedna pozycja zwolniona obok opodatkowanych", () => {
+    // Czynsz za mieszkanie i miejsce postojowe na jednym dokumencie: zwolnienie
+    // dotyczy tej pierwszej pozycji i nadal wymaga podstawy.
+    expect(pl({ lines: [BASE.lines[0]!, commercialLine] }).showExemptionBasis).toBe(true);
+  });
+
+  it("przytacza przepis w brzmieniu, którego oczekuje księgowa", () => {
+    const t = getDictionary("pl").documents.invoice;
+
+    expect(t.exemptionBasis).toBe(
+      "Podstawa prawna zwolnienia (najem lokalu mieszkalnego) – art. 43 ust. 1 pkt 36 Ustawy o podatku od towarów i usług",
+    );
+  });
 });
 
 describe("teksty dokumentu", () => {

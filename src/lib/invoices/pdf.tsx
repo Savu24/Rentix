@@ -177,6 +177,13 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
 
+  /*
+    Podstawa zwolnienia z VAT — ostatnie zdanie dokumentu, tuż nad rubrykami
+    podpisu. Drobnym drukiem i szarością, bo to przypis do stawki na pozycjach,
+    a nie treść, którą najemca ma czytać przed kwotą.
+  */
+  exemptionBasis: { marginTop: 16, fontSize: 7.5, color: COLORS.muted, lineHeight: 1.4 },
+
   signatures: { flexDirection: "row", justifyContent: "space-between", marginTop: 44 },
   signature: { width: "40%", alignItems: "center" },
   signatureLine: { borderTopWidth: 0.7, borderTopColor: COLORS.ink, width: "100%", marginBottom: 4 },
@@ -328,6 +335,20 @@ export function invoiceLayout(data: InvoicePdfData) {
     */
     accounting: isAccountingDocument(data.kind),
 
+    /*
+      Podstawa zwolnienia z VAT.
+
+      Pokazujemy ją tam, gdzie jest co uzasadniać: na dokumencie z pozycją
+      w stawce „zw.". Wydrukowanie jej pod fakturą z podatkiem — a taka wychodzi
+      za lokal użytkowy albo miejsce postojowe (`rentVatRate`) — byłoby
+      powołaniem się na zwolnienie, którego na tym dokumencie nie ma.
+
+      Sam przepis jest polski, więc wersja brytyjska zostawia w słowniku pusty
+      tekst; przetłumaczenie go byłoby powołaniem się na obcą ustawę.
+    */
+    showExemptionBasis:
+      Boolean(t.exemptionBasis) && data.lines.some((line) => line.vatRate === "ZW"),
+
     /* Kwota słownie i rubryki podpisu to wymogi i konwencje polskiego dokumentu. */
     showAmountInWords: Boolean(t.amountInWords),
     showSignatures: isAccountingDocument(data.kind) && Boolean(t.signedBy),
@@ -463,6 +484,7 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
     showVat,
     showSaleDate,
     accounting,
+    showExemptionBasis,
     showAmountInWords,
     showSignatures,
     showPaymentReference,
@@ -643,6 +665,10 @@ function InvoicePage({ data }: { data: InvoicePdfData }) {
         {data.notes ? <Text style={styles.notes}>{data.notes}</Text> : null}
 
         {!accounting ? <Text style={styles.disclaimer}>{t.chargeDisclaimer}</Text> : null}
+
+        {showExemptionBasis ? (
+          <Text style={styles.exemptionBasis}>{t.exemptionBasis}</Text>
+        ) : null}
 
         {/* Rubryki podpisu tylko na dokumencie księgowym — pod naliczeniem
             sugerowałyby moc dowodową, której ono nie ma. */}

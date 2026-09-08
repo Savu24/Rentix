@@ -2108,6 +2108,13 @@ export const uk: Dictionary = {
       remaining: "Still to pay",
       chargeDisclaimer:
         "This is a statement of the amount and date due. It is not an invoice or a receipt and should not be used for accounting purposes. An invoice is available on request.",
+      /*
+        Podstawa zwolnienia to cytat z polskiej ustawy o VAT — na brytyjskim
+        rachunku byłby powołaniem się na przepis, który tam nie obowiązuje.
+        Pusty tekst wyłącza ten wiersz; brytyjski odpowiednik wymagałby własnej
+        podstawy (VATA 1994), a nie tłumaczenia tej.
+      */
+      exemptionBasis: "",
       /* Rubryki podpisu to polska konwencja papierowa — na brytyjskim rachunku ich nie ma. */
       signedBy: "",
       receivedBy: "",
