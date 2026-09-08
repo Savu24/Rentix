@@ -54,6 +54,16 @@ const serverEnvSchema = z.object({
   CRON_SECRET: z.string().min(16, "CRON_SECRET musi mieć co najmniej 16 znaków").optional(),
 
   /**
+   * Konta, w których wolno poprawić numer wystawionego dokumentu.
+   *
+   * Lista slugów albo identyfikatorów organizacji po przecinku. Poprawianie
+   * numeru w rejestrze to wyjątek, nie funkcja produktu — patrz
+   * `src/lib/invoices/renumber.ts` — więc włącza się je kontu po koncie,
+   * a nie wszystkim naraz. Puste = wyłączone wszędzie.
+   */
+  INVOICE_NUMBER_EDIT_ORGS: z.string().default("miret"),
+
+  /**
    * Redis dla limitera prób logowania (Upstash, REST).
    *
    * Bez tych dwóch zmiennych limiter liczy w pamięci procesu, co na serverless

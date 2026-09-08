@@ -1373,6 +1373,12 @@ export const uk: Dictionary = {
         confirm:
           "The document will be marked as cancelled. Its number stays taken, so the register has no gap.",
       },
+      editInvoiceNumber: {
+        button: "Correct the number",
+        label: "Document number",
+        hint: "The number has to be unique in the register. Only documents issued so far can be changed — new ones get their number for good.",
+        save: "Save the number",
+      },
       extendTitle: "Extending the tenancy",
       terminateTitle: "Ending the tenancy",
       roomPricingTitle: "Room rents",
@@ -1808,6 +1814,11 @@ export const uk: Dictionary = {
       fixFields: "Please correct the highlighted fields.",
       noInvoiceSelected: "No document was selected.",
       alreadyCancelled: "This document is already cancelled.",
+      invoiceNumberNotAllowed: "On this account the number of an issued document cannot be changed.",
+      invoiceNumberLocked:
+        "This document's number is already final. Only documents issued before the switch to fixed numbering can be corrected.",
+      invoiceNumberTaken:
+        "Another document already carries this number. Two documents sharing a number would break the register.",
       cancelledNotSent: "This document is cancelled, so we are not sending it to the tenant.",
       noAccountEmail: "Your account has no email address to send the test to.",
     },
@@ -1828,6 +1839,7 @@ export const uk: Dictionary = {
         periodEnd: "Period to",
         paymentAmount: "Payment amount",
         paymentDate: "Payment date",
+        number: "Document number",
       },
       quantityNotNumber: "The quantity must be a number",
       quantityPositive: "The quantity must be greater than zero",
@@ -1839,6 +1851,7 @@ export const uk: Dictionary = {
       dueBeforeIssue: "The due date cannot be earlier than the issue date",
       periodOrder: "The period end cannot be earlier than its start",
       paymentPositive: "The payment must be greater than zero",
+      numberInvalid: "A number may contain letters, digits, spaces and the marks / - . _",
       status: {
         DRAFT: "Draft",
         PAID: "Paid",

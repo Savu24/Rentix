@@ -20,7 +20,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
  * po numerze jest dla księgowego sygnałem, że coś zniknęło bez śladu.
  *
  * Numer nadaje się raz, przy wystawieniu, i zostaje w bazie — zmiana prefiksów
- * nie rusza dokumentów już wystawionych.
+ * nie rusza dokumentów już wystawionych. Jedyny wyjątek opisuje `renumber.ts`.
  */
 
 export function invoiceNumberPrefixes(locale: Locale): Record<InvoiceKind, string> {
@@ -41,12 +41,41 @@ export function formatInvoiceNumber(
 }
 
 /**
+ * Numer porządkowy wyłuskany z gotowego numeru dokumentu, o ile ten dotyczy
+ * wskazanego miesiąca. NULL, gdy zapis jest inny — na przykład po ręcznej
+ * korekcie na numer w formacie biura rachunkowego.
+ *
+ * Prefiks celowo nie wchodzi do wzorca: dokument mógł powstać, zanim konto
+ * zmieniło kraj, a jego numer i tak zajmuje miejsce w rejestrze.
+ */
+export function sequenceInNumber(
+  number: string,
+  year: number,
+  /** Miesiąc liczony od zera, jak w `Date`. */
+  month: number,
+): number | null {
+  const match = /(\d+)\/(\d{2})\/(\d{4})$/.exec(number.trim());
+  if (!match) return null;
+
+  const [, sequence, numberMonth, numberYear] = match;
+  if (Number(numberMonth) !== month + 1 || Number(numberYear) !== year) return null;
+
+  return Number(sequence);
+}
+
+/**
  * Kolejny wolny numer dla organizacji, rodzaju i miesiąca wystawienia.
  *
- * Liczy dokumenty już wystawione w tym miesiącu zamiast trzymać licznik
+ * Liczy z dokumentów już wystawionych w tym miesiącu zamiast trzymać licznik
  * w osobnej tabeli — przy skali jednego właściciela to kilkanaście rekordów
  * miesięcznie, a licznik wymagałby własnej obsługi transakcji i i tak
  * rozjechałby się po ręcznej korekcie w bazie.
+ *
+ * Bierze największy numer porządkowy, a nie samą liczbę dokumentów. Różnica
+ * wychodzi dopiero, gdy ktoś poprawi numer ręcznie (`renumber.ts`): trzy
+ * dokumenty przenumerowane na 1, 2 i 4 dałyby przy liczeniu sztuk numer 4,
+ * czyli kolizję, której nie rozwiąże żadne ponowienie — bo licznik wracałby
+ * z tą samą wartością.
  *
  * Wyścig dwóch równoległych wystawień kończy się naruszeniem `@@unique`
  * na (organizationId, number) — wołający ponawia próbę, patrz
@@ -74,7 +103,7 @@ export async function nextInvoiceNumber(
   });
   const locale = isLocale(organization?.locale) ? organization.locale : DEFAULT_LOCALE;
 
-  const used = await tx.invoice.count({
+  const used = await tx.invoice.findMany({
     where: {
       organizationId,
       kind,
@@ -82,13 +111,24 @@ export async function nextInvoiceNumber(
       status: { not: "DRAFT" },
       issueDate: { gte: monthStart, lt: nextMonthStart },
     },
+    select: { number: true },
   });
 
-  return formatInvoiceNumber(kind, used + 1, year, month, locale);
+  /*
+    Liczba dokumentów zostaje dolną granicą: numer poprawiony ręcznie na zapis
+    spoza formatu („12/2026 KOR") nie da się odczytać, a mimo to zajmuje
+    miejsce w miesiącu i nie może zwolnić numeru wydanego wcześniej.
+  */
+  const highest = used.reduce(
+    (max, invoice) => Math.max(max, sequenceInNumber(invoice.number, year, month) ?? 0),
+    used.length,
+  );
+
+  return formatInvoiceNumber(kind, highest + 1, year, month, locale);
 }
 
 /** Prisma sygnalizuje naruszenie unikalności kodem P2002. */
-function isUniqueViolation(error: unknown): boolean {
+export function isUniqueViolation(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&

@@ -1356,6 +1356,12 @@ export const pl = {
         confirm:
           "Dokument zostanie oznaczony jako anulowany. Numer zostaje zajęty, żeby w rejestrze nie powstała dziura.",
       },
+      editInvoiceNumber: {
+        button: "Popraw numer",
+        label: "Numer dokumentu",
+        hint: "Numer musi być niepowtarzalny w rejestrze. Zmiana dotyczy tylko dokumentów wystawionych do tej pory — nowe dostają numer na stałe.",
+        save: "Zapisz numer",
+      },
       extendTitle: "Przedłużenie umowy",
       terminateTitle: "Zakończenie umowy",
       roomPricingTitle: "Ceny za pokoje",
@@ -1797,6 +1803,11 @@ export const pl = {
       fixFields: "Popraw zaznaczone pola.",
       noInvoiceSelected: "Nie wskazano żadnego dokumentu.",
       alreadyCancelled: "Ten dokument jest już anulowany.",
+      invoiceNumberNotAllowed: "Na tym koncie numeru wystawionego dokumentu nie da się zmienić.",
+      invoiceNumberLocked:
+        "Numer tego dokumentu jest już zamknięty. Poprawić da się tylko dokumenty wystawione przed przejściem na numerację stałą.",
+      invoiceNumberTaken:
+        "Ten numer nosi już inny dokument. Dwa dokumenty o tym samym numerze rozsypałyby rejestr.",
       cancelledNotSent: "Dokument jest anulowany. Nie wysyłamy go najemcy.",
       noAccountEmail: "Twoje konto nie ma adresu e-mail, na który wysłać test.",
     },
@@ -1812,6 +1823,7 @@ export const pl = {
         periodEnd: "Koniec okresu",
         paymentAmount: "Kwota wpłaty",
         paymentDate: "Data wpłaty",
+        number: "Numer dokumentu",
       },
       quantityNotNumber: "Ilość musi być liczbą",
       quantityPositive: "Ilość musi być większa od zera",
@@ -1824,6 +1836,7 @@ export const pl = {
       dueBeforeIssue: "Termin płatności nie może być wcześniejszy niż data wystawienia",
       periodOrder: "Koniec okresu nie może być wcześniejszy niż jego początek",
       paymentPositive: "Kwota wpłaty musi być większa od zera",
+      numberInvalid: "Numer może mieć litery, cyfry, spacje oraz znaki / - . _",
       status: {
         DRAFT: "Szkic",
         PAID: "Opłacona",

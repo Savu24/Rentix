@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CancelInvoice } from "@/components/panel/invoices/cancel-invoice";
+import { EditInvoiceNumber } from "@/components/panel/invoices/edit-invoice-number";
 import { DeletePayment, RecordPayment } from "@/components/panel/invoices/record-payment";
 import { SendInvoice } from "@/components/panel/invoices/send-invoice";
 import { Alert } from "@/components/ui/alert";
@@ -11,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { getInvoice } from "@/lib/invoices/service";
+import { getInvoice, mayRenumberInvoices } from "@/lib/invoices/service";
+import { invoiceNumberEditable } from "@/lib/invoices/renumber";
 import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { vatLabels } from "@/lib/invoices/vat";
 import { fill, formatDateIn } from "@/lib/i18n/format";
@@ -50,6 +52,15 @@ export default async function InvoiceDetailPage({ params }: Params) {
 
   const property = invoice.lease?.property;
 
+  /*
+    Poprawka numeru — wyjątek dla kont, które weszły do Rentiksa z dokumentami
+    jeszcze nierozliczonymi z księgowością. Patrz `lib/invoices/renumber.ts`;
+    ten sam warunek pilnuje endpoint, bo ukryty przycisk nie jest bramką.
+  */
+  const canEditNumber =
+    invoiceNumberEditable(invoice) &&
+    (await mayRenumberInvoices(session.user.organizationId));
+
   // Ostatnie powiadomienie o tym dokumencie — właściciel widzi, czy najemca
   // w ogóle dostał wiadomość, zanim zacznie dzwonić w sprawie zaległości.
   const lastNotification = await getLastNotification(invoice.id);
@@ -79,6 +90,12 @@ export default async function InvoiceDetailPage({ params }: Params) {
                 due: formatDateIn(invoice.dueDate, locale, "long"),
               })}
             </p>
+
+            {canEditNumber ? (
+              <div className="mt-1 flex w-full flex-col items-start">
+                <EditInvoiceNumber invoiceId={invoice.id} number={invoice.number} />
+              </div>
+            ) : null}
           </div>
 
           <Button asChild size="sm" variant="secondary">

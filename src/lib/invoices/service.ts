@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type { Prisma } from "@/generated/prisma/client";
 import type { InvoiceStatus } from "@/generated/prisma/enums";
 import {
@@ -7,6 +9,7 @@ import {
   shouldBillPeriod,
   type BillingLease,
 } from "@/lib/leases/billing";
+import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import type {
   GenerateInvoicesOutput,
@@ -15,7 +18,12 @@ import type {
   PaymentFormOutput,
 } from "@/lib/validations/invoice";
 
-import { nextInvoiceNumber, withUniqueNumberRetry } from "./numbering";
+import { isUniqueViolation, nextInvoiceNumber, withUniqueNumberRetry } from "./numbering";
+import {
+  invoiceNumberEditable,
+  organizationInAllowlist,
+  parseOrganizationAllowlist,
+} from "./renumber";
 import {
   buyerSnapshot,
   invoiceKindForLines,
@@ -391,6 +399,83 @@ export async function cancelInvoice(
   });
 
   return { ok: true };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Poprawianie numeru
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Czy to konto ma otwartą furtkę do poprawiania numerów — patrz `renumber.ts`.
+ *
+ * `cache` z Reacta zwija to do jednego zapytania na żądanie: pyta o to widok
+ * dokumentu, a potem jeszcze raz endpoint przy zapisie.
+ */
+export const mayRenumberInvoices = cache(async (organizationId: string): Promise<boolean> => {
+  const allowlist = parseOrganizationAllowlist(env.INVOICE_NUMBER_EDIT_ORGS);
+  if (allowlist.length === 0) return false;
+
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { id: true, slug: true },
+  });
+
+  return organization ? organizationInAllowlist(organization, allowlist) : false;
+});
+
+export type RenumberInvoiceResult =
+  | { ok: true; number: string }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "NOT_ALLOWED" }
+  | { ok: false; reason: "LOCKED" }
+  | { ok: false; reason: "NUMBER_TAKEN" };
+
+/**
+ * Poprawia numer dokumentu wystawionego przed datą odcięcia.
+ *
+ * Obie bramki — konto i data — sprawdzamy tutaj, a nie w endpoincie: to jedyne
+ * miejsce, które zapisuje `number` po wystawieniu, więc żadna inna droga do
+ * bazy nie ominie warunku.
+ *
+ * Zajętość numeru sprawdzamy wprost, żeby użytkownik dostał zdanie o kolizji
+ * zamiast błędu bazy; wyścig dwóch zapisów łapie jeszcze `@@unique`
+ * na (organizationId, number).
+ */
+export async function renumberInvoice(
+  organizationId: string,
+  invoiceId: string,
+  number: string,
+): Promise<RenumberInvoiceResult> {
+  if (!(await mayRenumberInvoices(organizationId))) {
+    return { ok: false, reason: "NOT_ALLOWED" };
+  }
+
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, organizationId },
+    select: { id: true, number: true, status: true, createdAt: true },
+  });
+
+  if (!invoice) return { ok: false, reason: "NOT_FOUND" };
+  if (!invoiceNumberEditable(invoice)) return { ok: false, reason: "LOCKED" };
+
+  // Zapis bez zmiany: użytkownik kliknął „zapisz" po namyśle. Nie ma czego
+  // sprawdzać ani zapisywać, a odpowiedź ma być taka sama jak po zmianie.
+  if (number === invoice.number) return { ok: true, number };
+
+  const taken = await prisma.invoice.findFirst({
+    where: { organizationId, number, id: { not: invoiceId } },
+    select: { id: true },
+  });
+  if (taken) return { ok: false, reason: "NUMBER_TAKEN" };
+
+  try {
+    await prisma.invoice.update({ where: { id: invoiceId }, data: { number } });
+  } catch (error) {
+    if (isUniqueViolation(error)) return { ok: false, reason: "NUMBER_TAKEN" };
+    throw error;
+  }
+
+  return { ok: true, number };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -157,6 +157,27 @@ export type InvoiceCreateInput = z.input<ReturnType<typeof invoiceCreateSchema>>
 export type InvoiceCreateOutput = z.output<ReturnType<typeof invoiceCreateSchema>>;
 
 /**
+ * Poprawka numeru dokumentu — patrz `src/lib/invoices/renumber.ts`.
+ *
+ * Wzorzec jest szeroki celowo: numer wpisuje się po to, żeby zgadzał się
+ * z zeszytem biura rachunkowego, a te bywają w każdym możliwym układzie
+ * („12/2026", „FV-2026-08-03", „R 7/08/2026"). Odsiewamy tylko to, co
+ * w rejestrze nie ma prawa się znaleźć: znaki sterujące i zapis zaczynający
+ * się od interpunkcji, po którym numer wygląda na ucięty.
+ */
+const INVOICE_NUMBER_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} ./_-]*$/u;
+
+export const invoiceNumberSchema = (c: ValidationContext) =>
+  z.object({
+    number: requiredText(c, c.d.panel.invoices.fields.number, 40).refine(
+      (value) => INVOICE_NUMBER_PATTERN.test(value),
+      { message: c.d.panel.invoices.numberInvalid },
+    ),
+  });
+
+export type InvoiceNumberOutput = z.output<ReturnType<typeof invoiceNumberSchema>>;
+
+/**
  * Filtr listy dokumentów.
  *
  * `status` przyjmuje też wartości wyliczane („OVERDUE", „UNPAID"), których nie
