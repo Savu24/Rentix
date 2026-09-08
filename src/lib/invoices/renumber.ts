@@ -41,17 +41,29 @@ export function parseOrganizationAllowlist(raw: string): string[] {
 /**
  * Czy konto jest na liście.
  *
- * Wpis pasuje do sluga albo do identyfikatora, bo slug powstaje z nazwy
- * („Miret sp. z o.o." → `miret-sp-z-o-o`) i nie zawsze jest tym, czego ktoś
- * się spodziewa. Identyfikator działa wtedy jako zapis pewny.
+ * Wpis pasuje na trzy sposoby, bo slug powstaje z nazwy podanej przy
+ * rejestracji i nie zawsze jest tym, czego ktoś się spodziewa — „Miret
+ * sp. z o.o." daje `miret-sp-z-o-o`, samo „Miret" daje `miret`, a drugie
+ * konto o tej samej nazwie `miret-2`:
+ *
+ * 1. identyfikator organizacji — zapis pewny, gdy trzeba wskazać dokładnie
+ *    jedno konto;
+ * 2. slug wprost;
+ * 3. slug zaczynający się od wpisu i myślnika, czyli ta sama nazwa z dopiskiem
+ *    formy prawnej albo z licznikiem.
+ *
+ * Myślnik w trzecim warunku jest istotny: bez niego wpis „miret" objąłby też
+ * konto „Miretex", czyli zupełnie kogoś innego.
  */
 export function organizationInAllowlist(
   organization: { id: string; slug: string },
   allowlist: readonly string[],
 ): boolean {
-  return (
-    allowlist.includes(organization.id.toLowerCase()) ||
-    allowlist.includes(organization.slug.toLowerCase())
+  const id = organization.id.toLowerCase();
+  const slug = organization.slug.toLowerCase();
+
+  return allowlist.some(
+    (entry) => entry === id || entry === slug || slug.startsWith(`${entry}-`),
   );
 }
 

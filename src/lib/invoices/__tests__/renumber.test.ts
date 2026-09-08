@@ -34,6 +34,21 @@ describe("organizationInAllowlist", () => {
     expect(organizationInAllowlist(organization, allowlist)).toBe(true);
   });
 
+  /*
+    Slug powstaje z nazwy przy rejestracji, więc wpis „miret" musi objąć konto
+    zapisane z formą prawną albo z licznikiem — inaczej funkcja nie włączyłaby
+    się nigdzie bez ręcznego ustawienia zmiennej.
+  */
+  it("wpis obejmuje nazwę z dopiskiem", () => {
+    expect(organizationInAllowlist({ id: "clxccc", slug: "miret-sp-z-o-o" }, allowlist)).toBe(true);
+    expect(organizationInAllowlist({ id: "clxddd", slug: "miret-2" }, allowlist)).toBe(true);
+  });
+
+  it("nie łapie konta, które tylko zaczyna się tak samo", () => {
+    // „Miretex" to inna firma, a nie Miret z dopiskiem — stąd myślnik w warunku.
+    expect(organizationInAllowlist({ id: "clxeee", slug: "miretex" }, allowlist)).toBe(false);
+  });
+
   it("obce konto zostaje poza listą", () => {
     expect(organizationInAllowlist({ id: "clxbbb", slug: "inne" }, allowlist)).toBe(false);
   });
