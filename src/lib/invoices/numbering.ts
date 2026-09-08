@@ -12,9 +12,14 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
  * to dwa odrębne rejestry.
  *
  * Sam układ zostaje w wersji brytyjskiej, bo miesięczna seria czyta się tak
- * samo dobrze; zmienia się prefiks, żeby „R" i „FV" nie wyglądały jak literówka
- * na dokumencie po angielsku. Prefiksy siedzą w słowniku pod
+ * samo dobrze; zmienia się prefiks, żeby litery serii nie wyglądały jak
+ * literówka na dokumencie po angielsku. Prefiksy siedzą w słowniku pod
  * `documents.numberPrefix`.
+ *
+ * Seria bywa pusta — polska faktura ma sam numer, bo „Faktura" stoi nad nim
+ * w nagłówku i „FV" mówiłoby to samo drugi raz. Pusta może być dokładnie jedna
+ * seria w danym kraju: rejestry biegną osobno, więc druga pusta oznaczałaby
+ * dwa dokumenty tego samego miesiąca pod jednym numerem.
  *
  * Numer anulowanego dokumentu zostaje zajęty — rejestr ma być ciągły, a dziura
  * po numerze jest dla księgowego sygnałem, że coś zniknęło bez śladu.
@@ -37,7 +42,12 @@ export function formatInvoiceNumber(
   month: number,
   locale: Locale = DEFAULT_LOCALE,
 ): string {
-  return `${invoiceNumberPrefixes(locale)[kind]} ${sequence}/${pad(month + 1)}/${year}`;
+  const prefix = invoiceNumberPrefixes(locale)[kind];
+  const core = `${sequence}/${pad(month + 1)}/${year}`;
+
+  // Pusta seria (polska faktura) daje sam numer — bez niej zostawałaby spacja
+  // wiodąca, która wchodziłaby do bazy, do nazwy pliku i do wyszukiwarki.
+  return prefix === "" ? core : `${prefix} ${core}`;
 }
 
 /**

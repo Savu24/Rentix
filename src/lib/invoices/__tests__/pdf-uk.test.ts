@@ -180,6 +180,32 @@ describe("numeracja dokumentów", () => {
     expect(formatInvoiceNumber("BILL", 3, 2026, 7, "uk")).toBe("INV 3/08/2026");
     expect(formatInvoiceNumber("CHARGE", 1, 2026, 0, "uk")).toBe("CHG 1/01/2026");
   });
+
+  it("polska faktura ma sam numer, bez liter serii", () => {
+    // „Faktura" stoi nad numerem w nagłówku — „FV" mówiłoby to samo drugi raz.
+    expect(formatInvoiceNumber("VAT_INVOICE", 3, 2026, 7, "pl")).toBe("3/08/2026");
+    // Bez spacji wiodącej: numer idzie tak samo do bazy, nazwy pliku i wyszukiwarki.
+    expect(formatInvoiceNumber("VAT_INVOICE", 3, 2026, 7, "pl").startsWith(" ")).toBe(false);
+  });
+
+  it("pozostałe rejestry zachowują swoje litery", () => {
+    /*
+      Numeracja biegnie osobno dla każdego rodzaju, więc litery są jedynym,
+      co dzieli rejestry. Druga pusta seria oznaczałaby rachunek i fakturę
+      z tego samego miesiąca pod jednym numerem.
+    */
+    expect(formatInvoiceNumber("PROFORMA", 3, 2026, 7, "pl")).toBe("PF 3/08/2026");
+    expect(formatInvoiceNumber("CHARGE", 3, 2026, 7, "pl")).toBe("N 3/08/2026");
+
+    const prefixes = getDictionary("pl").documents.numberPrefix;
+    const empty = Object.values(prefixes).filter((prefix) => prefix === "");
+    expect(empty).toHaveLength(1);
+  });
+
+  it("wersja brytyjska zostaje przy pełnym komplecie serii", () => {
+    const prefixes = getDictionary("uk").documents.numberPrefix;
+    expect(Object.values(prefixes).every((prefix) => prefix !== "")).toBe(true);
+  });
 });
 
 describe("rachunek do przelewu", () => {

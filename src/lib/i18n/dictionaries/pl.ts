@@ -2066,9 +2066,18 @@ export const pl = {
       signedBy: "Wystawił",
       receivedBy: "Odebrał",
     },
+    /*
+      Litery serii przed numerem. Rozdzielaja rejestry: rachunek i faktura maja
+      wlasna numeracje od jedynki, wiec bez serii oba dokumenty z tego samego
+      miesiaca nosilyby ten sam numer.
+
+      Faktura jest wyjatkiem i seria stoi tam pusta: „Faktura" nad numerem mowi
+      juz, co to za dokument, a „FV" powtarzalo to w drugiej linii. Pusta moze
+      byc dokladnie jedna seria — druga zaczelaby sie zderzac z pierwsza.
+    */
     numberPrefix: {
       BILL: "R",
-      VAT_INVOICE: "FV",
+      VAT_INVOICE: "",
       PROFORMA: "PF",
       CHARGE: "N",
     },

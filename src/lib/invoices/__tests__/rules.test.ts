@@ -93,7 +93,8 @@ describe("settlementStatus", () => {
 describe("formatInvoiceNumber", () => {
   it("składa numer w zapisie oczekiwanym przez księgowość", () => {
     expect(formatInvoiceNumber("BILL", 3, 2026, 7)).toBe("R 3/08/2026");
-    expect(formatInvoiceNumber("VAT_INVOICE", 1, 2026, 0)).toBe("FV 1/01/2026");
+    // Faktura idzie bez liter serii — „Faktura" stoi nad numerem w nagłówku.
+    expect(formatInvoiceNumber("VAT_INVOICE", 1, 2026, 0)).toBe("1/01/2026");
     expect(formatInvoiceNumber("PROFORMA", 12, 2026, 11)).toBe("PF 12/12/2026");
   });
 });
