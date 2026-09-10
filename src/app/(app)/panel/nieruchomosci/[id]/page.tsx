@@ -15,12 +15,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PropertyExpenses } from "@/components/panel/expenses/property-expenses";
+import { CleaningSchedule } from "@/components/panel/properties/cleaning-schedule";
 import { PropertyActions } from "@/components/panel/properties/property-actions";
 import { RoomsList, type RoomView } from "@/components/panel/properties/rooms-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { MIN_CLEANING_PARTICIPANTS } from "@/lib/cleaning/rotation";
+import { cleaningSchedule } from "@/lib/cleaning/service";
 import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { propertyExpenses } from "@/lib/expenses/service";
 import type { Locale } from "@/lib/i18n/config";
@@ -80,8 +83,13 @@ export default async function PropertyDetailPage({ params }: Params) {
   const wholeLease = property.leases[0];
   const wholeTenant = wholeLease?.tenants[0]?.tenant;
 
-  const address = formatPropertyAddress(property);
+  // Harmonogram sprzątania otwiera się na bieżącym miesiącu; kolejne
+  // użytkownik przewija już w przeglądarce, bez wracania na serwer po stronę.
   const now = new Date();
+  const cleaningMonth = { year: now.getUTCFullYear(), monthIndex: now.getUTCMonth() };
+  const cleaning = await cleaningSchedule(session.user.organizationId, property.id, cleaningMonth);
+
+  const address = formatPropertyAddress(property);
 
   // Każda sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka
   // z kreskami odsuwałaby tylko pokoje i koszty w dół.
@@ -237,6 +245,16 @@ export default async function PropertyDetailPage({ params }: Params) {
             </Button>
           </CardContent>
         </Card>
+      ) : null}
+
+      {/* Rozpiska ma sens dopiero tam, gdzie jest ją między kogo podzielić:
+          dwa pokoje albo dwoje najemców na umowie na całość. */}
+      {cleaning && cleaning.participants.length >= MIN_CLEANING_PARTICIPANTS ? (
+        <CleaningSchedule
+          propertyId={property.id}
+          initialMonth={cleaningMonth}
+          initialSchedule={cleaning}
+        />
       ) : null}
 
       <PropertyExpenses

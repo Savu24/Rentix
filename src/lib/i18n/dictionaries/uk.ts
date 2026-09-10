@@ -491,6 +491,27 @@ export const uk: Dictionary = {
         nameRequired: "Give the room a name",
         rentInvalid: "The rent must be an amount, for example 900.00",
       },
+      cleaning: {
+        title: "Cleaning rota",
+        lead: "Whose turn it is in the shared areas, week by week.",
+        emptyTitle: "No rota for this month yet",
+        emptyLead:
+          "Generate one: the weeks split evenly and nobody gets two of them in a row.",
+        generate: "Generate the rota",
+        regenerate: "Generate again",
+        clear: "Delete",
+        clearLabel: "Delete the rota for {month}",
+        previousMonth: "Previous month",
+        nextMonth: "Next month",
+        weekColumn: "Week",
+        datesColumn: "Dates",
+        whoColumn: "Cleans",
+        thisWeek: "this week",
+        byRooms: "Turns go round the rooms.",
+        byTenants: "Turns go round the tenants on the whole-property lease.",
+        rule: "Nobody cleans two weeks running — not even across the turn of the month.",
+        working: "One moment…",
+      },
       filters: {
         searchPlaceholder: "Search by name, street or town…",
         searchLabel: "Search properties",
@@ -1750,6 +1771,9 @@ export const uk: Dictionary = {
         roomInProperty: "That room was not found in this property.",
         propertyRooms: "No rooms found for this property.",
       },
+      cleaningMonthInvalid: "Write the month as “2026-09”.",
+      cleaningTooFewParticipants:
+        "A cleaning rota needs at least two rooms, or two tenants on a whole-property lease.",
       /** Messages pinned to a single form field. */
       fields: {
         selectProperty: "Choose a property from the list",

@@ -94,6 +94,37 @@ export function fill(
   );
 }
 
+const dayRangeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Zakres dni w jednym zapisie: „1–6 wrz" / „1–6 Sep".
+ *
+ * `formatRange` sam zwija powtórzoną część, więc w tabeli nie stoi dwa razy
+ * ta sama nazwa miesiąca. Strefa UTC, bo to dni kalendarza zapisane jako
+ * północ UTC — bez niej odwiedzający na zachód od Greenwich zobaczyłby
+ * wszystkie terminy o dzień za wcześnie.
+ */
+export function formatDayRangeIn(
+  start: Date | string,
+  end: Date | string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  let formatter = dayRangeFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    dayRangeFormatters.set(locale, formatter);
+  }
+
+  return formatter.formatRange(
+    typeof start === "string" ? new Date(start) : start,
+    typeof end === "string" ? new Date(end) : end,
+  );
+}
+
 const monthNameCache = new Map<string, readonly string[]>();
 
 /**

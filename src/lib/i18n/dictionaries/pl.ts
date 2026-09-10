@@ -491,6 +491,27 @@ export const pl = {
         nameRequired: "Podaj oznaczenie pokoju",
         rentInvalid: "Czynsz musi być kwotą, np. 900,00",
       },
+      cleaning: {
+        title: "Harmonogram sprzątania",
+        lead: "Dyżury w częściach wspólnych, tydzień po tygodniu.",
+        emptyTitle: "Na ten miesiąc nie ma jeszcze harmonogramu",
+        emptyLead:
+          "Wygeneruj rozpiskę: tygodnie rozejdą się po równo, a nikt nie dostanie dwóch pod rząd.",
+        generate: "Wygeneruj harmonogram",
+        regenerate: "Wygeneruj ponownie",
+        clear: "Usuń",
+        clearLabel: "Usuń harmonogram na {month}",
+        previousMonth: "Poprzedni miesiąc",
+        nextMonth: "Następny miesiąc",
+        weekColumn: "Tydzień",
+        datesColumn: "Termin",
+        whoColumn: "Sprząta",
+        thisWeek: "ten tydzień",
+        byRooms: "Dyżury chodzą po pokojach.",
+        byTenants: "Dyżury chodzą po najemcach z umowy na całość.",
+        rule: "Nikt nie sprząta dwa tygodnie z rzędu — także na styku miesięcy.",
+        working: "Chwileczkę…",
+      },
       filters: {
         searchPlaceholder: "Szukaj po nazwie, ulicy lub mieście…",
         searchLabel: "Szukaj nieruchomości",
@@ -1738,6 +1759,9 @@ export const pl = {
         roomInProperty: "Nie znaleziono pokoju w tej nieruchomości.",
         propertyRooms: "Nie znaleziono pokoi tej nieruchomości.",
       },
+      cleaningMonthInvalid: "Miesiąc podaje się w zapisie „2026-09”.",
+      cleaningTooFewParticipants:
+        "Harmonogram sprzątania potrzebuje co najmniej dwóch pokoi albo dwóch najemców na umowie na całość.",
       /** Komunikaty przypinane do konkretnego pola formularza. */
       fields: {
         selectProperty: "Wybierz nieruchomość z listy",

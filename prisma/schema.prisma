@@ -127,7 +127,8 @@ model Organization {
   logo                OrganizationLogo?
   invitations         Invitation[]
   /// Konta, które mają tę organizację ustawioną jako bieżącą.
-  activeForUsers      User[]            @relation("ActiveOrganization")
+  activeForUsers      User[]               @relation("ActiveOrganization")
+  cleaningDuties      CleaningDuty[]
 
   @@index([createdAt])
   @@map("organizations")
@@ -534,6 +535,7 @@ model Property {
   meterReadings       MeterReading[]
   maintenanceRequests MaintenanceRequest[]
   expenses            Expense[]
+  cleaningDuties      CleaningDuty[]
 
   @@index([organizationId])
   @@index([organizationId, archivedAt])
@@ -591,12 +593,55 @@ model Room {
   leases              Lease[]
   meterReadings       MeterReading[]
   maintenanceRequests MaintenanceRequest[]
+  cleaningDuties      CleaningDuty[]
 
   @@unique([propertyId, name])
   @@index([organizationId])
   @@index([propertyId, position])
   @@index([propertyId, status])
   @@map("rooms")
+}
+
+/// Dyżur sprzątania części wspólnych — jeden tydzień, jeden sprzątający.
+///
+/// Wiersz na tydzień, a nie dokument na miesiąc: miesiąc jest tu tylko
+/// zakresem dat w zapytaniu. Dzięki temu generowanie kolejnego miesiąca widzi
+/// poprzedni dyżur jednym `findFirst` i nie stawia tego samego pokoju dwa
+/// tygodnie z rzędu — a to jedyna reguła, o którą w tej tabelce chodzi.
+model CleaningDuty {
+  id             String @id @default(cuid())
+  organizationId String
+  propertyId     String
+
+  /// Pierwszy i ostatni dzień dyżuru, o północy UTC. Tygodnie są przycięte do
+  /// miesiąca: pierwszy zaczyna się 1. dnia, ostatni kończy ostatniego —
+  /// harmonogram na wrzesień ma nosić numery wrześniowych dni, a nie cudzych.
+  startsOn DateTime
+  endsOn   DateTime
+
+  /// Pokój, na który wypadł tydzień. NULL przy najmie całości — wtedy dyżur
+  /// nosi najemca, bo pokoi nikt tam osobno nie wynajmuje.
+  roomId   String?
+  /// Najemca z umowy na całość. NULL, gdy dyżur należy do pokoju.
+  tenantId String?
+  /// Podpis w tabelce zapisany w chwili generowania. Skasowany pokój albo
+  /// najemca nie ma zostawiać pustej kratki w harmonogramie, który wisi już
+  /// wydrukowany na lodówce.
+  label    String
+
+  createdAt DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  room         Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  /// Jeden dyżur na tydzień: powtórne generowanie miesiąca nadpisuje wiersze,
+  /// a nie dokłada drugiego zestawu obok pierwszego.
+  @@unique([propertyId, startsOn])
+  @@index([organizationId])
+  @@index([propertyId, startsOn])
+  @@map("cleaning_duties")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -711,6 +756,7 @@ model Tenant {
   maintenanceRequests MaintenanceRequest[]
   documents           Document[]
   invitations         Invitation[]
+  cleaningDuties      CleaningDuty[]
 
   @@index([organizationId])
   @@index([organizationId, status])
