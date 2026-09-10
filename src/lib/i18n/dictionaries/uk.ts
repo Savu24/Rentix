@@ -499,6 +499,8 @@ export const uk: Dictionary = {
           "Generate one: the weeks split evenly and nobody gets two of them in a row.",
         generate: "Generate the rota",
         regenerate: "Generate again",
+        download: "Download PDF",
+        downloadLabel: "Download the rota for {month} as a PDF",
         clear: "Delete",
         clearLabel: "Delete the rota for {month}",
         previousMonth: "Previous month",
@@ -1772,6 +1774,8 @@ export const uk: Dictionary = {
         propertyRooms: "No rooms found for this property.",
       },
       cleaningMonthInvalid: "Write the month as “2026-09”.",
+      cleaningEmptyMonth:
+        "There is no rota for this month yet. Generate one on the property page and there will be something to download.",
       cleaningTooFewParticipants:
         "A cleaning rota needs at least two rooms, or two tenants on a whole-property lease.",
       /** Messages pinned to a single form field. */
@@ -2143,6 +2147,19 @@ export const uk: Dictionary = {
       signedBy: "",
       receivedBy: "",
     },
+    cleaning: {
+      title: "Cleaning rota",
+      filename: "cleaning rota",
+      byRooms: "Turns go round the rooms.",
+      byTenants: "Turns go round the tenants on the whole-property lease.",
+      weekColumn: "Week",
+      datesColumn: "Dates",
+      whoColumn: "Cleans",
+      doneColumn: "Done",
+      rule: "Nobody cleans two weeks running — not even across the turn of the month.",
+      footer: "{property} · {month}",
+    },
+
     numberPrefix: {
       BILL: "INV",
       VAT_INVOICE: "VAT",

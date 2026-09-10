@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { formatPropertyAddress } from "@/lib/properties/address";
 
 import {
   MIN_CLEANING_PARTICIPANTS,
@@ -225,4 +226,48 @@ export async function clearCleaningSchedule(
   });
 
   return count;
+}
+
+export type CleaningPrintout = CleaningScheduleView & {
+  propertyName: string;
+  propertyAddress: string;
+  organizationName: string;
+};
+
+/**
+ * Rozpiska razem z nagłówkiem wydruku. `null` = nie ma takiej nieruchomości.
+ *
+ * Adres i nazwa firmy nie są potrzebne na ekranie — tam użytkownik wie, na
+ * czyjej karcie stoi. Na kartce wydrukowanej i powieszonej w kuchni to jedyne,
+ * co odróżnia ją od rozpiski z sąsiedniego mieszkania.
+ */
+export async function cleaningPrintout(
+  organizationId: string,
+  propertyId: string,
+  month: CleaningMonth,
+): Promise<CleaningPrintout | null> {
+  const [property, schedule] = await Promise.all([
+    prisma.property.findFirst({
+      where: { id: propertyId, organizationId },
+      select: {
+        name: true,
+        street: true,
+        buildingNumber: true,
+        apartmentNumber: true,
+        postalCode: true,
+        city: true,
+        organization: { select: { name: true } },
+      },
+    }),
+    cleaningSchedule(organizationId, propertyId, month),
+  ]);
+
+  if (!property || !schedule) return null;
+
+  return {
+    ...schedule,
+    propertyName: property.name,
+    propertyAddress: formatPropertyAddress(property),
+    organizationName: property.organization.name,
+  };
 }

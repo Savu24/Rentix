@@ -4,6 +4,7 @@ import {
   BrushCleaning,
   ChevronLeft,
   ChevronRight,
+  Download,
   Loader2,
   RefreshCw,
   Trash2,
@@ -121,6 +122,20 @@ export function CleaningSchedule({
 
         {hasSchedule ? (
           <span className="flex items-center gap-0.5">
+            {/*
+              Zwykły link, nie fetch: przeglądarka ma sama zapisać plik, a treść
+              wraca prosto z serwera, więc nie ma tu czego trzymać w stanie.
+              Miesiąc idzie w adresie — pobiera się ten, który widać nad tabelą.
+            */}
+            <Button asChild size="sm" variant="ghost">
+              <a
+                href={`/api/properties/${propertyId}/cleaning/pdf?month=${key}`}
+                title={fill(t.downloadLabel, { month: monthLabel })}
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden />
+                {t.download}
+              </a>
+            </Button>
             <Button size="sm" variant="ghost" onClick={generate} disabled={busy}>
               <RefreshCw className="h-3.5 w-3.5" aria-hidden />
               {t.regenerate}

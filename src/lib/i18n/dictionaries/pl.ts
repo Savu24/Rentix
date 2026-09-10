@@ -499,6 +499,8 @@ export const pl = {
           "Wygeneruj rozpiskę: tygodnie rozejdą się po równo, a nikt nie dostanie dwóch pod rząd.",
         generate: "Wygeneruj harmonogram",
         regenerate: "Wygeneruj ponownie",
+        download: "Pobierz PDF",
+        downloadLabel: "Pobierz harmonogram na {month} w formacie PDF",
         clear: "Usuń",
         clearLabel: "Usuń harmonogram na {month}",
         previousMonth: "Poprzedni miesiąc",
@@ -1760,6 +1762,8 @@ export const pl = {
         propertyRooms: "Nie znaleziono pokoi tej nieruchomości.",
       },
       cleaningMonthInvalid: "Miesiąc podaje się w zapisie „2026-09”.",
+      cleaningEmptyMonth:
+        "Na ten miesiąc nie ma jeszcze harmonogramu. Wygeneruj go na karcie nieruchomości, wtedy będzie co pobrać.",
       cleaningTooFewParticipants:
         "Harmonogram sprzątania potrzebuje co najmniej dwóch pokoi albo dwóch najemców na umowie na całość.",
       /** Komunikaty przypinane do konkretnego pola formularza. */
@@ -2091,6 +2095,22 @@ export const pl = {
       signedBy: "Wystawił",
       receivedBy: "Odebrał",
     },
+    /** Harmonogram sprzątania — kartka na lodówkę, nie dokument księgowy. */
+    cleaning: {
+      title: "Harmonogram sprzątania",
+      /** Pierwsze słowo nazwy pliku, stąd bez ogonków w samym zapisie na dysku. */
+      filename: "harmonogram sprzątania",
+      byRooms: "Dyżury chodzą po pokojach.",
+      byTenants: "Dyżury chodzą po najemcach z umowy na całość.",
+      weekColumn: "Tydzień",
+      datesColumn: "Termin",
+      whoColumn: "Sprząta",
+      /** Nagłówek nad pustą kratką — odhacza się ją długopisem po sprzątaniu. */
+      doneColumn: "Zrobione",
+      rule: "Nikt nie sprząta dwa tygodnie z rzędu — także na styku miesięcy.",
+      footer: "{property} · {month}",
+    },
+
     /*
       Litery serii przed numerem. Rozdzielaja rejestry: rachunek i faktura maja
       wlasna numeracje od jedynki, wiec bez serii oba dokumenty z tego samego
