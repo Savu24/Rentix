@@ -104,6 +104,14 @@ model Organization {
   /// dolozeniem tego pola.
   bankAccount String?
 
+  /// Wzór numeru dokumentu — „{n}/{m}/{y}", „{y}/{m}/{n}", „{m}/{y}/A/{n}"…
+  /// Symbole i zasady opisuje `src/lib/invoices/number-format.ts`.
+  ///
+  /// NULL = wzór domyślny (numer/miesiąc/rok, licznik co miesiąc). Zmiana
+  /// wzoru nie dotyka dokumentów już wystawionych: numer nadaje się raz
+  /// i zostaje w `Invoice.number`.
+  invoiceNumberFormat String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

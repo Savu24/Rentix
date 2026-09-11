@@ -3,6 +3,7 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/prisma";
 import type {
   AccountDeleteOutput,
+  NumberingSettingsOutput,
   OrganizationLogoOutput,
   OrganizationSettingsOutput,
   PasswordChangeOutput,
@@ -29,6 +30,7 @@ export async function getOrganization(organizationId: string) {
       city: true,
       countryCode: true,
       bankAccount: true,
+      invoiceNumberFormat: true,
     },
   });
 }
@@ -65,6 +67,21 @@ export async function updateOrganization(
       city: true,
       bankAccount: true,
     },
+  });
+}
+
+/**
+ * Zapisuje wzór numeru dokumentu. Działa od następnego wystawionego
+ * dokumentu — numery już nadane zostają, patrz `invoices/numbering.ts`.
+ */
+export async function updateNumberingSettings(
+  organizationId: string,
+  data: NumberingSettingsOutput,
+) {
+  return prisma.organization.update({
+    where: { id: organizationId },
+    data: { invoiceNumberFormat: data.invoiceNumberFormat },
+    select: { id: true, invoiceNumberFormat: true },
   });
 }
 

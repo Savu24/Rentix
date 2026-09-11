@@ -2,24 +2,27 @@ import { notFound } from "next/navigation";
 
 import { PlanLock } from "@/components/panel/plan-lock";
 import { LogoForm } from "@/components/panel/settings/logo-form";
+import { NumberingForm } from "@/components/panel/settings/numbering-form";
 import { OrganizationForm } from "@/components/panel/settings/organization-form";
 import { Alert } from "@/components/ui/alert";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { organizationAllows } from "@/lib/billing/server";
+import { invoiceNumberPrefixes } from "@/lib/invoices/numbering";
 import {
   getOrganization,
   getOrganizationLogo,
   isSellerComplete,
 } from "@/lib/organizations/service";
-import { panelDictionary } from "@/lib/panel/dictionary";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 
 export default async function SettingsOrganizationPage() {
   const session = await requireOwnerSession("/panel/ustawienia");
-  const [organization, logo, logoAllowed, d] = await Promise.all([
+  const [organization, logo, logoAllowed, d, locale] = await Promise.all([
     getOrganization(session.user.organizationId),
     getOrganizationLogo(session.user.organizationId),
     organizationAllows(session.user.organizationId, "DOCUMENT_LOGO"),
     panelDictionary(),
+    panelLocale(),
   ]);
 
   if (!organization) notFound();
@@ -40,6 +43,11 @@ export default async function SettingsOrganizationPage() {
           city: organization.city ?? "",
           bankAccount: organization.bankAccount ?? "",
         }}
+      />
+
+      <NumberingForm
+        current={organization.invoiceNumberFormat}
+        prefixes={invoiceNumberPrefixes(locale)}
       />
 
       {logoAllowed ? (

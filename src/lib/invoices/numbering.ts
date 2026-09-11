@@ -3,16 +3,27 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getDictionary } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 
+import {
+  DEFAULT_NUMBER_FORMAT,
+  numberingPeriodBounds,
+  renderNumberFormat,
+  sequenceInNumber,
+} from "./number-format";
+
 /**
  * Numeracja dokumentów.
  *
- * Format „FV 3/08/2026" — kolejny numer w miesiącu, miesiąc, rok. To zapis,
+ * Domyślnie „R 3/08/2026" — kolejny numer w miesiącu, miesiąc, rok. To zapis,
  * którego oczekuje polskie biuro rachunkowe; numeracja resetuje się co miesiąc
  * i biegnie osobno dla każdego rodzaju dokumentu, bo rachunek i faktura VAT
  * to dwa odrębne rejestry.
  *
- * Sam układ zostaje w wersji brytyjskiej, bo miesięczna seria czyta się tak
- * samo dobrze; zmienia się prefiks, żeby litery serii nie wyglądały jak
+ * Układ cyfr wybiera organizacja w ustawieniach — gotowe wzory albo własny,
+ * patrz `number-format.ts`. Ten sam wzór mówi, co ile licznik wraca do
+ * jedynki: co miesiąc, co rok albo nigdy. Litery serii NIE są częścią wzoru:
+ * to one rozdzielają rejestry, więc doklejamy je zawsze, z przodu.
+ *
+ * Prefiks zmienia się z wersją krajową, żeby litery serii nie wyglądały jak
  * literówka na dokumencie po angielsku. Prefiksy siedzą w słowniku pod
  * `documents.numberPrefix`.
  *
@@ -25,25 +36,23 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
  * po numerze jest dla księgowego sygnałem, że coś zniknęło bez śladu.
  *
  * Numer nadaje się raz, przy wystawieniu, i zostaje w bazie — zmiana prefiksów
- * nie rusza dokumentów już wystawionych. Jedyny wyjątek opisuje `renumber.ts`.
+ * ani wzoru nie rusza dokumentów już wystawionych. Jedyny wyjątek opisuje
+ * `renumber.ts`.
  */
 
 export function invoiceNumberPrefixes(locale: Locale): Record<InvoiceKind, string> {
   return getDictionary(locale).documents.numberPrefix;
 }
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
 export function formatInvoiceNumber(
   kind: InvoiceKind,
   sequence: number,
-  year: number,
-  /** Miesiąc liczony od zera, jak w `Date`. */
-  month: number,
+  issueDate: Date,
   locale: Locale = DEFAULT_LOCALE,
+  template: string = DEFAULT_NUMBER_FORMAT,
 ): string {
   const prefix = invoiceNumberPrefixes(locale)[kind];
-  const core = `${sequence}/${pad(month + 1)}/${year}`;
+  const core = renderNumberFormat(template, sequence, issueDate);
 
   // Pusta seria (polska faktura) daje sam numer — bez niej zostawałaby spacja
   // wiodąca, która wchodziłaby do bazy, do nazwy pliku i do wyszukiwarki.
@@ -51,32 +60,10 @@ export function formatInvoiceNumber(
 }
 
 /**
- * Numer porządkowy wyłuskany z gotowego numeru dokumentu, o ile ten dotyczy
- * wskazanego miesiąca. NULL, gdy zapis jest inny — na przykład po ręcznej
- * korekcie na numer w formacie biura rachunkowego.
+ * Kolejny wolny numer dla organizacji, rodzaju i okresu wystawienia — miesiąca,
+ * roku albo całego rejestru, zależnie od wzoru numeru.
  *
- * Prefiks celowo nie wchodzi do wzorca: dokument mógł powstać, zanim konto
- * zmieniło kraj, a jego numer i tak zajmuje miejsce w rejestrze.
- */
-export function sequenceInNumber(
-  number: string,
-  year: number,
-  /** Miesiąc liczony od zera, jak w `Date`. */
-  month: number,
-): number | null {
-  const match = /(\d+)\/(\d{2})\/(\d{4})$/.exec(number.trim());
-  if (!match) return null;
-
-  const [, sequence, numberMonth, numberYear] = match;
-  if (Number(numberMonth) !== month + 1 || Number(numberYear) !== year) return null;
-
-  return Number(sequence);
-}
-
-/**
- * Kolejny wolny numer dla organizacji, rodzaju i miesiąca wystawienia.
- *
- * Liczy z dokumentów już wystawionych w tym miesiącu zamiast trzymać licznik
+ * Liczy z dokumentów już wystawionych w tym okresie zamiast trzymać licznik
  * w osobnej tabeli — przy skali jednego właściciela to kilkanaście rekordów
  * miesięcznie, a licznik wymagałby własnej obsługi transakcji i i tak
  * rozjechałby się po ręcznej korekcie w bazie.
@@ -97,21 +84,19 @@ export async function nextInvoiceNumber(
   kind: InvoiceKind,
   issueDate: Date,
 ): Promise<string> {
-  const year = issueDate.getUTCFullYear();
-  const month = issueDate.getUTCMonth();
-
-  const monthStart = new Date(Date.UTC(year, month, 1));
-  const nextMonthStart = new Date(Date.UTC(year, month + 1, 1));
-
   /*
-    Prefiks bierze się z kraju wystawcy, więc musimy go znać przed nadaniem
-    numeru. Zapytanie jest w tej samej transakcji co reszta wystawienia.
+    Prefiks bierze się z kraju wystawcy, a układ cyfr z ustawień, więc oba
+    musimy znać przed nadaniem numeru. Zapytanie jest w tej samej transakcji
+    co reszta wystawienia.
   */
   const organization = await tx.organization.findUnique({
     where: { id: organizationId },
-    select: { locale: true },
+    select: { locale: true, invoiceNumberFormat: true },
   });
   const locale = isLocale(organization?.locale) ? organization.locale : DEFAULT_LOCALE;
+  const template = organization?.invoiceNumberFormat ?? DEFAULT_NUMBER_FORMAT;
+
+  const bounds = numberingPeriodBounds(template, issueDate);
 
   const used = await tx.invoice.findMany({
     where: {
@@ -119,22 +104,23 @@ export async function nextInvoiceNumber(
       kind,
       // Szkice nie mają jeszcze numeru, więc nie zajmują miejsca w rejestrze.
       status: { not: "DRAFT" },
-      issueDate: { gte: monthStart, lt: nextMonthStart },
+      ...(bounds.gte ? { issueDate: bounds } : {}),
     },
     select: { number: true },
   });
 
   /*
     Liczba dokumentów zostaje dolną granicą: numer poprawiony ręcznie na zapis
-    spoza formatu („12/2026 KOR") nie da się odczytać, a mimo to zajmuje
-    miejsce w miesiącu i nie może zwolnić numeru wydanego wcześniej.
+    spoza formatu („12/2026 KOR") albo nadany przed zmianą wzoru w ustawieniach
+    nie da się odczytać, a mimo to zajmuje miejsce w okresie i nie może
+    zwolnić numeru wydanego wcześniej.
   */
   const highest = used.reduce(
-    (max, invoice) => Math.max(max, sequenceInNumber(invoice.number, year, month) ?? 0),
+    (max, invoice) => Math.max(max, sequenceInNumber(invoice.number, template, issueDate) ?? 0),
     used.length,
   );
 
-  return formatInvoiceNumber(kind, highest + 1, year, month, locale);
+  return formatInvoiceNumber(kind, highest + 1, issueDate, locale, template);
 }
 
 /** Prisma sygnalizuje naruszenie unikalności kodem P2002. */

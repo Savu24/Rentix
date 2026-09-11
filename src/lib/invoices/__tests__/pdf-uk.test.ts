@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { getDictionary } from "@/lib/i18n";
 import { invoiceLayout, type InvoicePdfData } from "@/lib/invoices/pdf";
 import { formatInvoiceNumber } from "@/lib/invoices/numbering";
+
+const AUGUST = new Date(Date.UTC(2026, 7, 1));
+const JANUARY = new Date(Date.UTC(2026, 0, 1));
 import { formatBankAccount } from "@/lib/bank-account";
 import { selectableInvoiceKinds } from "@/lib/validations/invoice";
 
@@ -180,16 +183,16 @@ describe("teksty dokumentu", () => {
 
 describe("numeracja dokumentów", () => {
   it("bierze prefiks z wersji krajowej", () => {
-    expect(formatInvoiceNumber("BILL", 3, 2026, 7, "pl")).toBe("R 3/08/2026");
-    expect(formatInvoiceNumber("BILL", 3, 2026, 7, "uk")).toBe("INV 3/08/2026");
-    expect(formatInvoiceNumber("CHARGE", 1, 2026, 0, "uk")).toBe("CHG 1/01/2026");
+    expect(formatInvoiceNumber("BILL", 3, AUGUST, "pl")).toBe("R 3/08/2026");
+    expect(formatInvoiceNumber("BILL", 3, AUGUST, "uk")).toBe("INV 3/08/2026");
+    expect(formatInvoiceNumber("CHARGE", 1, JANUARY, "uk")).toBe("CHG 1/01/2026");
   });
 
   it("polska faktura ma sam numer, bez liter serii", () => {
     // „Faktura" stoi nad numerem w nagłówku — „FV" mówiłoby to samo drugi raz.
-    expect(formatInvoiceNumber("VAT_INVOICE", 3, 2026, 7, "pl")).toBe("3/08/2026");
+    expect(formatInvoiceNumber("VAT_INVOICE", 3, AUGUST, "pl")).toBe("3/08/2026");
     // Bez spacji wiodącej: numer idzie tak samo do bazy, nazwy pliku i wyszukiwarki.
-    expect(formatInvoiceNumber("VAT_INVOICE", 3, 2026, 7, "pl").startsWith(" ")).toBe(false);
+    expect(formatInvoiceNumber("VAT_INVOICE", 3, AUGUST, "pl").startsWith(" ")).toBe(false);
   });
 
   it("pozostałe rejestry zachowują swoje litery", () => {
@@ -198,8 +201,8 @@ describe("numeracja dokumentów", () => {
       co dzieli rejestry. Druga pusta seria oznaczałaby rachunek i fakturę
       z tego samego miesiąca pod jednym numerem.
     */
-    expect(formatInvoiceNumber("PROFORMA", 3, 2026, 7, "pl")).toBe("PF 3/08/2026");
-    expect(formatInvoiceNumber("CHARGE", 3, 2026, 7, "pl")).toBe("N 3/08/2026");
+    expect(formatInvoiceNumber("PROFORMA", 3, AUGUST, "pl")).toBe("PF 3/08/2026");
+    expect(formatInvoiceNumber("CHARGE", 3, AUGUST, "pl")).toBe("N 3/08/2026");
 
     const prefixes = getDictionary("pl").documents.numberPrefix;
     const empty = Object.values(prefixes).filter((prefix) => prefix === "");

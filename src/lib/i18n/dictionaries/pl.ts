@@ -1742,6 +1742,45 @@ export const pl = {
         bankAccountHint:
           "26 cyfr. Trafia na rachunki jako konto do przelewu. Zostaw puste, jeśli rozliczasz się inaczej.",
       },
+      /**
+       * Wzór numeru dokumentu. Klucze `presets` to same wzory z
+       * `invoices/number-format.ts` — etykiety mówią, co jest w numerze
+       * i co ile licznik wraca do jedynki, bo to drugie nie widać po
+       * przykładzie.
+       */
+      numbering: {
+        title: "Numeracja dokumentów",
+        lead: "Układ numeru nadawanego kolejnym dokumentom. Dokumenty już wystawione zostają przy swoich numerach, a litery serii (R, PF, N) doklejają się same.",
+        saved: "Zapisano wzór numeru.",
+        save: "Zapisz",
+        presets: {
+          "{n}/{m}/{y}": "Numer, miesiąc, rok",
+          "{n}/{y}": "Numer, rok",
+          "{y}/{m}/{n}": "Rok, miesiąc, numer",
+          "{d}/{m}/{y}/{n}": "Dzień, miesiąc, rok, numer",
+        },
+        custom: "Własny wzór",
+        customLabel: "Wzór",
+        customHint:
+          "Symbole: {n} kolejny numer, {d} dzień, {m} miesiąc, {y} rok. Resztę znaków przepisujemy dosłownie, np. {m}/{y}/A/{n} daje 09/2026/A/3.",
+        preview: "Tak wyjdzie następny dokument",
+        period: {
+          month: "Licznik zaczyna od 1 co miesiąc.",
+          year: "Licznik zaczyna od 1 co rok.",
+          none: "Licznik biegnie bez przerwy, bez zerowania.",
+        },
+        problems: {
+          empty: "Wpisz wzór numeru",
+          tooLong: "Wzór może mieć najwyżej {max} znaków",
+          badChars: "Poza symbolami dozwolone są litery, cyfry, spacja i znaki / - . _",
+          unknownToken: "Nieznany symbol w klamrach. Dozwolone: {n}, {d}, {m}, {y}",
+          noSequence: "We wzorze musi być {n} — bez kolejnego numeru dokumenty zderzałyby się ze sobą",
+          manySequences: "Symbol {n} może wystąpić tylko raz",
+          adjacentTokens: "Rozdziel symbole separatorem, np. {n}/{m} zamiast {n}{m}",
+          monthWithoutYear: "Miesiąc bez roku powtarzałby numery co rok — dodaj {y}",
+          dayWithoutMonth: "Dzień bez miesiąca nie składa się w datę — dodaj {m}",
+        },
+      },
       logoTooLarge: "Plik jest za duży",
       logoWrongType: "Wgraj obrazek PNG albo JPEG",
       logoMaxSize: "Obrazek może ważyć najwyżej {kb} kB",

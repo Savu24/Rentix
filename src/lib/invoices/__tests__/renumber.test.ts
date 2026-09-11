@@ -6,7 +6,10 @@ import {
   organizationInAllowlist,
   parseOrganizationAllowlist,
 } from "@/lib/invoices/renumber";
-import { sequenceInNumber } from "@/lib/invoices/numbering";
+import { DEFAULT_NUMBER_FORMAT, sequenceInNumber } from "@/lib/invoices/number-format";
+
+/** Dowolny dzień sierpnia 2026 — licznik domyślnego wzoru jest miesięczny. */
+const AUGUST = new Date(Date.UTC(2026, 7, 15));
 
 const before = new Date(RENUMBER_CUTOFF.getTime() - 1);
 const after = new Date(RENUMBER_CUTOFF.getTime() + 1);
@@ -76,17 +79,17 @@ describe("invoiceNumberEditable", () => {
 
 describe("sequenceInNumber", () => {
   it("czyta numer porządkowy z zapisu nadanego przez Rentiksa", () => {
-    expect(sequenceInNumber("FV 3/08/2026", 2026, 7)).toBe(3);
-    expect(sequenceInNumber("R 12/08/2026", 2026, 7)).toBe(12);
+    expect(sequenceInNumber("FV 3/08/2026", DEFAULT_NUMBER_FORMAT, AUGUST)).toBe(3);
+    expect(sequenceInNumber("R 12/08/2026", DEFAULT_NUMBER_FORMAT, AUGUST)).toBe(12);
   });
 
   it("pomija dokument z innego miesiąca albo roku", () => {
-    expect(sequenceInNumber("FV 3/07/2026", 2026, 7)).toBeNull();
-    expect(sequenceInNumber("FV 3/08/2025", 2026, 7)).toBeNull();
+    expect(sequenceInNumber("FV 3/07/2026", DEFAULT_NUMBER_FORMAT, AUGUST)).toBeNull();
+    expect(sequenceInNumber("FV 3/08/2025", DEFAULT_NUMBER_FORMAT, AUGUST)).toBeNull();
   });
 
   it("numer poprawiony ręcznie na obcy format jest nie do odczytania", () => {
-    expect(sequenceInNumber("FV-2026-08-03", 2026, 7)).toBeNull();
+    expect(sequenceInNumber("FV-2026-08-03", DEFAULT_NUMBER_FORMAT, AUGUST)).toBeNull();
   });
 
   /*
@@ -96,7 +99,7 @@ describe("sequenceInNumber", () => {
   it("po przenumerowaniu największy numer jest wyższy niż liczba dokumentów", () => {
     const numbers = ["FV 1/08/2026", "FV 2/08/2026", "FV 4/08/2026"];
     const highest = numbers.reduce(
-      (max, number) => Math.max(max, sequenceInNumber(number, 2026, 7) ?? 0),
+      (max, number) => Math.max(max, sequenceInNumber(number, DEFAULT_NUMBER_FORMAT, AUGUST) ?? 0),
       numbers.length,
     );
 

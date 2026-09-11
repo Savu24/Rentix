@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import { unknownVariables } from "@/lib/email/render";
+import {
+  DEFAULT_NUMBER_FORMAT,
+  MAX_NUMBER_FORMAT_LENGTH,
+  numberFormatProblem,
+} from "@/lib/invoices/number-format";
 import { EDITABLE_NOTIFICATION_TYPES } from "@/lib/notifications/types";
 
 import { fill } from "@/lib/i18n/format";
@@ -59,6 +64,38 @@ export const organizationSettingsSchema = (c: ValidationContext) =>
 
 export type OrganizationSettingsInput = z.input<ReturnType<typeof organizationSettingsSchema>>;
 export type OrganizationSettingsOutput = z.output<ReturnType<typeof organizationSettingsSchema>>;
+
+/**
+ * Wzór numeru dokumentu — patrz `number-format.ts`.
+ *
+ * Wzór domyślny zapisujemy jako NULL, a nie dosłownie: NULL znaczy „tak jak
+ * wszyscy", więc gdyby domyślny zapis miał się kiedyś zmienić, konta, które
+ * niczego nie wybierały, pójdą za nim, a te z własnym wzorem zostaną przy
+ * swoim.
+ */
+export const numberingSettingsSchema = (c: ValidationContext) =>
+  z.object({
+    invoiceNumberFormat: z
+      .string()
+      .trim()
+      .superRefine((value, ctx) => {
+        const problem = numberFormatProblem(value);
+        if (problem) {
+          // `fill` podstawia tylko `{max}`; „{n}" w treści komunikatu zostaje
+          // dosłownie, bo to nazwa symbolu, a nie dziura na wartość.
+          ctx.addIssue({
+            code: "custom",
+            message: fill(c.d.panel.settings.numbering.problems[problem], {
+              max: MAX_NUMBER_FORMAT_LENGTH,
+            }),
+          });
+        }
+      })
+      .transform((value) => (value === DEFAULT_NUMBER_FORMAT ? null : value)),
+  });
+
+export type NumberingSettingsInput = z.input<ReturnType<typeof numberingSettingsSchema>>;
+export type NumberingSettingsOutput = z.output<ReturnType<typeof numberingSettingsSchema>>;
 
 /**
  * Logo wystawcy — nieobowiązkowe. Bez niego dokument wygląda dokładnie tak,

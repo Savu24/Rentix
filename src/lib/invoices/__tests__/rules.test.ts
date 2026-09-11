@@ -11,6 +11,9 @@ import { getDictionary } from "@/lib/i18n";
 import { invoiceKindLabels, isAccountingDocument } from "@/lib/validations/invoice";
 import { formatInvoiceNumber, withUniqueNumberRetry } from "@/lib/invoices/numbering";
 
+/** Data wystawienia jak w bazie: północ UTC. Miesiąc od zera, jak w `Date`. */
+const utc = (year: number, month: number, day = 1) => new Date(Date.UTC(year, month, day));
+
 describe("buyerSnapshot", () => {
   const TENANT = {
     firstName: "Jan",
@@ -92,10 +95,22 @@ describe("settlementStatus", () => {
 
 describe("formatInvoiceNumber", () => {
   it("składa numer w zapisie oczekiwanym przez księgowość", () => {
-    expect(formatInvoiceNumber("BILL", 3, 2026, 7)).toBe("R 3/08/2026");
+    expect(formatInvoiceNumber("BILL", 3, utc(2026, 7))).toBe("R 3/08/2026");
     // Faktura idzie bez liter serii — „Faktura" stoi nad numerem w nagłówku.
-    expect(formatInvoiceNumber("VAT_INVOICE", 1, 2026, 0)).toBe("1/01/2026");
-    expect(formatInvoiceNumber("PROFORMA", 12, 2026, 11)).toBe("PF 12/12/2026");
+    expect(formatInvoiceNumber("VAT_INVOICE", 1, utc(2026, 0))).toBe("1/01/2026");
+    expect(formatInvoiceNumber("PROFORMA", 12, utc(2026, 11))).toBe("PF 12/12/2026");
+  });
+
+  it("układ cyfr bierze ze wzoru organizacji, litery serii zostają z przodu", () => {
+    expect(formatInvoiceNumber("BILL", 3, utc(2026, 8, 11), "pl", "{y}/{m}/{n}")).toBe(
+      "R 2026/09/3",
+    );
+    expect(formatInvoiceNumber("VAT_INVOICE", 3, utc(2026, 8, 11), "pl", "{d}/{m}/{y}/{n}")).toBe(
+      "11/09/2026/3",
+    );
+    expect(formatInvoiceNumber("VAT_INVOICE", 3, utc(2026, 8, 11), "pl", "{m}/{y}/A/{n}")).toBe(
+      "09/2026/A/3",
+    );
   });
 });
 
@@ -173,8 +188,8 @@ describe("naliczenie a dowód księgowy", () => {
   it("naliczenie ma własną serię numeracji", () => {
     // Własny prefiks to nie kosmetyka: gdyby naliczenia biegły serią rachunków,
     // zajmowałyby numery w rejestrze, w którym nie powinny się pojawić.
-    expect(formatInvoiceNumber("CHARGE", 1, 2026, 7)).toBe("N 1/08/2026");
-    expect(formatInvoiceNumber("BILL", 1, 2026, 7)).toBe("R 1/08/2026");
+    expect(formatInvoiceNumber("CHARGE", 1, utc(2026, 7))).toBe("N 1/08/2026");
+    expect(formatInvoiceNumber("BILL", 1, utc(2026, 7))).toBe("R 1/08/2026");
   });
 
   it("każdy rodzaj dokumentu ma etykietę w obu wersjach krajowych", () => {
