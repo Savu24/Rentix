@@ -1,32 +1,40 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  monthKey,
-  monthWeeks,
-  parseMonthKey,
+  MAX_CLEANING_RANGE_DAYS,
+  addDays,
+  isoDay,
+  parseIsoDay,
+  rangeWeeks,
   rotateDuties,
 } from "@/lib/cleaning/rotation";
 
-const iso = (date: Date) => date.toISOString().slice(0, 10);
-const range = (year: number, monthIndex: number) =>
-  monthWeeks(year, monthIndex).map((week) => `${iso(week.startsOn)}..${iso(week.endsOn)}`);
+const day = (iso: string) => parseIsoDay(iso)!;
+const range = (from: string, to: string) =>
+  rangeWeeks(day(from), day(to)).map((week) => `${isoDay(week.startsOn)}..${isoDay(week.endsOn)}`);
 
-/** Losowanie bez losu — kolejność wchodzi do testu taka, jaka wyszła z wejścia. */
-const noShuffle = () => 0.999_999;
-
-describe("monthWeeks", () => {
-  it("pierwszy tydzień zaczyna się 1. dnia miesiąca, a nie w poprzednim", () => {
-    // 1 września 2026 to wtorek — poniedziałek 31 sierpnia należy do sierpnia.
-    expect(range(2026, 8)[0]).toBe("2026-09-01..2026-09-06");
+describe("rangeWeeks", () => {
+  it("pierwszy tydzień zaczyna się w dniu startu, nie w poniedziałek", () => {
+    // 10 lipca 2026 to piątek — tydzień idzie piątek–czwartek.
+    expect(range("2026-07-10", "2026-08-06")).toEqual([
+      "2026-07-10..2026-07-16",
+      "2026-07-17..2026-07-23",
+      "2026-07-24..2026-07-30",
+      "2026-07-31..2026-08-06",
+    ]);
   });
 
-  it("ostatni tydzień kończy się ostatnim dniem miesiąca", () => {
-    const weeks = range(2026, 8);
-    expect(weeks.at(-1)).toBe("2026-09-28..2026-09-30");
+  it("tydzień na styku miesięcy idzie w całości, bez przecinania", () => {
+    const weeks = range("2026-07-10", "2026-08-31");
+    expect(weeks).toContain("2026-07-31..2026-08-06");
+  });
+
+  it("ostatni tydzień jest przycięty do dnia końca", () => {
+    expect(range("2026-07-10", "2027-07-31").at(-1)).toBe("2027-07-30..2027-07-31");
   });
 
   it("tygodnie idą bez dziur i bez zakładek", () => {
-    const weeks = monthWeeks(2026, 8);
+    const weeks = rangeWeeks(day("2026-07-10"), day("2027-07-31"));
 
     for (let i = 1; i < weeks.length; i += 1) {
       const previousEnd = weeks[i - 1].endsOn.getTime();
@@ -34,119 +42,80 @@ describe("monthWeeks", () => {
     }
   });
 
-  it("miesiąc zaczynający się w poniedziałek daje same pełne tygodnie", () => {
-    // Czerwiec 2026: 1. to poniedziałek, 30. wtorek.
-    expect(range(2026, 5)).toEqual([
-      "2026-06-01..2026-06-07",
-      "2026-06-08..2026-06-14",
-      "2026-06-15..2026-06-21",
-      "2026-06-22..2026-06-28",
-      "2026-06-29..2026-06-30",
-    ]);
-  });
-
-  it("miesiąc zaczynający się w niedzielę otwiera jednodniowym tygodniem", () => {
-    // Luty 2026 zaczyna się w niedzielę — pierwszy „tydzień" to sam 1 lutego.
-    expect(range(2026, 1)[0]).toBe("2026-02-01..2026-02-01");
-  });
-
-  it("luty roku przestępnego kończy się 29.", () => {
-    expect(range(2028, 1).at(-1)).toBe("2028-02-28..2028-02-29");
+  it("rok od 10 lipca do 31 lipca następnego roku to 56 tygodni", () => {
+    expect(rangeWeeks(day("2026-07-10"), day("2027-07-31"))).toHaveLength(56);
   });
 
   it("numeruje tygodnie od jedynki", () => {
-    expect(monthWeeks(2026, 8).map((week) => week.index)).toEqual([1, 2, 3, 4, 5]);
+    expect(rangeWeeks(day("2026-09-01"), day("2026-09-30")).map((week) => week.index)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+  });
+
+  it("koniec przed początkiem daje pustą listę", () => {
+    expect(rangeWeeks(day("2026-09-10"), day("2026-09-01"))).toEqual([]);
+  });
+
+  it("jeden dzień to jeden jednodniowy tydzień", () => {
+    expect(range("2026-09-01", "2026-09-01")).toEqual(["2026-09-01..2026-09-01"]);
   });
 });
 
 describe("rotateDuties", () => {
   const rooms = [{ id: "a" }, { id: "b" }, { id: "c" }];
 
+  it("chodzi karuzelą w kolejności uczestników", () => {
+    expect(rotateDuties(rooms, 7).map((room) => room.id)).toEqual([
+      "a", "b", "c", "a", "b", "c", "a",
+    ]);
+  });
+
   it("nikt nie sprząta dwa tygodnie z rzędu", () => {
-    const duties = rotateDuties(rooms, 12, { random: Math.random });
+    const duties = rotateDuties(rooms, 56);
 
     for (let i = 1; i < duties.length; i += 1) {
       expect(duties[i].id).not.toBe(duties[i - 1].id);
     }
   });
 
-  it("nie powtarza sprzątającego z ostatniego tygodnia poprzedniego miesiąca", () => {
-    // Bez tego reguła pękałaby dokładnie na styku miesięcy, gdzie nikt jej
-    // nie sprawdza — a tam widać ją najlepiej, bo tabelki wiszą obok siebie.
-    for (const previousId of ["a", "b", "c"]) {
-      const duties = rotateDuties(rooms, 5, { previousId, random: Math.random });
-      expect(duties[0].id).not.toBe(previousId);
+  it("dyżurów każdy dostaje tyle samo z dokładnością do jednego", () => {
+    const counts = new Map<string, number>();
+    for (const duty of rotateDuties(rooms, 56)) {
+      counts.set(duty.id, (counts.get(duty.id) ?? 0) + 1);
     }
+
+    const values = [...counts.values()];
+    expect(Math.max(...values) - Math.min(...values)).toBeLessThanOrEqual(1);
   });
 
-  it("nie powtarza sprzątającego z pierwszego tygodnia kolejnego miesiąca", () => {
-    // Miesiąc wygenerowany po raz drugi ma pasować także do tego, co wisi już
-    // po jego prawej stronie.
-    for (const nextId of ["a", "b", "c"]) {
-      const duties = rotateDuties(rooms, 5, { nextId, random: Math.random });
-      expect(duties.at(-1)!.id).not.toBe(nextId);
-    }
-  });
-
-  it("gdy obu styków nie da się pogodzić, wygrywa miesiąc poprzedni", () => {
-    // Dwoje sprzątających i parzysta liczba tygodni: pierwszy i ostatni dyżur
-    // są wtedy różne z definicji, więc „a" po obu stronach nie ma rozwiązania.
-    // Styk widoczny wcześniej jest ważniejszy.
-    const duties = rotateDuties([{ id: "a" }, { id: "b" }], 4, {
-      previousId: "a",
-      nextId: "a",
-      random: Math.random,
-    });
-
-    expect(duties.map((duty) => duty.id)).toEqual(["b", "a", "b", "a"]);
-  });
-
-  it("rozdaje dyżury równo, z dokładnością do jednego", () => {
-    const duties = rotateDuties(rooms, 9, { random: noShuffle });
-    const counts = rooms.map((room) => duties.filter((duty) => duty.id === room.id).length);
-
-    expect(counts).toEqual([3, 3, 3]);
-  });
-
-  it("chodzi karuzelą, więc kolejność wraca co pełny obrót", () => {
-    const duties = rotateDuties(rooms, 5, { random: noShuffle });
-    expect(duties.map((duty) => duty.id)).toEqual(["a", "b", "c", "a", "b"]);
-  });
-
-  it("przy dwóch sprzątających naprzemiennie", () => {
-    const duties = rotateDuties([{ id: "a" }, { id: "b" }], 4, { random: noShuffle });
-    expect(duties.map((duty) => duty.id)).toEqual(["a", "b", "a", "b"]);
-  });
-
-  it("jeden sprzątający nie daje harmonogramu", () => {
-    expect(rotateDuties([{ id: "a" }], 4)).toEqual([]);
-  });
-
-  it("zero tygodni nie daje dyżurów", () => {
-    expect(rotateDuties(rooms, 0)).toEqual([]);
+  it("przy jednym uczestniku nie rozdaje niczego", () => {
+    expect(rotateDuties([{ id: "a" }], 5)).toEqual([]);
   });
 });
 
-describe("parseMonthKey", () => {
-  it("czyta klucz miesiąca", () => {
-    expect(parseMonthKey("2026-09")).toEqual({ year: 2026, monthIndex: 8 });
+describe("parseIsoDay", () => {
+  it("czyta dzień kalendarza jako północ UTC", () => {
+    expect(parseIsoDay("2026-09-01")?.toISOString()).toBe("2026-09-01T00:00:00.000Z");
   });
 
-  it("odrzuca miesiąc spoza kalendarza i śmieci", () => {
-    expect(parseMonthKey("2026-13")).toBeNull();
-    expect(parseMonthKey("2026-00")).toBeNull();
-    expect(parseMonthKey("2026-9")).toBeNull();
-    expect(parseMonthKey("wrzesień")).toBeNull();
+  it("odrzuca dni, których nie ma w kalendarzu", () => {
+    expect(parseIsoDay("2026-02-31")).toBeNull();
+    expect(parseIsoDay("2026-13-01")).toBeNull();
+  });
+
+  it("odrzuca zapisy, które nie są dniem", () => {
+    expect(parseIsoDay("2026-09")).toBeNull();
+    expect(parseIsoDay("01.09.2026")).toBeNull();
+    expect(parseIsoDay("")).toBeNull();
   });
 });
 
-describe("monthKey", () => {
-  it("dopełnia miesiąc zerem", () => {
-    expect(monthKey(2026, 0)).toBe("2026-01");
+describe("addDays", () => {
+  it("przechodzi przez granicę miesiąca i roku", () => {
+    expect(isoDay(addDays(day("2026-12-30"), 3))).toBe("2027-01-02");
   });
 
-  it("przenosi rok przy miesiącu spoza zakresu", () => {
-    expect(monthKey(2026, 12)).toBe("2027-01");
-    expect(monthKey(2026, -1)).toBe("2025-12");
+  it("limit zakresu obejmuje dwa lata razem z przestępnym", () => {
+    expect(MAX_CLEANING_RANGE_DAYS).toBeGreaterThanOrEqual(366 + 365);
   });
 });

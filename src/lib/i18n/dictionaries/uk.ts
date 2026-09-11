@@ -93,6 +93,18 @@ export const uk: Dictionary = {
       badge: "MOST POPULAR",
       note: "Prices exclude VAT and are billed monthly. Pay yearly and you pay for ten months.",
 
+      /* Kalkulator jak po polsku — patrz komentarz w `pl`. */
+      calculator: {
+        heading: "Work out your cost",
+        lead: "Move the sliders — the plan picks itself.",
+        leases: "Tenancies",
+        rent: "Average monthly rent",
+        rentRoll: "Rent across the portfolio: {amount} a month",
+        plan: "Your plan",
+        share: "The subscription is {percent} of the rent you collect",
+        shareFree: "Nothing to pay at this level",
+      },
+
       /*
         Ten sam podział progów co po polsku, poza umową: brytyjska karta mówi
         o ewidencji najmu, nie o dokumencie do podpisu (AST, ochrona kaucji
@@ -494,24 +506,28 @@ export const uk: Dictionary = {
       cleaning: {
         title: "Cleaning rota",
         lead: "Whose turn it is in the shared areas, week by week.",
-        emptyTitle: "No rota for this month yet",
+        emptyTitle: "No rota yet",
         emptyLead:
-          "Generate one: the weeks split evenly and nobody gets two of them in a row.",
+          "Say when it should start and end. The weeks go round in turn and nobody gets two in a row.",
+        from: "From",
+        to: "To",
+        rangeHint: "Each turn starts on the same weekday the rota starts on.",
         generate: "Generate the rota",
         regenerate: "Generate again",
+        regenerateLead: "The new rota replaces the current one entirely.",
+        cancel: "Cancel",
         download: "Download PDF",
-        downloadLabel: "Download the rota for {month} as a PDF",
+        downloadLabel: "Download the rota as a PDF",
         clear: "Delete",
-        clearLabel: "Delete the rota for {month}",
-        previousMonth: "Previous month",
-        nextMonth: "Next month",
+        clearLabel: "Delete the rota",
+        weeks: ["{count} week", "{count} weeks"],
         weekColumn: "Week",
         datesColumn: "Dates",
         whoColumn: "Cleans",
         thisWeek: "this week",
         byRooms: "Turns go round the rooms.",
         byTenants: "Turns go round the tenants on the whole-property lease.",
-        rule: "Nobody cleans two weeks running — not even across the turn of the month.",
+        rule: "Nobody cleans two weeks running.",
         working: "One moment…",
       },
       filters: {
@@ -1773,9 +1789,11 @@ export const uk: Dictionary = {
         roomInProperty: "That room was not found in this property.",
         propertyRooms: "No rooms found for this property.",
       },
-      cleaningMonthInvalid: "Write the month as “2026-09”.",
-      cleaningEmptyMonth:
-        "There is no rota for this month yet. Generate one on the property page and there will be something to download.",
+      cleaningRangeInvalid:
+        "Give the rota a start and an end date. The end cannot come before the start.",
+      cleaningRangeTooLong: "A rota covers at most two years at a time.",
+      cleaningEmpty:
+        "There is no rota yet. Generate one on the property page and there will be something to download.",
       cleaningTooFewParticipants:
         "A cleaning rota needs at least two rooms, or two tenants on a whole-property lease.",
       /** Messages pinned to a single form field. */
@@ -2150,14 +2168,10 @@ export const uk: Dictionary = {
     cleaning: {
       title: "Cleaning rota",
       filename: "cleaning rota",
-      byRooms: "Turns go round the rooms.",
-      byTenants: "Turns go round the tenants on the whole-property lease.",
-      weekColumn: "Week",
-      datesColumn: "Dates",
-      whoColumn: "Cleans",
-      doneColumn: "Done",
-      rule: "Nobody cleans two weeks running — not even across the turn of the month.",
-      footer: "{property} · {month}",
+      commonAreas: "Shared areas",
+      weekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+      swapHint: "Can't make your week? You can always swap with someone.",
+      swapReminder: "Just remember: as far as we're concerned, it is still your turn.",
     },
 
     numberPrefix: {

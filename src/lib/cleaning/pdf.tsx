@@ -4,19 +4,24 @@ import { Document, Font, Page, StyleSheet, Text, View } from "@react-pdf/rendere
 
 import { getDictionary } from "@/lib/i18n";
 import { LOCALE_META, type Locale } from "@/lib/i18n/config";
-import { fill, formatDayRangeIn, monthNames } from "@/lib/i18n/format";
+import { formatDateIn, monthNames } from "@/lib/i18n/format";
 import { slugify } from "@/lib/utils";
 
-import { monthKey } from "./rotation";
-import type { CleaningDutyView, CleaningMonth } from "./service";
+import { addDays, isoDay, parseIsoDay } from "./rotation";
+import type { CleaningDutyView, CleaningRange } from "./service";
 
 /**
  * Harmonogram sprzątania jako PDF do wydruku.
  *
  * Rozpiska kończy życie na lodówce albo na drzwiach do kuchni, a nie na
- * ekranie właściciela — dlatego kartka ma pustą kratkę na odhaczenie tygodnia
- * i niesie adres lokalu: w mieszkaniu przy trzech pokojach nikt nie pamięta,
- * z którego mieszkania jest wydruk leżący na stole.
+ * ekranie właściciela — dlatego kartka wygląda jak kalendarz ścienny: miesiące
+ * w trzech kolumnach, w każdym tygodnie wiersz po wierszu, a przy wierszu, kto
+ * sprząta. Lokator patrzy na dzisiejszą datę, a nie szuka numeru tygodnia.
+ *
+ * Kolumny dni zaczynają się w dniu tygodnia, w którym rusza harmonogram —
+ * przy starcie w piątek nagłówek idzie „pt so nd pn wt śr cz". Dzięki temu
+ * każdy dyżur to dokładnie jeden wiersz, także na styku miesięcy: ten sam
+ * tydzień stoi na końcu lipca i na początku sierpnia z tym samym podpisem.
  *
  * Font osadzany z pliku TTF, tak jak w umowie i na fakturze: wbudowane fonty
  * PDF nie mają polskich znaków diakrytycznych.
@@ -37,68 +42,65 @@ Font.registerHyphenationCallback((word) => [word]);
 const COLORS = {
   ink: "#16301D",
   muted: "#6B7266",
-  accent: "#1B4D3E",
   rule: "#DED2B8",
-  zebra: "#F7F4EE",
 };
+
+/** Szerokość strony A4 bez marginesów — z niej liczy się liczbę kolumn. */
+const PAGE_WIDTH = 595;
+const PAGE_MARGIN = 40;
+const CONTENT_WIDTH = PAGE_WIDTH - 2 * PAGE_MARGIN;
+
+/** Kratka jednego dnia: dwucyfrowy numer w ósemce mieści się z zapasem. */
+const DAY_CELL = 15;
+const DAYS_WIDTH = 7 * DAY_CELL;
+/** Odstęp między kolumnami miesięcy, po połowie z każdej strony. */
+const GUTTER = 8;
+
+/** Font ósemka: tyle punktów zajmuje przeciętnie jeden znak Intera. */
+const CHAR_WIDTH = 4.6;
 
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Inter",
-    fontSize: 10,
-    lineHeight: 1.45,
+    fontSize: 8,
+    lineHeight: 1.2,
     color: COLORS.ink,
-    paddingTop: 48,
-    paddingBottom: 56,
-    paddingHorizontal: 52,
+    paddingTop: 36,
+    paddingBottom: 64,
+    paddingHorizontal: PAGE_MARGIN,
   },
 
-  // Interlinia strony (1.45) na siedemnastce zostawia tytułowi tyle luzu pod
-  // spodem, że miesiąc dosiadał się do jego ogonków. Nagłówek prowadzi własną.
-  title: { fontSize: 17, fontWeight: 700, lineHeight: 1.2 },
-  month: { fontSize: 12, fontWeight: 600, color: COLORS.accent, marginTop: 4 },
-  address: { fontSize: 9.5, color: COLORS.muted, marginTop: 6 },
-  mode: { fontSize: 9.5, color: COLORS.muted },
+  // Odstęp pod nagłówkiem liczy się na drugiej stronie: tam pod adresem od
+  // razu zaczyna się siatka, bez tytułu, który na pierwszej trzyma dystans.
+  header: { alignItems: "flex-end", marginBottom: 12 },
+  headerLine: { fontSize: 11, lineHeight: 1.35 },
+  headerMuted: { color: COLORS.muted },
 
-  tableHead: {
-    flexDirection: "row",
-    marginTop: 22,
-    paddingBottom: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.accent,
-  },
-  headCell: { fontSize: 8, fontWeight: 600, color: COLORS.accent, textTransform: "uppercase" },
+  title: { fontSize: 16, textAlign: "center", marginTop: 6, marginBottom: 12 },
+
+  grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -GUTTER / 2 },
+  month: { paddingHorizontal: GUTTER / 2, marginBottom: 10 },
+  monthName: { width: DAYS_WIDTH, fontSize: 9, fontWeight: 700, textAlign: "center", marginBottom: 3 },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
-    // Wiersz wyższy niż na fakturze: w tę kratkę wpisuje się długopisem.
-    paddingVertical: 7,
+    paddingVertical: 2.5,
     borderBottomWidth: 0.5,
     borderBottomColor: COLORS.rule,
   },
-  rowAlt: { backgroundColor: COLORS.zebra },
+  headRow: { color: COLORS.muted, fontSize: 7.5 },
 
-  colWeek: { width: "12%" },
-  colDates: { width: "30%" },
-  colWho: { width: "44%", paddingRight: 8 },
-  colDone: { width: "14%", alignItems: "flex-end" },
-
-  week: { color: COLORS.muted },
-  dates: { color: COLORS.muted },
-  who: { fontWeight: 600 },
-  /** Kratka do odhaczenia — pusta ramka, bo wypełnia ją człowiek, nie druk. */
-  box: { width: 13, height: 13, borderWidth: 0.8, borderColor: COLORS.rule },
-
-  rule: { marginTop: 20, fontSize: 9, color: COLORS.muted },
+  day: { width: DAY_CELL, textAlign: "center" },
+  label: { textAlign: "center", paddingLeft: 4 },
 
   footer: {
     position: "absolute",
     bottom: 28,
-    left: 52,
-    right: 52,
-    fontSize: 8,
-    color: COLORS.muted,
+    left: PAGE_MARGIN,
+    right: PAGE_MARGIN,
+    fontSize: 9,
+    lineHeight: 1.6,
     textAlign: "center",
   },
 });
@@ -108,85 +110,172 @@ export type CleaningPdfData = {
   propertyName: string;
   propertyAddress: string;
   organizationName: string;
-  month: CleaningMonth;
-  /** Czy dyżury chodzą po najemcach z umowy na całość, czy po pokojach. */
-  byTenants: boolean;
+  range: CleaningRange;
   duties: CleaningDutyView[];
 };
 
-/** „wrzesień 2026" — ten sam podpis miesiąca co nad tabelą w panelu. */
-function monthLabel(month: CleaningMonth, locale: Locale): string {
-  return `${monthNames(locale)[month.monthIndex]} ${month.year}`;
+/** Jeden wiersz kalendarza: siedem kratek dnia (pusta poza miesiącem) i podpis. */
+export type CalendarRow = { days: (number | null)[]; label: string };
+
+export type CalendarMonth = {
+  year: number;
+  monthIndex: number;
+  rows: CalendarRow[];
+};
+
+/**
+ * Rozkłada dyżury na miesiące kalendarza.
+ *
+ * Każdy dyżur trafia do każdego miesiąca, którego dni obejmuje — tydzień na
+ * styku stoi więc w obu, ale w każdym pokazuje tylko swoje dni. Kratki po
+ * końcu harmonogramu zostają puste, tak jak dni sprzed jego początku: ostatni,
+ * przycięty tydzień nie udaje pełnego.
+ */
+export function calendarMonths(duties: CleaningDutyView[], range: CleaningRange): CalendarMonth[] {
+  const from = parseIsoDay(range.from);
+  const to = parseIsoDay(range.to);
+  if (!from || !to) return [];
+
+  const months: CalendarMonth[] = [];
+  let cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1));
+
+  while (cursor <= to) {
+    const year = cursor.getUTCFullYear();
+    const monthIndex = cursor.getUTCMonth();
+    const monthStart = isoDay(cursor);
+    const monthEnd = isoDay(new Date(Date.UTC(year, monthIndex + 1, 0)));
+
+    const rows = duties
+      .filter((duty) => duty.startsOn <= monthEnd && duty.endsOn >= monthStart)
+      .map((duty) => {
+        const start = parseIsoDay(duty.startsOn)!;
+
+        const days = Array.from({ length: 7 }, (_, offset) => {
+          const day = addDays(start, offset);
+          const key = isoDay(day);
+          const inside = key >= monthStart && key <= monthEnd && key <= duty.endsOn;
+
+          return inside ? day.getUTCDate() : null;
+        });
+
+        return { days, label: duty.label };
+      });
+
+    months.push({ year, monthIndex, rows });
+    cursor = new Date(Date.UTC(year, monthIndex + 1, 1));
+  }
+
+  return months;
 }
 
 /**
- * Nazwa pliku: rodzaj dokumentu, lokal i miesiąc.
+ * Ile miesięcy mieści się obok siebie.
  *
- * Miesiąc doklejamy po slugifikacji, a nie przed: `slugify` przycina długie
+ * Trzy, gdy podpisy są krótkie („Pokój 1", „2 (balkon)"). Imię i nazwisko
+ * najemcy potrzebuje szerszej kolumny, więc miesiące schodzą do dwóch obok
+ * siebie — lepiej dłuższa kartka niż nazwisko złamane w połowie.
+ */
+function layout(duties: CleaningDutyView[]): { columns: number; labelWidth: number } {
+  const longest = Math.max(0, ...duties.map((duty) => duty.label.length));
+  const labelWidth = Math.max(42, Math.ceil(longest * CHAR_WIDTH) + 8);
+  const monthWidth = DAYS_WIDTH + labelWidth + GUTTER;
+
+  return { columns: Math.min(3, Math.max(1, Math.floor(CONTENT_WIDTH / monthWidth))), labelWidth };
+}
+
+/**
+ * Nazwa pliku: rodzaj dokumentu, lokal i dzień startu rozpiski.
+ *
+ * Datę doklejamy po slugifikacji, a nie przed: `slugify` przycina długie
  * nazwy do 48 znaków i zjadłoby właśnie tę końcówkę, przez którą dwa wydruki
  * tego samego mieszkania dają się w folderze pobranych rozróżnić.
  */
 export function cleaningPdfFilename(data: {
   locale: Locale;
   propertyName: string;
-  month: CleaningMonth;
+  range: CleaningRange;
 }): string {
   const label = getDictionary(data.locale).documents.cleaning.filename;
-  const key = monthKey(data.month.year, data.month.monthIndex);
 
-  return `${slugify(`${label} ${data.propertyName}`)}-${key}.pdf`;
+  return `${slugify(`${label} ${data.propertyName}`)}-${data.range.from}.pdf`;
 }
 
 export function CleaningScheduleDocument({ data }: { data: CleaningPdfData }) {
   const t = getDictionary(data.locale).documents.cleaning;
-  const label = monthLabel(data.month, data.locale);
+  // `Intl` daje mianownik małą literą („lipiec"); nad kalendarzem miesiąc
+  // jest tytułem, więc dostaje wielką — tak jak na kartce z papierni.
+  const intl = LOCALE_META[data.locale].intl;
+  const names = monthNames(data.locale).map(
+    (name) => name.charAt(0).toLocaleUpperCase(intl) + name.slice(1),
+  );
+  const months = calendarMonths(data.duties, data.range);
+  const { columns, labelWidth } = layout(data.duties);
+
+  const from = parseIsoDay(data.range.from)!;
+  const period = `${formatDateIn(from, data.locale, "numeric")} – ${formatDateIn(
+    parseIsoDay(data.range.to)!,
+    data.locale,
+    "numeric",
+  )}`;
+
+  // Nagłówek dni idzie od dnia tygodnia, w którym rusza harmonogram. Słownik
+  // trzyma skróty od poniedziałku, a `getUTCDay()` liczy od niedzieli.
+  const weekdays = Array.from(
+    { length: 7 },
+    (_, offset) => t.weekdays[(from.getUTCDay() + offset + 6) % 7],
+  );
+
+  const monthStyle = [styles.month, { width: `${100 / columns}%` }];
+  const labelStyle = [styles.label, { width: labelWidth }];
 
   return (
     <Document
-      title={`${t.title} — ${data.propertyName}, ${label}`}
+      title={`${t.title} ${period} — ${data.propertyName}`}
       author={data.organizationName}
       language={LOCALE_META[data.locale].htmlLang}
     >
       <Page size="A4" style={styles.page}>
-        <View>
-          <Text style={styles.title}>{t.title}</Text>
-          <Text style={styles.month}>{label}</Text>
-          <Text style={styles.address}>
-            {data.propertyName} · {data.propertyAddress}
+        <View style={styles.header} fixed>
+          <Text style={styles.headerLine}>
+            {t.title} {period}
           </Text>
-          <Text style={styles.mode}>{data.byTenants ? t.byTenants : t.byRooms}</Text>
+          <Text style={[styles.headerLine, styles.headerMuted]}>{data.propertyAddress}</Text>
         </View>
 
-        <View style={styles.tableHead}>
-          <Text style={[styles.headCell, styles.colWeek]}>{t.weekColumn}</Text>
-          <Text style={[styles.headCell, styles.colDates]}>{t.datesColumn}</Text>
-          <Text style={[styles.headCell, styles.colWho]}>{t.whoColumn}</Text>
-          <View style={styles.colDone}>
-            <Text style={styles.headCell}>{t.doneColumn}</Text>
-          </View>
-        </View>
+        <Text style={styles.title}>{t.commonAreas}</Text>
 
-        {data.duties.map((duty, index) => (
-          <View
-            key={duty.startsOn}
-            style={index % 2 === 1 ? [styles.row, styles.rowAlt] : styles.row}
-            wrap={false}
-          >
-            <Text style={[styles.week, styles.colWeek]}>{duty.index}</Text>
-            <Text style={[styles.dates, styles.colDates]}>
-              {formatDayRangeIn(duty.startsOn, duty.endsOn, data.locale)}
-            </Text>
-            <Text style={[styles.who, styles.colWho]}>{duty.label}</Text>
-            <View style={styles.colDone}>
-              <View style={styles.box} />
+        <View style={styles.grid}>
+          {months.map((month) => (
+            <View key={`${month.year}-${month.monthIndex}`} style={monthStyle} wrap={false}>
+              <Text style={styles.monthName}>{names[month.monthIndex]}</Text>
+
+              <View style={[styles.row, styles.headRow]}>
+                {weekdays.map((name, offset) => (
+                  <Text key={offset} style={styles.day}>
+                    {name}
+                  </Text>
+                ))}
+                <Text style={labelStyle} />
+              </View>
+
+              {month.rows.map((row, index) => (
+                <View key={index} style={styles.row}>
+                  {row.days.map((day, offset) => (
+                    <Text key={offset} style={styles.day}>
+                      {day ?? ""}
+                    </Text>
+                  ))}
+                  <Text style={labelStyle}>{row.label}</Text>
+                </View>
+              ))}
             </View>
-          </View>
-        ))}
-
-        <Text style={styles.rule}>{t.rule}</Text>
+          ))}
+        </View>
 
         <Text style={styles.footer} fixed>
-          {fill(t.footer, { property: data.propertyName, month: label })}
+          {t.swapHint}
+          {"\n"}
+          {t.swapReminder}
         </Text>
       </Page>
     </Document>

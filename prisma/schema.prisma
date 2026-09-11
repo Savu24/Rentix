@@ -613,9 +613,9 @@ model CleaningDuty {
   organizationId String
   propertyId     String
 
-  /// Pierwszy i ostatni dzień dyżuru, o północy UTC. Tygodnie są przycięte do
-  /// miesiąca: pierwszy zaczyna się 1. dnia, ostatni kończy ostatniego —
-  /// harmonogram na wrzesień ma nosić numery wrześniowych dni, a nie cudzych.
+  /// Pierwszy i ostatni dzień dyżuru, o północy UTC. Tygodnie idą ciągiem od
+  /// dnia startu harmonogramu po siedem dni, przez granice miesięcy; tylko
+  /// ostatni bywa krótszy, przycięty do dnia końca.
   startsOn DateTime
   endsOn   DateTime
 
@@ -636,8 +636,8 @@ model CleaningDuty {
   room         Room?        @relation(fields: [roomId], references: [id], onDelete: SetNull)
   tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
-  /// Jeden dyżur na tydzień: powtórne generowanie miesiąca nadpisuje wiersze,
-  /// a nie dokłada drugiego zestawu obok pierwszego.
+  /// Jeden dyżur na tydzień: powtórne generowanie zastępuje rozpiskę
+  /// nieruchomości, a nie dokłada drugiego zestawu obok pierwszego.
   @@unique([propertyId, startsOn])
   @@index([organizationId])
   @@index([propertyId, startsOn])

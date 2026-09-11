@@ -2,9 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { formatPropertyAddress } from "@/lib/properties/address";
 
 import {
+  MAX_CLEANING_RANGE_DAYS,
   MIN_CLEANING_PARTICIPANTS,
   isoDay,
-  monthWeeks,
+  rangeWeeks,
   rotateDuties,
 } from "./rotation";
 
@@ -13,6 +14,11 @@ import {
  *
  * Zawężenie do `organizationId` z sesji, jak w pozostałych serwisach: cudze id
  * nieruchomości daje „nie znaleziono", a nie cudzą rozpiskę.
+ *
+ * Nieruchomość ma jedną rozpiskę naraz: ciągły zakres od dnia startu do dnia
+ * końca, zwykle na rok. Tak wisi to na lodówce — jedna kartka z całym rokiem,
+ * a nie dwanaście karteczek, z których wrześniowa gdzieś się zgubiła.
+ * Wygenerowanie nowej zastępuje starą w całości.
  *
  * Kto sprząta, zależy od tego, jak lokal jest wynajęty. Przy najmie pokojowym
  * dyżury chodzą po pokojach — tak wisi to na lodówce i tak mówi o tym umowa.
@@ -28,7 +34,7 @@ export type CleaningParticipant = {
 };
 
 export type CleaningDutyView = {
-  /** Numer tygodnia w miesiącu, licząc od 1. */
+  /** Numer tygodnia w harmonogramie, licząc od 1. */
   index: number;
   /** Dni kalendarza w zapisie „2026-09-01" — ten sam kształt na serwerze i w API. */
   startsOn: string;
@@ -38,19 +44,15 @@ export type CleaningDutyView = {
   tenantId: string | null;
 };
 
-export type CleaningMonth = { year: number; monthIndex: number };
+/** Pierwszy i ostatni dzień rozpiski, w zapisie „2026-09-01". */
+export type CleaningRange = { from: string; to: string };
 
 export type CleaningScheduleView = {
   participants: CleaningParticipant[];
+  /** `null`, gdy rozpiski jeszcze nie ma. */
+  range: CleaningRange | null;
   duties: CleaningDutyView[];
 };
-
-function monthRange({ year, monthIndex }: CleaningMonth) {
-  return {
-    start: new Date(Date.UTC(year, monthIndex, 1)),
-    end: new Date(Date.UTC(year, monthIndex + 1, 1)),
-  };
-}
 
 function toView(
   duty: { startsOn: Date; endsOn: Date; label: string; roomId: string | null; tenantId: string | null },
@@ -64,6 +66,15 @@ function toView(
     roomId: duty.roomId,
     tenantId: duty.tenantId,
   };
+}
+
+/** Zakres rozpiski odczytany z jej skrajnych tygodni. */
+function rangeOf(duties: CleaningDutyView[]): CleaningRange | null {
+  const first = duties[0];
+  const last = duties.at(-1);
+  if (!first || !last) return null;
+
+  return { from: first.startsOn, to: last.endsOn };
 }
 
 /**
@@ -118,70 +129,58 @@ export async function cleaningParticipants(
   return property.rooms.map((room) => ({ kind: "ROOM" as const, id: room.id, label: room.name }));
 }
 
-/** Rozpiska jednego miesiąca razem z listą uczestników. `null` = nie ma nieruchomości. */
+/** Rozpiska nieruchomości razem z listą uczestników. `null` = nie ma nieruchomości. */
 export async function cleaningSchedule(
   organizationId: string,
   propertyId: string,
-  month: CleaningMonth,
 ): Promise<CleaningScheduleView | null> {
   const participants = await cleaningParticipants(organizationId, propertyId);
   if (!participants) return null;
 
-  const { start, end } = monthRange(month);
-  const duties = await prisma.cleaningDuty.findMany({
-    where: { organizationId, propertyId, startsOn: { gte: start, lt: end } },
+  const rows = await prisma.cleaningDuty.findMany({
+    where: { organizationId, propertyId },
     orderBy: { startsOn: "asc" },
     select: { startsOn: true, endsOn: true, label: true, roomId: true, tenantId: true },
   });
+  const duties = rows.map(toView);
 
-  return { participants, duties: duties.map(toView) };
+  return { participants, range: rangeOf(duties), duties };
 }
 
 export type GenerateResult =
   | { ok: true; schedule: CleaningScheduleView }
-  | { ok: false; reason: "NOT_FOUND" | "TOO_FEW_PARTICIPANTS"; participantCount?: number };
+  | {
+      ok: false;
+      reason: "NOT_FOUND" | "TOO_FEW_PARTICIPANTS" | "RANGE_INVALID" | "RANGE_TOO_LONG";
+    };
 
 /**
- * Generuje miesiąc od nowa.
+ * Rozpisuje zakres od nowa.
  *
- * Powtórne wywołanie nadpisuje ten miesiąc w całości — to jest „wygeneruj
- * ponownie", a nie druga rozpiska obok pierwszej. Sąsiednie miesiące zostają
- * nietknięte, ale wchodzą do losowania jako warunki brzegowe, żeby nikt nie
- * dostał dwóch tygodni pod rząd na styku.
+ * Powtórne wywołanie zastępuje całą rozpiskę nieruchomości — to jest „wygeneruj
+ * ponownie", a nie druga rozpiska obok pierwszej. Stare tygodnie spoza nowego
+ * zakresu też znikają: dwie kartki z różnymi datami startu kłóciłyby się
+ * o to, kto sprząta w tygodniu, w którym się nakładają.
  */
 export async function generateCleaningSchedule(
   organizationId: string,
   propertyId: string,
-  month: CleaningMonth,
+  range: { from: Date; to: Date },
 ): Promise<GenerateResult> {
+  if (range.to < range.from) return { ok: false, reason: "RANGE_INVALID" };
+
+  const days = Math.round((range.to.getTime() - range.from.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  if (days > MAX_CLEANING_RANGE_DAYS) return { ok: false, reason: "RANGE_TOO_LONG" };
+
   const participants = await cleaningParticipants(organizationId, propertyId);
   if (!participants) return { ok: false, reason: "NOT_FOUND" };
 
   if (participants.length < MIN_CLEANING_PARTICIPANTS) {
-    return { ok: false, reason: "TOO_FEW_PARTICIPANTS", participantCount: participants.length };
+    return { ok: false, reason: "TOO_FEW_PARTICIPANTS" };
   }
 
-  const { start, end } = monthRange(month);
-  const weeks = monthWeeks(month.year, month.monthIndex);
-
-  const neighbours = { organizationId, propertyId };
-  const [before, after] = await Promise.all([
-    prisma.cleaningDuty.findFirst({
-      where: { ...neighbours, startsOn: { lt: start } },
-      orderBy: { startsOn: "desc" },
-      select: { roomId: true, tenantId: true },
-    }),
-    prisma.cleaningDuty.findFirst({
-      where: { ...neighbours, startsOn: { gte: end } },
-      orderBy: { startsOn: "asc" },
-      select: { roomId: true, tenantId: true },
-    }),
-  ]);
-
-  const assigned = rotateDuties(participants, weeks.length, {
-    previousId: before?.roomId ?? before?.tenantId ?? null,
-    nextId: after?.roomId ?? after?.tenantId ?? null,
-  });
+  const weeks = rangeWeeks(range.from, range.to);
+  const assigned = rotateDuties(participants, weeks.length);
 
   const rows = weeks.map((week, index) => {
     const participant = assigned[index];
@@ -200,29 +199,27 @@ export async function generateCleaningSchedule(
   });
 
   // Kasowanie i wstawianie w jednej transakcji — inaczej nieudany zapis
-  // zostawiłby miesiąc pusty, a użytkownik prosił o nowy podział, nie o żaden.
+  // zostawiłby nieruchomość bez rozpiski, a użytkownik prosił o nową, nie o żadną.
   await prisma.$transaction([
-    prisma.cleaningDuty.deleteMany({
-      where: { organizationId, propertyId, startsOn: { gte: start, lt: end } },
-    }),
+    prisma.cleaningDuty.deleteMany({ where: { organizationId, propertyId } }),
     prisma.cleaningDuty.createMany({ data: rows }),
   ]);
 
+  const duties = rows.map(toView);
+
   return {
     ok: true,
-    schedule: { participants, duties: rows.map(toView) },
+    schedule: { participants, range: rangeOf(duties), duties },
   };
 }
 
-/** Kasuje rozpiskę jednego miesiąca. Zwraca liczbę skasowanych tygodni. */
+/** Kasuje rozpiskę nieruchomości. Zwraca liczbę skasowanych tygodni. */
 export async function clearCleaningSchedule(
   organizationId: string,
   propertyId: string,
-  month: CleaningMonth,
 ): Promise<number> {
-  const { start, end } = monthRange(month);
   const { count } = await prisma.cleaningDuty.deleteMany({
-    where: { organizationId, propertyId, startsOn: { gte: start, lt: end } },
+    where: { organizationId, propertyId },
   });
 
   return count;
@@ -244,7 +241,6 @@ export type CleaningPrintout = CleaningScheduleView & {
 export async function cleaningPrintout(
   organizationId: string,
   propertyId: string,
-  month: CleaningMonth,
 ): Promise<CleaningPrintout | null> {
   const [property, schedule] = await Promise.all([
     prisma.property.findFirst({
@@ -259,7 +255,7 @@ export async function cleaningPrintout(
         organization: { select: { name: true } },
       },
     }),
-    cleaningSchedule(organizationId, propertyId, month),
+    cleaningSchedule(organizationId, propertyId),
   ]);
 
   if (!property || !schedule) return null;

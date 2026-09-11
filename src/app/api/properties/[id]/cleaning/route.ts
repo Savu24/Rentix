@@ -2,53 +2,35 @@ import type { NextRequest } from "next/server";
 
 import { apiError, ok } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
+import { parseIsoDay } from "@/lib/cleaning/rotation";
 import {
   cleaningSchedule,
   clearCleaningSchedule,
   generateCleaningSchedule,
 } from "@/lib/cleaning/service";
-import { monthKey, parseMonthKey } from "@/lib/cleaning/rotation";
 
 export const runtime = "nodejs";
 
 type Params = { params: Promise<{ id: string }> };
 
-/**
- * Miesiąc z żądania.
- *
- * Brak parametru znaczy „bieżący" — przycisk w panelu otwiera się właśnie na
- * nim, a adres bez `?month=` ma dawać to samo, co panel po wejściu.
- */
-function readMonth(value: string | null) {
-  if (!value) {
-    const now = new Date();
-    return parseMonthKey(monthKey(now.getUTCFullYear(), now.getUTCMonth()));
-  }
-
-  return parseMonthKey(value);
-}
-
-/** GET /api/properties/:id/cleaning?month=YYYY-MM */
-export async function GET(request: NextRequest, { params }: Params) {
+/** GET /api/properties/:id/cleaning — cała rozpiska nieruchomości. */
+export async function GET(_request: NextRequest, { params }: Params) {
   const auth = await requireApiOwner();
   if ("response" in auth) return auth.response;
 
-  const month = readMonth(request.nextUrl.searchParams.get("month"));
-  if (!month) return apiError("VALIDATION_ERROR", auth.d.panel.api.cleaningMonthInvalid);
-
   const { id } = await params;
-  const schedule = await cleaningSchedule(auth.organizationId, id, month);
+  const schedule = await cleaningSchedule(auth.organizationId, id);
 
   if (!schedule) return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
   return ok(schedule);
 }
 
 /**
- * POST /api/properties/:id/cleaning — rozpisuje miesiąc od nowa.
+ * POST /api/properties/:id/cleaning — rozpisuje zakres od nowa.
  *
- * Miesiąc idzie w ciele, a nie w adresie: to jest zapis, a nie odczyt.
- * Powtórzone żądanie nadpisuje ten sam miesiąc innym losowaniem — o to chodzi
- * w „wygeneruj ponownie".
+ * Ciało: `{ from: "2026-07-10", to: "2027-07-31" }`. Zakres idzie w ciele,
+ * a nie w adresie: to jest zapis, a nie odczyt. Powtórzone żądanie zastępuje
+ * całą rozpiskę — o to chodzi w „wygeneruj ponownie".
  */
 export async function POST(request: NextRequest, { params }: Params) {
   const auth = await requireApiOwner();
@@ -61,31 +43,35 @@ export async function POST(request: NextRequest, { params }: Params) {
     return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
   }
 
-  const raw = (body as { month?: unknown } | null)?.month;
-  const month = readMonth(typeof raw === "string" ? raw : null);
-  if (!month) return apiError("VALIDATION_ERROR", auth.d.panel.api.cleaningMonthInvalid);
+  const raw = (body ?? {}) as { from?: unknown; to?: unknown };
+  const from = typeof raw.from === "string" ? parseIsoDay(raw.from) : null;
+  const to = typeof raw.to === "string" ? parseIsoDay(raw.to) : null;
+  if (!from || !to) return apiError("VALIDATION_ERROR", auth.d.panel.api.cleaningRangeInvalid);
 
   const { id } = await params;
-  const result = await generateCleaningSchedule(auth.organizationId, id, month);
+  const result = await generateCleaningSchedule(auth.organizationId, id, { from, to });
 
   if (result.ok) return ok(result.schedule);
-  if (result.reason === "NOT_FOUND") {
-    return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
-  }
 
-  return apiError("CONFLICT", auth.d.panel.api.cleaningTooFewParticipants);
+  switch (result.reason) {
+    case "NOT_FOUND":
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
+    case "RANGE_INVALID":
+      return apiError("VALIDATION_ERROR", auth.d.panel.api.cleaningRangeInvalid);
+    case "RANGE_TOO_LONG":
+      return apiError("VALIDATION_ERROR", auth.d.panel.api.cleaningRangeTooLong);
+    case "TOO_FEW_PARTICIPANTS":
+      return apiError("CONFLICT", auth.d.panel.api.cleaningTooFewParticipants);
+  }
 }
 
-/** DELETE /api/properties/:id/cleaning?month=YYYY-MM */
-export async function DELETE(request: NextRequest, { params }: Params) {
+/** DELETE /api/properties/:id/cleaning — kasuje całą rozpiskę. */
+export async function DELETE(_request: NextRequest, { params }: Params) {
   const auth = await requireApiOwner();
   if ("response" in auth) return auth.response;
 
-  const month = readMonth(request.nextUrl.searchParams.get("month"));
-  if (!month) return apiError("VALIDATION_ERROR", auth.d.panel.api.cleaningMonthInvalid);
-
   const { id } = await params;
-  const removed = await clearCleaningSchedule(auth.organizationId, id, month);
+  const removed = await clearCleaningSchedule(auth.organizationId, id);
 
   return ok({ removed });
 }

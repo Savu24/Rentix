@@ -96,6 +96,23 @@ export const pl = {
       note: "Ceny netto, płatne miesięcznie. Przy rozliczeniu rocznym płacisz za dziesięć miesięcy.",
 
       /*
+        Kalkulator pod kartami: liczba umów i średni czynsz, a w odpowiedzi
+        plan, jego cena i udział abonamentu w czynszu. Procent jest tu sednem —
+        cena stoi w miejscu, więc im większy portfel, tym mniejszy ułamek
+        czynszu zostaje u nas. Same progi tego nie pokazują.
+      */
+      calculator: {
+        heading: "Policz swój koszt",
+        lead: "Przesuń suwaki — plan dobierze się sam.",
+        leases: "Umowy najmu",
+        rent: "Średni czynsz miesięczny",
+        rentRoll: "Czynsz z całego portfela: {amount} miesięcznie",
+        plan: "Twój plan",
+        share: "Abonament to {percent} czynszu, który co miesiąc wpływa",
+        shareFree: "Na tym progu nie płacisz nic",
+      },
+
+      /*
         Karty wypisują wprost, co dostaje dany plan.
 
         Każdy wyższy próg zaczyna się od „wszystko z niższego", więc lista na
@@ -494,24 +511,29 @@ export const pl = {
       cleaning: {
         title: "Harmonogram sprzątania",
         lead: "Dyżury w częściach wspólnych, tydzień po tygodniu.",
-        emptyTitle: "Na ten miesiąc nie ma jeszcze harmonogramu",
+        emptyTitle: "Nie ma jeszcze harmonogramu",
         emptyLead:
-          "Wygeneruj rozpiskę: tygodnie rozejdą się po równo, a nikt nie dostanie dwóch pod rząd.",
+          "Podaj, od kiedy do kiedy ma obowiązywać. Tygodnie pójdą po kolei, a nikt nie dostanie dwóch pod rząd.",
+        from: "Od",
+        to: "Do",
+        /** Pod polami dat — tłumaczy, czemu kolumny w PDF-ie nie zaczynają się od poniedziałku. */
+        rangeHint: "Tydzień dyżuru zaczyna się w tym dniu tygodnia, w którym rusza harmonogram.",
         generate: "Wygeneruj harmonogram",
         regenerate: "Wygeneruj ponownie",
+        regenerateLead: "Nowy harmonogram zastąpi obecny w całości.",
+        cancel: "Anuluj",
         download: "Pobierz PDF",
-        downloadLabel: "Pobierz harmonogram na {month} w formacie PDF",
+        downloadLabel: "Pobierz harmonogram w formacie PDF",
         clear: "Usuń",
-        clearLabel: "Usuń harmonogram na {month}",
-        previousMonth: "Poprzedni miesiąc",
-        nextMonth: "Następny miesiąc",
+        clearLabel: "Usuń harmonogram",
+        weeks: ["{count} tydzień", "{count} tygodnie", "{count} tygodni"],
         weekColumn: "Tydzień",
         datesColumn: "Termin",
         whoColumn: "Sprząta",
         thisWeek: "ten tydzień",
         byRooms: "Dyżury chodzą po pokojach.",
         byTenants: "Dyżury chodzą po najemcach z umowy na całość.",
-        rule: "Nikt nie sprząta dwa tygodnie z rzędu — także na styku miesięcy.",
+        rule: "Nikt nie sprząta dwa tygodnie z rzędu.",
         working: "Chwileczkę…",
       },
       filters: {
@@ -1761,9 +1783,11 @@ export const pl = {
         roomInProperty: "Nie znaleziono pokoju w tej nieruchomości.",
         propertyRooms: "Nie znaleziono pokoi tej nieruchomości.",
       },
-      cleaningMonthInvalid: "Miesiąc podaje się w zapisie „2026-09”.",
-      cleaningEmptyMonth:
-        "Na ten miesiąc nie ma jeszcze harmonogramu. Wygeneruj go na karcie nieruchomości, wtedy będzie co pobrać.",
+      cleaningRangeInvalid:
+        "Podaj dzień początku i końca harmonogramu. Koniec nie może wypadać przed początkiem.",
+      cleaningRangeTooLong: "Harmonogram rozpisuje się najwyżej na dwa lata naraz.",
+      cleaningEmpty:
+        "Nie ma jeszcze harmonogramu. Wygeneruj go na karcie nieruchomości, wtedy będzie co pobrać.",
       cleaningTooFewParticipants:
         "Harmonogram sprzątania potrzebuje co najmniej dwóch pokoi albo dwóch najemców na umowie na całość.",
       /** Komunikaty przypinane do konkretnego pola formularza. */
@@ -2100,15 +2124,13 @@ export const pl = {
       title: "Harmonogram sprzątania",
       /** Pierwsze słowo nazwy pliku, stąd bez ogonków w samym zapisie na dysku. */
       filename: "harmonogram sprzątania",
-      byRooms: "Dyżury chodzą po pokojach.",
-      byTenants: "Dyżury chodzą po najemcach z umowy na całość.",
-      weekColumn: "Tydzień",
-      datesColumn: "Termin",
-      whoColumn: "Sprząta",
-      /** Nagłówek nad pustą kratką — odhacza się ją długopisem po sprzątaniu. */
-      doneColumn: "Zrobione",
-      rule: "Nikt nie sprząta dwa tygodnie z rzędu — także na styku miesięcy.",
-      footer: "{property} · {month}",
+      /** Tytuł nad kalendarzem — czego dotyczą dyżury. */
+      commonAreas: "Miejsca wspólne",
+      /** Skróty dni od poniedziałku; kolumny w PDF-ie startują od dnia, w którym rusza harmonogram. */
+      weekdays: ["pn", "wt", "śr", "cz", "pt", "so", "nd"],
+      /** Stopka kartki — dwie linie pod kalendarzem, do lokatorów. */
+      swapHint: "Nie dasz rady w wyznaczonym terminie? Zawsze możesz się z kimś zamienić.",
+      swapReminder: "Pamiętaj tylko, że dla nas to w dalszym ciągu Twój dyżur.",
     },
 
     /*
