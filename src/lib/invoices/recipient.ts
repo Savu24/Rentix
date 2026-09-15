@@ -11,6 +11,8 @@
  */
 
 export type RecipientTenant = {
+  /// Wchodzi do wpisu w `notifications` — karta najemcy czyta z niego historię wysyłki.
+  id: string;
   firstName: string;
   lastName?: string | null;
   email: string | null;

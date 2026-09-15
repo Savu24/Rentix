@@ -51,6 +51,8 @@ type LocaleMeta = {
   readonly label: string;
   /** Kod kraju do danych wystawcy dokumentów. */
   readonly countryCode: "PL" | "GB";
+  /** Strefa czasowa kraju — do pokazywania godzin, np. chwili wysyłki wiadomości. */
+  readonly timeZone: string;
   /** Kody języków z `Accept-Language`, które kierujemy na tę wersję. */
   readonly acceptLanguage: readonly string[];
 };
@@ -62,6 +64,7 @@ export const LOCALE_META: Record<Locale, LocaleMeta> = {
     currency: "PLN",
     label: "Polska",
     countryCode: "PL",
+    timeZone: "Europe/Warsaw",
     acceptLanguage: ["pl"],
   },
   uk: {
@@ -70,6 +73,7 @@ export const LOCALE_META: Record<Locale, LocaleMeta> = {
     currency: "GBP",
     label: "United Kingdom",
     countryCode: "GB",
+    timeZone: "Europe/London",
     // Angielski w dowolnej odmianie trafia na wersję brytyjską — to jedyna
     // anglojęzyczna, jaką mamy. Amerykanin zobaczy funty, ale zrozumie stronę;
     // odesłanie go na polską byłoby gorsze.

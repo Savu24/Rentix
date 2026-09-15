@@ -134,12 +134,32 @@ export async function listTenants(organizationId: string, query: TenantListQuery
   return sortTenants(filtered, query.sort);
 }
 
-/** Karta najemcy: umowy, faktury, wpłaty i wątki rozmów. */
+/** Ile ostatnich wysyłek pokazuje karta najemcy. */
+export const TENANT_NOTIFICATIONS_SHOWN = 20;
+
+/** Karta najemcy: umowy, faktury, wpłaty, wątki rozmów i historia wysyłki. */
 export async function getTenant(organizationId: string, tenantId: string) {
   return prisma.tenant.findFirst({
     where: { id: tenantId, organizationId },
     include: {
       user: { select: { id: true, email: true, lastLoginAt: true } },
+      // Historia korespondencji: co poszło, kiedy i na jaki adres. Nieudane
+      // wysyłki też, bo „nie dotarło" to dla wynajmującego ważniejsza
+      // informacja niż „dotarło". Oczekujące nie — jeszcze nic nie poszło.
+      notifications: {
+        where: { status: { in: ["SENT", "FAILED"] } },
+        orderBy: { createdAt: "desc" },
+        take: TENANT_NOTIFICATIONS_SHOWN,
+        select: {
+          id: true,
+          type: true,
+          status: true,
+          createdAt: true,
+          toEmail: true,
+          error: true,
+          invoice: { select: { id: true, number: true } },
+        },
+      },
       leases: {
         include: {
           lease: {

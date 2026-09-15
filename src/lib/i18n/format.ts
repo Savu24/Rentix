@@ -6,7 +6,7 @@ import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "./config";
  * arytmetyka i zaokrąglanie.
  */
 
-type DateStyle = "long" | "short" | "numeric" | "monthYear";
+type DateStyle = "long" | "short" | "numeric" | "monthYear" | "dateTime";
 
 const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   /** „5 września 2026" / „5 September 2026" */
@@ -17,6 +17,13 @@ const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   numeric: { day: "2-digit", month: "2-digit", year: "numeric" },
   /** „wrzesień 2026" / „September 2026" */
   monthYear: { month: "long", year: "numeric" },
+  /**
+   * „5 wrz 2026, 08:15" / „5 Sep 2026, 08:15" — dla chwil, nie dni:
+   * moment wysyłki wiadomości, a nie termin płatności. Jedyny styl ze strefą
+   * czasową, bo serwer liczy w UTC, a godzina bez przeliczenia na czas
+   * kraju kłamałaby o jedną–dwie godziny.
+   */
+  dateTime: { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" },
 };
 
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
@@ -25,7 +32,10 @@ function dateFormatter(locale: Locale, style: DateStyle): Intl.DateTimeFormat {
   const key = `${locale}:${style}`;
   let formatter = dateFormatters.get(key);
   if (!formatter) {
-    formatter = new Intl.DateTimeFormat(LOCALE_META[locale].intl, DATE_OPTIONS[style]);
+    formatter = new Intl.DateTimeFormat(LOCALE_META[locale].intl, {
+      ...DATE_OPTIONS[style],
+      ...(style === "dateTime" ? { timeZone: LOCALE_META[locale].timeZone } : {}),
+    });
     dateFormatters.set(key, formatter);
   }
   return formatter;

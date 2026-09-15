@@ -244,6 +244,7 @@ export async function sendPaymentNotifications({
         // Powiadomienie w panelu zobaczy tylko najemca z kontem; bez konta
         // zostaje sam e-mail.
         userId: tenant.userId,
+        tenantId: tenant.id,
         type,
         channel: "EMAIL",
         status: result.ok ? "SENT" : "FAILED",

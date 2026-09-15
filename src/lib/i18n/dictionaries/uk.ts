@@ -740,6 +740,19 @@ export const uk: Dictionary = {
         messages: "Messages",
         noThreads: "No message threads with this tenant.",
         threadWithoutSubject: "Thread without a subject",
+        sentMessages: "Sent messages",
+        noSentMessages: "Nothing has been sent to this tenant yet.",
+        sentMessagesLead: "Last {count} messages.",
+        sendFailed: "Not delivered",
+        notificationTypes: {
+          INVOICE_ISSUED: "Document issued",
+          PAYMENT_REMINDER: "Reminder before due date",
+          PAYMENT_OVERDUE: "Overdue notice",
+          MAINTENANCE_UPDATE: "Maintenance status changed",
+          MESSAGE_RECEIVED: "New message",
+          LEASE_EXPIRING: "Lease ending",
+          METER_READING_REQUEST: "Meter reading request",
+        },
         identity: "Identity details",
         /*
           Dowodu osobistego w Wielkiej Brytanii nie ma — tożsamość potwierdza

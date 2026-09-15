@@ -96,6 +96,7 @@ export async function sendInvoiceToTenant(
     data: {
       organizationId,
       userId: tenant.userId,
+      tenantId: tenant.id,
       type: "INVOICE_ISSUED",
       channel: "EMAIL",
       status: result.ok ? "SENT" : "FAILED",

@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { invoiceRecipient } from "@/lib/invoices/recipient";
 
-const zUmowy = { firstName: "Jan", lastName: "Kowalski", email: "jan@przyklad.pl" };
-const zFaktury = { firstName: "Anna", lastName: "Nowak", email: "anna@przyklad.pl" };
+const zUmowy = { id: "t-1", firstName: "Jan", lastName: "Kowalski", email: "jan@przyklad.pl" };
+const zFaktury = { id: "t-2", firstName: "Anna", lastName: "Nowak", email: "anna@przyklad.pl" };
 
 describe("odbiorca dokumentu", () => {
   it("bierze najemcę z umowy, gdy dokument jest z nią powiązany", () => {
@@ -42,7 +42,7 @@ describe("odbiorca dokumentu", () => {
   it("odbiorca bez adresu to nie to samo co brak odbiorcy", () => {
     // Wołający rozróżniają te przypadki, bo prowadzą do dwóch różnych miejsc
     // w panelu: kartoteki najemcy albo wyboru umowy.
-    const bezAdresu = { firstName: "Piotr", email: null };
+    const bezAdresu = { id: "t-3", firstName: "Piotr", email: null };
     const result = invoiceRecipient({ lease: null, tenant: bezAdresu });
 
     expect(result).not.toBeNull();

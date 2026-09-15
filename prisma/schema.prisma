@@ -765,6 +765,7 @@ model Tenant {
   documents           Document[]
   invitations         Invitation[]
   cleaningDuties      CleaningDuty[]
+  notifications       Notification[]
 
   @@index([organizationId])
   @@index([organizationId, status])
@@ -1477,6 +1478,13 @@ model Notification {
   /// zwykła relacja zamiast pary (entityType, entityId).
   invoiceId String?
 
+  /// Najemca, do którego poszła wiadomość — osobno od `userId`, bo większość
+  /// najemców nie ma konta, a osobno od `invoiceId`, bo odbiorcę dokumentu
+  /// rozstrzyga umowa i po jej przepisaniu na kogoś innego ten sam dokument
+  /// wskazywałby już inną osobę. Karta najemcy czyta z tego historię
+  /// korespondencji; SetNull, bo historia wysyłki ma przeżyć kartotekę.
+  tenantId String?
+
   sentAt DateTime?
   readAt DateTime?
   /// Treść błędu z bramki e-mail, gdy status = FAILED.
@@ -1487,9 +1495,11 @@ model Notification {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   invoice      Invoice?     @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, createdAt])
   @@index([userId, readAt])
+  @@index([tenantId, createdAt])
   // Kolejka wysyłki: „co czeka na wysłanie".
   @@index([status, createdAt])
   @@map("notifications")

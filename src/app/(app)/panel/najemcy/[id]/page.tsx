@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Pencil,
   Phone,
+  Send,
   ShieldCheck,
 } from "lucide-react";
 
@@ -35,7 +36,7 @@ import { remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
-import { getTenant } from "@/lib/tenants/service";
+import { getTenant, TENANT_NOTIFICATIONS_SHOWN } from "@/lib/tenants/service";
 import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
 import { tenantStatusLabels, TENANT_STATUS_TONE } from "@/lib/validations/tenant";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
@@ -357,6 +358,67 @@ export default async function TenantDetailPage({ params }: Params) {
                   <p className="mt-1 text-xs text-muted">
                     {thread._count.messages}{" "}
                     {pluralize(locale, thread._count.messages, misc.threadMessages)}
+                  </p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
+            <Send className="h-4 w-4 text-muted" aria-hidden />
+            {t.sentMessages}
+          </h2>
+          {tenant.notifications.length >= TENANT_NOTIFICATIONS_SHOWN ? (
+            <p className="text-xs text-muted">
+              {fill(t.sentMessagesLead, { count: String(TENANT_NOTIFICATIONS_SHOWN) })}
+            </p>
+          ) : null}
+        </div>
+        {tenant.notifications.length === 0 ? (
+          <Card>
+            <CardContent className="p-4 text-sm text-muted">{t.noSentMessages}</CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col p-0">
+              {tenant.notifications.map((notification, index) => (
+                <div
+                  key={notification.id}
+                  className={`flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3 ${
+                    index > 0 ? "border-t border-border" : ""
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium text-fg">
+                        {t.notificationTypes[notification.type]}
+                      </p>
+                      {notification.invoice ? (
+                        <Link
+                          href={`/panel/finanse/${notification.invoice.id}`}
+                          className="font-mono text-xs text-muted hover:text-fg hover:underline"
+                        >
+                          {notification.invoice.number}
+                        </Link>
+                      ) : null}
+                      {notification.status === "FAILED" ? (
+                        <Badge tone="critical">{t.sendFailed}</Badge>
+                      ) : null}
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted">
+                      {notification.toEmail}
+                      {/* Treść błędu z bramki zostaje przy wpisie: bez niej
+                          „nie dotarło" każe zgadywać, czy to literówka
+                          w adresie, czy pełna skrzynka. */}
+                      {notification.error ? ` · ${notification.error}` : ""}
+                    </p>
+                  </div>
+                  <p className="tabular shrink-0 text-xs text-muted">
+                    {formatDateIn(notification.createdAt, locale, "dateTime")}
                   </p>
                 </div>
               ))}
