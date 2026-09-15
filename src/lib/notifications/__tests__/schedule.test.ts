@@ -83,7 +83,9 @@ describe("chooseNotification", () => {
     expect(result).toBe("PAYMENT_REMINDER");
   });
 
-  it("dzień po terminie to już zaległość", () => {
+  it("dzień po terminie jeszcze nie wzywamy", () => {
+    // Przelew z ostatniego dnia terminu dochodzi nazajutrz. Wezwanie tego
+    // samego ranka dostawał najemca, który już zapłacił.
     const result = chooseNotification(
       candidate({
         issueDate: utc(2026, 8, 1),
@@ -93,7 +95,40 @@ describe("chooseNotification", () => {
       utc(2026, 8, 12),
     );
 
-    expect(result).toBe("PAYMENT_OVERDUE");
+    expect(result).toBeNull();
+  });
+
+  it("pierwsze wezwanie wychodzi po tylu dniach zaległości, co ustawiony rytm", () => {
+    const shared = candidate({
+      issueDate: utc(2026, 8, 1),
+      dueDate: utc(2026, 8, 11),
+      sent: [["PAYMENT_REMINDER", utc(2026, 8, 8)]],
+    });
+
+    expect(
+      chooseNotification(shared, utc(2026, 8, 11 + OVERDUE_REPEAT_DAYS - 1)),
+    ).toBeNull();
+    expect(chooseNotification(shared, utc(2026, 8, 11 + OVERDUE_REPEAT_DAYS))).toBe(
+      "PAYMENT_OVERDUE",
+    );
+  });
+
+  it("rytm konta przesuwa też pierwsze wezwanie", () => {
+    // Termin 10., rytm co 5 dni: nic 11., wezwanie 15., kolejne 20.
+    const schedule = { reminderDaysBefore: 1, overdueRepeatDays: 5 };
+    const fresh = candidate({ issueDate: utc(2026, 9, 1), dueDate: utc(2026, 9, 10) });
+
+    expect(chooseNotification(fresh, utc(2026, 9, 11), schedule)).toBeNull();
+    expect(chooseNotification(fresh, utc(2026, 9, 14), schedule)).toBeNull();
+    expect(chooseNotification(fresh, utc(2026, 9, 15), schedule)).toBe("PAYMENT_OVERDUE");
+
+    const chased = candidate({
+      issueDate: utc(2026, 9, 1),
+      dueDate: utc(2026, 9, 10),
+      sent: [["PAYMENT_OVERDUE", utc(2026, 9, 15)]],
+    });
+    expect(chooseNotification(chased, utc(2026, 9, 19), schedule)).toBeNull();
+    expect(chooseNotification(chased, utc(2026, 9, 20), schedule)).toBe("PAYMENT_OVERDUE");
   });
 
   it("wezwania nie ponawiamy codziennie", () => {

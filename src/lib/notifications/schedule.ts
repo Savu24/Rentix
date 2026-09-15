@@ -70,9 +70,15 @@ export function chooseNotification(
   if (overdueDays > 0) {
     if (!allows("PAYMENT_OVERDUE")) return null;
 
+    // Rytm z ustawień liczy się od terminu, nie od poprzedniego wezwania:
+    // pierwsze wychodzi po `overdueRepeatDays` dniach zaległości, kolejne co
+    // tyle samo. Wezwanie nazajutrz po terminie, zanim przelew zdąży dojść,
+    // tylko psuło relację z najemcą — dlatego dzień po terminie jeszcze
+    // czekamy. Codzienna wiadomość o tej samej zaległości z kolei trafia
+    // do spamu i przestaje działać.
+    if (overdueDays < schedule.overdueRepeatDays) return null;
+
     const lastSent = invoice.sentTypes.get("PAYMENT_OVERDUE");
-    // Wezwanie ponawiamy co kilka dni: codzienna wiadomość o tej samej
-    // zaległości trafia do spamu i przestaje działać.
     if (!lastSent) return "PAYMENT_OVERDUE";
     return now.getTime() - lastSent.getTime() >= schedule.overdueRepeatDays * DAY_MS
       ? "PAYMENT_OVERDUE"

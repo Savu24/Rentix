@@ -1716,7 +1716,8 @@ export const uk: Dictionary = {
         senderName: "Sender name",
         reminderDays: "Days before the due date to remind",
         overdueDays: "Days between chasers after the due date",
-        overdueHint: "Daily chasers end up in spam and stop getting through.",
+        overdueHint:
+          "The first chaser goes out that many days after the due date, then every that many days. Daily chasers end up in spam and stop getting through.",
         noContactEmail:
           "You have no contact address, so tenant replies have nowhere to go. Add one under Organisation.",
         types: {

@@ -1713,7 +1713,8 @@ export const pl = {
         senderName: "Nazwa nadawcy",
         reminderDays: "Przypomnienie na ile dni przed terminem",
         overdueDays: "Wezwanie po terminie co ile dni",
-        overdueHint: "Codzienne wezwania trafiają do spamu i przestają docierać.",
+        overdueHint:
+          "Pierwsze wezwanie wychodzi tyle dni po terminie, kolejne co tyle samo. Codzienne wezwania trafiają do spamu i przestają docierać.",
         noContactEmail:
           "Nie masz adresu kontaktowego. Odpowiedzi najemców nie mają dokąd trafić. Uzupełnij go w zakładce Organizacja.",
         types: {
@@ -1727,7 +1728,7 @@ export const pl = {
           },
           PAYMENT_OVERDUE: {
             label: "Wezwanie po terminie",
-            hint: "Wychodzi po terminie i jest ponawiane, dopóki wpłata nie zostanie odnotowana.",
+            hint: "Wychodzi kilka dni po terminie i jest ponawiane, dopóki wpłata nie zostanie odnotowana.",
           },
         },
         autoSend: "Wysyłaj automatycznie: {type}",
