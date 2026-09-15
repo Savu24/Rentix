@@ -248,6 +248,58 @@
     opacity: 0.65;
   }
 
+  /*
+   * Suwak kalkulatora przy cenniku.
+   *
+   * Natywny `input[type="range"]` w każdej przeglądarce wygląda inaczej i w
+   * żadnej nie wygląda jak reszta strony, więc zdejmujemy wygląd systemowy
+   * i rysujemy tor sami. Uchwyt ma osobne reguły dla WebKita i Gecka, bo
+   * pseudoelementów obu silników nie wolno łączyć przecinkiem: nierozpoznany
+   * selektor unieważniłby całą regułę i suwak zostałby bez uchwytu.
+   */
+  .r-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 20px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .r-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+  }
+
+  .r-range::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+  }
+
+  /* Marginesem środkujemy uchwyt na torze: (6px toru - 20px uchwytu) / 2. */
+  .r-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    margin-top: -7px;
+    height: 20px;
+    width: 20px;
+    border-radius: 999px;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+  }
+
+  .r-range::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border: 2px solid var(--surface);
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+  }
+
   /* Zakreślacz w nagłówkach marketingowych: „Zarządzaj <mark>najmem</mark>". */
   .r-mark {
     background: var(--highlight);

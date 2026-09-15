@@ -2,6 +2,7 @@ import { BarChart3, FileText, Wallet, Wrench } from "lucide-react";
 import Link from "next/link";
 
 import { Logo } from "@/components/brand/logo";
+import { PlanCalculator } from "@/components/marketing/plan-calculator";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -226,6 +227,12 @@ export function Landing({ locale }: { locale: Locale }) {
                 </Card>
               ))}
             </div>
+
+            <PlanCalculator
+              locale={locale}
+              t={t.pricing.calculator}
+              plans={t.pricing.plans}
+            />
 
             <p className="mx-auto mt-7 max-w-[560px] text-center text-[13px] text-muted">
               {t.pricing.note}

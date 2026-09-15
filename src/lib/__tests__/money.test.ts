@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   multiplyByQuantity,
   formatMoney,
+  formatMoneyWhole,
   formatPLN,
   parseMoney,
   parsePLN,
@@ -129,6 +130,21 @@ describe("splitGrosze", () => {
     expect(() => splitGrosze(100, 0)).toThrow();
     expect(() => splitGrosze(100, -2)).toThrow();
     expect(() => splitGrosze(100, 1.5)).toThrow();
+  });
+});
+
+describe("kwota okrągła", () => {
+  /* Polski format wstawia spacje nierozdzielające — w asercji czytelniejsze
+     są zwykłe, a i tak nie o nie tu chodzi. */
+  const plain = (value: string) => value.replace(/ /g, " ");
+
+  it("nie dokłada groszy, których suwak na stronie nie wybiera", () => {
+    expect(plain(formatMoneyWhole(250_000, "pl"))).toBe("2 500 zł");
+    expect(formatMoneyWhole(120_000, "uk")).toBe("£1,200");
+  });
+
+  it("zaokrągla resztę zamiast pokazywać ją po przecinku", () => {
+    expect(plain(formatMoneyWhole(250_049, "pl"))).toBe("2 500 zł");
   });
 });
 

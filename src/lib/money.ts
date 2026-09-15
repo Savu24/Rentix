@@ -23,6 +23,7 @@ import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "@/lib/i18n/config";
   to na literówkę; kwoty mają się czytać jednakowo w każdym wierszu.
 */
 const currencyFormatters = new Map<Locale, Intl.NumberFormat>();
+const wholeCurrencyFormatters = new Map<Locale, Intl.NumberFormat>();
 const amountFormatters = new Map<Locale, Intl.NumberFormat>();
 
 function currencyFormatter(locale: Locale): Intl.NumberFormat {
@@ -36,6 +37,20 @@ function currencyFormatter(locale: Locale): Intl.NumberFormat {
       useGrouping: "always",
     });
     currencyFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
+function wholeCurrencyFormatter(locale: Locale): Intl.NumberFormat {
+  let formatter = wholeCurrencyFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE_META[locale].intl, {
+      style: "currency",
+      currency: LOCALE_META[locale].currency,
+      maximumFractionDigits: 0,
+      useGrouping: "always",
+    });
+    wholeCurrencyFormatters.set(locale, formatter);
   }
   return formatter;
 }
@@ -56,6 +71,18 @@ function amountFormatter(locale: Locale): Intl.NumberFormat {
 /** 240000 → „2 400,00 zł" (pl) albo „£2,400.00" (uk). */
 export function formatMoney(grosze: number, locale: Locale = DEFAULT_LOCALE): string {
   return currencyFormatter(locale).format(grosze / 100);
+}
+
+/**
+ * 250000 → „2 500 zł" / „£2,500" — kwota okrągła, bez końcówki groszowej.
+ *
+ * Wyłącznie do liczb szacunkowych na stronie sprzedażowej: suwak kalkulatora
+ * chodzi co sto złotych, więc „2 500,00 zł" dokłada dwa zera, których nikt
+ * nie czyta. Na dokumencie, fakturze i w rozliczeniu obowiązuje `formatMoney` —
+ * tam grosze są treścią, a nie ozdobą.
+ */
+export function formatMoneyWhole(grosze: number, locale: Locale = DEFAULT_LOCALE): string {
+  return wholeCurrencyFormatter(locale).format(grosze / 100);
 }
 
 /** 240000 → „2 400,00" / „2,400.00" — bez symbolu, do pól formularza i CSV. */
