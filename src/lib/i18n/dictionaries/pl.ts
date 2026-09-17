@@ -2181,9 +2181,8 @@ export const pl = {
       commonAreas: "Miejsca wspólne",
       /** Skróty dni od poniedziałku; kolumny w PDF-ie startują od dnia, w którym rusza harmonogram. */
       weekdays: ["pn", "wt", "śr", "cz", "pt", "so", "nd"],
-      /** Stopka kartki — dwie linie pod kalendarzem, do lokatorów. */
-      swapHint: "Nie dasz rady w wyznaczonym terminie? Zawsze możesz się z kimś zamienić.",
-      swapReminder: "Pamiętaj tylko, że dla nas to w dalszym ciągu Twój dyżur.",
+      /** Nagłówek kolumny, w której lokator podpisuje się po skończonym dyżurze. */
+      signature: "podpis",
     },
 
     /*

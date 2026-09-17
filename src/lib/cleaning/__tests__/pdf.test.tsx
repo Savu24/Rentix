@@ -80,6 +80,16 @@ describe("calendarMonths", () => {
     expect(last.label).toBe("4");
   });
 
+  it("rubryka podpisu stoi tam, gdzie dyżur się kończy", () => {
+    // Tydzień „31 → 4" kończy się w sierpniu: w lipcu bez rubryki, w sierpniu z.
+    expect(months[0].rows.at(-1)!.signature).toBe(false);
+    expect(months[1].rows[0].signature).toBe(true);
+    // Pełne tygodnie w środku miesiąca zawsze mają rubrykę.
+    expect(months[0].rows.slice(0, 3).map((row) => row.signature)).toEqual([true, true, true]);
+    // Urwany tydzień na końcu harmonogramu też: dyżur się kończy, choć krócej.
+    expect(months.at(-1)!.rows.at(-1)!.signature).toBe(true);
+  });
+
   it("styczeń wchodzi w środku karuzeli, bez resetu na nowy rok", () => {
     // Grudzień kończy się na „1 (balkon)", więc styczeń otwiera „2".
     expect(rows(6)[0]).toEqual(["1 2 3 4 5 6 7", "2"]);

@@ -2217,8 +2217,7 @@ export const uk: Dictionary = {
       filename: "cleaning rota",
       commonAreas: "Shared areas",
       weekdays: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
-      swapHint: "Can't make your week? You can always swap with someone.",
-      swapReminder: "Just remember: as far as we're concerned, it is still your turn.",
+      signature: "signature",
     },
 
     numberPrefix: {

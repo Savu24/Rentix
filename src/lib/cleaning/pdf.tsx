@@ -23,6 +23,11 @@ import type { CleaningDutyView, CleaningRange } from "./service";
  * każdy dyżur to dokładnie jeden wiersz, także na styku miesięcy: ten sam
  * tydzień stoi na końcu lipca i na początku sierpnia z tym samym podpisem.
  *
+ * Przy każdym tygodniu jest rubryka, w której lokator podpisuje się po
+ * skończonym dyżurze — kartka jest zarazem rozpiską i potwierdzeniem, że
+ * sprzątanie się odbyło. Tydzień na styku miesięcy ma rubrykę tylko tam,
+ * gdzie się kończy: podpis składa się raz, po robocie, a nie w obu miesiącach.
+ *
  * Font osadzany z pliku TTF, tak jak w umowie i na fakturze: wbudowane fonty
  * PDF nie mają polskich znaków diakrytycznych.
  */
@@ -56,6 +61,15 @@ const DAYS_WIDTH = 7 * DAY_CELL;
 /** Odstęp między kolumnami miesięcy, po połowie z każdej strony. */
 const GUTTER = 8;
 
+/**
+ * Rubryka podpisu: poniżej 48 punktów (ok. 1,7 cm) nie da się podpisać
+ * długopisem, powyżej 120 pusta kreska ciągnie się bez sensu przez pół kartki.
+ */
+const SIGNATURE_MIN = 48;
+const SIGNATURE_MAX = 120;
+/** Wysokość wiersza dyżuru — tyle miejsca potrzebuje odręczny podpis. */
+const ROW_HEIGHT = 18;
+
 /** Font ósemka: tyle punktów zajmuje przeciętnie jeden znak Intera. */
 const CHAR_WIDTH = 4.6;
 
@@ -66,7 +80,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.2,
     color: COLORS.ink,
     paddingTop: 36,
-    paddingBottom: 64,
+    paddingBottom: 40,
     paddingHorizontal: PAGE_MARGIN,
   },
 
@@ -90,19 +104,20 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.rule,
   },
   headRow: { color: COLORS.muted, fontSize: 7.5 },
+  dutyRow: { minHeight: ROW_HEIGHT },
 
   day: { width: DAY_CELL, textAlign: "center" },
   label: { textAlign: "center", paddingLeft: 4 },
 
-  footer: {
-    position: "absolute",
-    bottom: 28,
-    left: PAGE_MARGIN,
-    right: PAGE_MARGIN,
-    fontSize: 9,
-    lineHeight: 1.6,
-    textAlign: "center",
+  // Rubryka to pole między pionową kreską a linią wiersza — kreska oddziela
+  // ją od podpisu pokoju, żeby podpis lokatora nie wjechał na nazwisko.
+  signature: {
+    alignSelf: "stretch",
+    marginLeft: 4,
+    borderLeftWidth: 0.5,
+    borderLeftColor: COLORS.rule,
   },
+  signatureHead: { marginLeft: 4, textAlign: "center" },
 });
 
 export type CleaningPdfData = {
@@ -114,8 +129,12 @@ export type CleaningPdfData = {
   duties: CleaningDutyView[];
 };
 
-/** Jeden wiersz kalendarza: siedem kratek dnia (pusta poza miesiącem) i podpis. */
-export type CalendarRow = { days: (number | null)[]; label: string };
+/**
+ * Jeden wiersz kalendarza: siedem kratek dnia (pusta poza miesiącem), podpis
+ * i to, czy w tym miesiącu jest rubryka na podpis lokatora — jest tam, gdzie
+ * dyżur się kończy.
+ */
+export type CalendarRow = { days: (number | null)[]; label: string; signature: boolean };
 
 export type CalendarMonth = {
   year: number;
@@ -158,7 +177,7 @@ export function calendarMonths(duties: CleaningDutyView[], range: CleaningRange)
           return inside ? day.getUTCDate() : null;
         });
 
-        return { days, label: duty.label };
+        return { days, label: duty.label, signature: duty.endsOn <= monthEnd };
       });
 
     months.push({ year, monthIndex, rows });
@@ -169,18 +188,29 @@ export function calendarMonths(duties: CleaningDutyView[], range: CleaningRange)
 }
 
 /**
- * Ile miesięcy mieści się obok siebie.
+ * Ile miesięcy mieści się obok siebie i ile zostaje na rubrykę podpisu.
  *
- * Trzy, gdy podpisy są krótkie („Pokój 1", „2 (balkon)"). Imię i nazwisko
- * najemcy potrzebuje szerszej kolumny, więc miesiące schodzą do dwóch obok
- * siebie — lepiej dłuższa kartka niż nazwisko złamane w połowie.
+ * Dwa, gdy podpisy są krótkie („Pokój 1", „2 (balkon)"). Imię i nazwisko
+ * najemcy potrzebuje szerszej kolumny, więc miesiące schodzą do jednego —
+ * lepiej dłuższa kartka niż nazwisko złamane w połowie albo rubryka, w której
+ * nie zmieści się podpis. Resztę szerokości dostaje rubryka, do rozsądnej granicy.
  */
-function layout(duties: CleaningDutyView[]): { columns: number; labelWidth: number } {
+function layout(duties: CleaningDutyView[]): {
+  columns: number;
+  labelWidth: number;
+  signatureWidth: number;
+} {
   const longest = Math.max(0, ...duties.map((duty) => duty.label.length));
   const labelWidth = Math.max(42, Math.ceil(longest * CHAR_WIDTH) + 8);
-  const monthWidth = DAYS_WIDTH + labelWidth + GUTTER;
+  const fixedWidth = DAYS_WIDTH + labelWidth + GUTTER;
 
-  return { columns: Math.min(3, Math.max(1, Math.floor(CONTENT_WIDTH / monthWidth))), labelWidth };
+  const columns = Math.min(
+    3,
+    Math.max(1, Math.floor(CONTENT_WIDTH / (fixedWidth + SIGNATURE_MIN))),
+  );
+  const signatureWidth = Math.min(SIGNATURE_MAX, CONTENT_WIDTH / columns - fixedWidth);
+
+  return { columns, labelWidth, signatureWidth };
 }
 
 /**
@@ -209,7 +239,7 @@ export function CleaningScheduleDocument({ data }: { data: CleaningPdfData }) {
     (name) => name.charAt(0).toLocaleUpperCase(intl) + name.slice(1),
   );
   const months = calendarMonths(data.duties, data.range);
-  const { columns, labelWidth } = layout(data.duties);
+  const { columns, labelWidth, signatureWidth } = layout(data.duties);
 
   const from = parseIsoDay(data.range.from)!;
   const period = `${formatDateIn(from, data.locale, "numeric")} – ${formatDateIn(
@@ -227,6 +257,7 @@ export function CleaningScheduleDocument({ data }: { data: CleaningPdfData }) {
 
   const monthStyle = [styles.month, { width: `${100 / columns}%` }];
   const labelStyle = [styles.label, { width: labelWidth }];
+  const signatureStyle = [styles.signature, { width: signatureWidth }];
 
   return (
     <Document
@@ -256,27 +287,23 @@ export function CleaningScheduleDocument({ data }: { data: CleaningPdfData }) {
                   </Text>
                 ))}
                 <Text style={labelStyle} />
+                <Text style={[styles.signatureHead, { width: signatureWidth }]}>{t.signature}</Text>
               </View>
 
               {month.rows.map((row, index) => (
-                <View key={index} style={styles.row}>
+                <View key={index} style={[styles.row, styles.dutyRow]}>
                   {row.days.map((day, offset) => (
                     <Text key={offset} style={styles.day}>
                       {day ?? ""}
                     </Text>
                   ))}
                   <Text style={labelStyle}>{row.label}</Text>
+                  {row.signature ? <View style={signatureStyle} /> : null}
                 </View>
               ))}
             </View>
           ))}
         </View>
-
-        <Text style={styles.footer} fixed>
-          {t.swapHint}
-          {"\n"}
-          {t.swapReminder}
-        </Text>
       </Page>
     </Document>
   );
