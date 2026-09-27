@@ -43,5 +43,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         "CONFLICT",
         auth.d.panel.api.paymentOnCancelled,
       );
+    case "DRAFT":
+      return apiError("CONFLICT", auth.d.panel.api.paymentOnDraft);
   }
 }

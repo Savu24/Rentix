@@ -41,6 +41,8 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       );
     case "CANCELLED":
       return apiError("CONFLICT", auth.d.panel.api.cancelledNotSent);
+    case "DRAFT":
+      return apiError("CONFLICT", auth.d.panel.api.draftNotSent);
     case "SEND_FAILED":
       return apiError("INTERNAL_ERROR", result.error);
   }

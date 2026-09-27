@@ -14,10 +14,12 @@ import { prisma } from "@/lib/prisma";
 import type {
   GenerateInvoicesOutput,
   InvoiceCreateOutput,
+  InvoiceDraftOutput,
   InvoiceListQuery,
   PaymentFormOutput,
 } from "@/lib/validations/invoice";
 
+import { DRAFT_NUMBER_PREFIX, draftInvoiceNumber, requiresApproval } from "./draft";
 import { isUniqueViolation, nextInvoiceNumber, withUniqueNumberRetry } from "./numbering";
 import {
   invoiceNumberEditable,
@@ -269,7 +271,7 @@ export async function financeSummary(organizationId: string, now: Date = new Dat
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 
-  const [unpaid, overdue, paidThisMonth] = await Promise.all([
+  const [unpaid, overdue, paidThisMonth, draftCount] = await Promise.all([
     prisma.invoice.aggregate({
       where: { organizationId, status: { in: ["ISSUED", "PARTIALLY_PAID"] } },
       _sum: { totalGrossGrosze: true, paidGrosze: true },
@@ -284,6 +286,8 @@ export async function financeSummary(organizationId: string, now: Date = new Dat
       where: { organizationId, paidAt: { gte: monthStart, lt: nextMonthStart } },
       _sum: { amountGrosze: true },
     }),
+    // Szkice czekają na właściciela — bez licznika nikt by ich nie zauważył.
+    prisma.invoice.count({ where: { organizationId, status: "DRAFT" } }),
   ]);
 
   const outstanding = (sums: { totalGrossGrosze: number | null; paidGrosze: number | null }) =>
@@ -295,6 +299,7 @@ export async function financeSummary(organizationId: string, now: Date = new Dat
     overdueCount: overdue._count,
     overdueGrosze: outstanding(overdue._sum),
     paidThisMonthGrosze: paidThisMonth._sum.amountGrosze ?? 0,
+    draftCount,
   };
 }
 
@@ -456,7 +461,10 @@ export async function renumberInvoice(
   });
 
   if (!invoice) return { ok: false, reason: "NOT_FOUND" };
-  if (!invoiceNumberEditable(invoice)) return { ok: false, reason: "LOCKED" };
+  // Szkic nie ma jeszcze numeru — dostanie go przy zatwierdzeniu.
+  if (invoice.status === "DRAFT" || !invoiceNumberEditable(invoice)) {
+    return { ok: false, reason: "LOCKED" };
+  }
 
   // Zapis bez zmiany: użytkownik kliknął „zapisz" po namyśle. Nie ma czego
   // sprawdzać ani zapisywać, a odpowiedź ma być taka sama jak po zmianie.
@@ -487,6 +495,8 @@ export type GeneratedInvoice = {
   invoiceId: string;
   number: string;
   totalGrossGrosze: number;
+  /** Niepełny miesiąc — dokument czeka na akceptację, patrz `draft.ts`. */
+  draft: boolean;
 };
 
 export type SkippedLease = {
@@ -520,6 +530,10 @@ export type GenerateInvoicesResult = {
  * nie nadszedł — bez tego cron pierwszego dnia miesiąca wystawiłby dokument
  * z datą wystawienia w przyszłości. Wywołanie ręczne go nie podaje: skoro
  * użytkownik prosi o konkretny miesiąc, wystawiamy mimo daty.
+ *
+ * Niepełny miesiąc nie jest wystawiany, tylko zapisywany jako szkic do
+ * akceptacji — patrz `draft.ts`. Szkic liczy się jako rozliczenie okresu,
+ * więc kolejny przebieg go nie zdubluje.
  */
 export async function generateInvoicesForMonth(
   organizationId: string,
@@ -626,7 +640,17 @@ export async function generateInvoicesForMonth(
         organizationId,
         leaseId: lease.id,
         periodStart: period.periodStart,
-        status: { not: "CANCELLED" },
+        OR: [
+          { status: { not: "CANCELLED" } },
+          /*
+            Odrzucony szkic też zamyka okres — ale tylko dla crona. Bez tego
+            właściciel odrzucałby ten sam szkic co noc. Ręczne naliczenie
+            (bez `notBefore`) to świadoma prośba, więc tworzy szkic od nowa.
+          */
+          ...(options.notBefore
+            ? [{ status: "CANCELLED" as const, number: { startsWith: DRAFT_NUMBER_PREFIX } }]
+            : []),
+        ],
       },
       select: { id: true },
     });
@@ -635,15 +659,19 @@ export async function generateInvoicesForMonth(
       continue;
     }
 
+    const draft = requiresApproval(period);
+
     const invoice = await withUniqueNumberRetry(() =>
       prisma.$transaction(async (tx) => {
-        const number = await nextInvoiceNumber(tx, organizationId, kind, period.issueDate);
+        const number = draft
+          ? draftInvoiceNumber()
+          : await nextInvoiceNumber(tx, organizationId, kind, period.issueDate);
 
         return tx.invoice.create({
           data: {
             organizationId,
             leaseId: lease.id,
-            status: "ISSUED",
+            status: draft ? "DRAFT" : "ISSUED",
             kind,
             number,
             issueDate: period.issueDate,
@@ -666,10 +694,100 @@ export async function generateInvoicesForMonth(
       invoiceId: invoice.id,
       number: invoice.number,
       totalGrossGrosze: invoice.totalGrossGrosze,
+      draft,
     });
   }
 
   return { created, skipped };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Szkice do akceptacji
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type DraftInvoiceResult =
+  | { ok: true; invoice: { id: string; number: string } }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "NOT_DRAFT" }
+  | { ok: false; reason: "NOTHING_TO_BILL" };
+
+/**
+ * Poprawki szkicu: pozycje, daty, uwagi.
+ *
+ * Pozycje podmieniamy w całości, a nie łatamy po jednej — formularz i tak
+ * wysyła cały dokument, a sumy liczą się od nowa z tego, co przyszło.
+ */
+export async function updateDraftInvoice(
+  organizationId: string,
+  invoiceId: string,
+  data: InvoiceDraftOutput,
+): Promise<DraftInvoiceResult> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, organizationId },
+    select: { id: true, status: true },
+  });
+
+  if (!invoice) return { ok: false, reason: "NOT_FOUND" };
+  if (invoice.status !== "DRAFT") return { ok: false, reason: "NOT_DRAFT" };
+
+  const { totals, lines } = linesCreateData(data.lines);
+
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.invoiceLine.deleteMany({ where: { invoiceId } });
+
+    return tx.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        issueDate: data.issueDate,
+        saleDate: data.saleDate,
+        dueDate: data.dueDate,
+        notes: data.notes,
+        ...totals,
+        lines: { create: lines },
+      },
+      select: { id: true, number: true },
+    });
+  });
+
+  return { ok: true, invoice: updated };
+}
+
+/**
+ * Zatwierdzenie szkicu: numer z rejestru i status „wystawiony".
+ *
+ * Numer nadajemy dopiero tutaj, według daty wystawienia ze szkicu — właściciel
+ * mógł ją przesunąć, a numeracja biegnie miesiącami. Warunek `status: DRAFT`
+ * siedzi w samym zapisie, więc dwa równoległe kliknięcia nie nadadzą dwóch
+ * numerów: drugie nie znajdzie już szkicu.
+ */
+export async function issueDraftInvoice(
+  organizationId: string,
+  invoiceId: string,
+): Promise<DraftInvoiceResult> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, organizationId },
+    select: { id: true, status: true, kind: true, issueDate: true, totalGrossGrosze: true },
+  });
+
+  if (!invoice) return { ok: false, reason: "NOT_FOUND" };
+  if (invoice.status !== "DRAFT") return { ok: false, reason: "NOT_DRAFT" };
+  if (invoice.totalGrossGrosze <= 0) return { ok: false, reason: "NOTHING_TO_BILL" };
+
+  const issued = await withUniqueNumberRetry(() =>
+    prisma.$transaction(async (tx) => {
+      const number = await nextInvoiceNumber(tx, organizationId, invoice.kind, invoice.issueDate);
+
+      const { count } = await tx.invoice.updateMany({
+        where: { id: invoiceId, organizationId, status: "DRAFT" },
+        data: { status: "ISSUED", number },
+      });
+
+      return count === 1 ? { id: invoiceId, number } : null;
+    }),
+  );
+
+  if (!issued) return { ok: false, reason: "NOT_DRAFT" };
+  return { ok: true, invoice: issued };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -712,7 +830,8 @@ async function recalculateSettlement(tx: Prisma.TransactionClient, invoiceId: st
 export type RecordPaymentResult =
   | { ok: true; payment: { id: string }; invoice: { status: InvoiceStatus; paidGrosze: number } }
   | { ok: false; reason: "NOT_FOUND" }
-  | { ok: false; reason: "CANCELLED" };
+  | { ok: false; reason: "CANCELLED" }
+  | { ok: false; reason: "DRAFT" };
 
 export async function recordPayment(
   organizationId: string,
@@ -726,6 +845,8 @@ export async function recordPayment(
 
   if (!invoice) return { ok: false, reason: "NOT_FOUND" };
   if (invoice.status === "CANCELLED") return { ok: false, reason: "CANCELLED" };
+  // Wpłata przestawiłaby status na „wystawiony" bez numeru z rejestru.
+  if (invoice.status === "DRAFT") return { ok: false, reason: "DRAFT" };
 
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.create({

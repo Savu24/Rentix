@@ -1047,6 +1047,8 @@ export const uk: Dictionary = {
         leadAll: "Issues documents for every active tenancy for the chosen month.",
         alsoSkipped: "Tenancies already invoiced for this period are skipped.",
         issued: "Issued {count} {noun}: {numbers}.",
+        drafted:
+          "Waiting for approval: {count} (part month). Check the amounts and approve the draft before the tenant gets it.",
         skipped: "Skipped {count} {noun}: {reasons}.",
         month: "Month",
         year: "Year",
@@ -1089,6 +1091,16 @@ export const uk: Dictionary = {
         reminderSent: "Reminder sent {date}",
         reminderFailed: "Reminder could not be sent {date}",
         notes: "Notes",
+        draft: {
+          title: "Draft awaiting approval",
+          lead: "Rent for a part month is worked out pro rata by day. Adjust the amounts or add lines, then approve. The tenant only sees the document once it is approved.",
+          edit: "Edit draft",
+          save: "Save changes",
+          saved: "Draft changes saved.",
+          issue: "Approve and issue",
+          issueHint: "The document gets its number from the register. Once issued it can no longer be edited.",
+          close: "Close",
+        },
       },
       manualInvoice: {
         open: "Issue by hand",
@@ -1126,6 +1138,8 @@ export const uk: Dictionary = {
       markPaid: "Mark as paid: {amount}",
       downloadSelected: "Download selected",
       documentNoun: ["document", "documents"],
+      draftsWaiting: "Drafts awaiting approval: {count}. This is rent for a part month. Check the amounts and approve.",
+      showDrafts: "Show drafts",
       downloadCount: "Download {count} {noun}",
       download: "Download",
       selectForDownload: "Select to download",
@@ -1913,6 +1927,10 @@ export const uk: Dictionary = {
       invoiceNumberTaken:
         "Another document already carries this number. Two documents sharing a number would break the register.",
       cancelledNotSent: "This document is cancelled, so we are not sending it to the tenant.",
+      draftNotSent: "This is a draft. Approve it first, then it can be sent to the tenant.",
+      paymentOnDraft: "This is a draft. A payment can be recorded once the document is approved.",
+      invoiceNotDraft: "This document has already been issued. Issued documents cannot be edited.",
+      draftNothingToBill: "The draft has nothing to pay. Fix the lines or cancel the draft.",
       noAccountEmail: "Your account has no email address to send the test to.",
     },
 
@@ -1945,6 +1963,7 @@ export const uk: Dictionary = {
       periodOrder: "The period end cannot be earlier than its start",
       paymentPositive: "The payment must be greater than zero",
       numberInvalid: "A number may contain letters, digits, spaces and the marks / - . _",
+      draftNumber: "No number yet",
       status: {
         DRAFT: "Draft",
         PAID: "Paid",
@@ -2155,6 +2174,7 @@ export const uk: Dictionary = {
     invoice: {
       batchTitle: "Rent documents ({count})",
       cancelled: " (CANCELLED)",
+      draftNumber: "DRAFT",
       numberPrefix: "no. ",
       issueDate: "Invoice date",
       /*

@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { getLease } from "@/lib/leases/service";
+import { hasRegisterNumber } from "@/lib/invoices/draft";
 import { INVOICE_STATUS_TONE, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { BillingStartField } from "@/components/panel/leases/billing-start-field";
 import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
@@ -296,7 +297,9 @@ export default async function LeaseDetailPage({ params }: Params) {
                     }`}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-fg">{invoice.number}</p>
+                      <p className="text-sm font-medium text-fg">
+                        {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
+                      </p>
                       <p className="text-xs text-muted">
                         {fill(misc.dueOn, {
                           date: formatDateIn(invoice.dueDate, locale, "short"),

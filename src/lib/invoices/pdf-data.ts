@@ -8,6 +8,7 @@ import { formatPropertyAddress, roomDesignation } from "@/lib/properties/address
 import { slugify } from "@/lib/utils";
 import { invoiceKindLabels } from "@/lib/validations/invoice";
 
+import { hasRegisterNumber } from "./draft";
 import type { InvoicePdfData } from "./pdf";
 import type { getInvoice } from "./service";
 
@@ -23,6 +24,16 @@ export type InvoiceWithRelations = NonNullable<Awaited<ReturnType<typeof getInvo
 /** Kraj wystawcy dokumentu. Nieznana wartość w bazie schodzi do domyślnego. */
 function invoiceLocale(invoice: { organization: { locale: string } }) {
   return isLocale(invoice.organization.locale) ? invoice.organization.locale : DEFAULT_LOCALE;
+}
+
+/**
+ * Numer na dokumencie. Szkic ma w bazie numer zastępczy (`draft.ts`), który
+ * na podglądzie wyglądałby jak prawdziwy — drukujemy więc samo „SZKIC".
+ */
+function printedNumber(invoice: { number: string; organization: { locale: string } }): string {
+  return hasRegisterNumber(invoice.number)
+    ? invoice.number
+    : getDictionary(invoiceLocale(invoice)).documents.invoice.draftNumber;
 }
 
 /**
@@ -43,7 +54,7 @@ export function invoicePdfFilename(invoice: {
 }): string {
   const label = invoiceKindLabels(getDictionary(invoiceLocale(invoice)))[invoice.kind];
 
-  return `${slugify(`${label} ${invoice.number}`)}.pdf`;
+  return `${slugify(`${label} ${printedNumber(invoice)}`)}.pdf`;
 }
 
 export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData {
@@ -77,7 +88,7 @@ export function toInvoicePdfData(invoice: InvoiceWithRelations): InvoicePdfData 
   return {
     locale,
     kind: invoice.kind,
-    number: invoice.number,
+    number: printedNumber(invoice),
     issueDate: invoice.issueDate,
     saleDate: invoice.saleDate,
     dueDate: invoice.dueDate,

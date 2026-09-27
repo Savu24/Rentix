@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MarkPaid } from "@/components/panel/invoices/mark-paid";
 import { useI18n } from "@/lib/i18n/client";
 import { fill, formatDateIn } from "@/lib/i18n/format";
+import { hasRegisterNumber } from "@/lib/invoices/draft";
 import { INVOICE_STATUS_TONE, type DisplayInvoiceStatus } from "@/lib/invoices/status";
 import { formatMoney } from "@/lib/money";
 
@@ -49,7 +50,9 @@ export function TenantInvoiceList({ invoices }: { invoices: TenantInvoiceRow[] }
               className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 rounded-btn transition-opacity hover:opacity-80"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-fg">{invoice.number}</p>
+                <p className="text-sm font-medium text-fg">
+                  {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
+                </p>
                 <p className="text-xs text-muted">
                   {fill(misc.dueOn, { date: formatDateIn(invoice.dueDate, locale, "short") })}
                 </p>

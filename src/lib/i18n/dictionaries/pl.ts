@@ -1030,6 +1030,8 @@ export const pl = {
         leadAll: "Wystawi dokumenty wszystkim aktywnym umowom za wskazany miesiąc.",
         alsoSkipped: "Umowy, które mają już rozliczenie za ten okres, zostaną pominięte.",
         issued: "Wystawiono {count} {noun}: {numbers}.",
+        drafted:
+          "Czeka na akceptację: {count} (niepełny miesiąc). Sprawdź kwoty i zatwierdź szkic, zanim trafi do najemcy.",
         skipped: "Pominięto {count} {noun}: {reasons}.",
         month: "Miesiąc",
         year: "Rok",
@@ -1073,6 +1075,16 @@ export const pl = {
         reminderSent: "Wysłano przypomnienie {date}",
         reminderFailed: "Nie udało się wysłać przypomnienia {date}",
         notes: "Uwagi",
+        draft: {
+          title: "Szkic do akceptacji",
+          lead: "Czynsz za niepełny miesiąc policzyliśmy proporcjonalnie do dni. Popraw kwoty albo dopisz pozycje, a potem zatwierdź. Najemca zobaczy dokument dopiero po zatwierdzeniu.",
+          edit: "Popraw szkic",
+          save: "Zapisz zmiany",
+          saved: "Zapisano zmiany w szkicu.",
+          issue: "Zatwierdź i wystaw",
+          issueHint: "Dokument dostanie numer z rejestru. Po wystawieniu nie da się go już edytować.",
+          close: "Zamknij",
+        },
       },
       manualInvoice: {
         open: "Wystaw ręcznie",
@@ -1110,6 +1122,8 @@ export const pl = {
       markPaid: "Oznacz jako opłaconą: {amount}",
       downloadSelected: "Pobierz zaznaczone",
       documentNoun: ["dokument", "dokumenty", "dokumentów"],
+      draftsWaiting: "Szkice do akceptacji: {count}. To czynsz za niepełny miesiąc. Sprawdź kwoty i zatwierdź.",
+      showDrafts: "Pokaż szkice",
       downloadCount: "Pobierz {count} {noun}",
       download: "Pobierz",
       selectForDownload: "Zaznacz do pobrania",
@@ -1914,6 +1928,10 @@ export const pl = {
       invoiceNumberTaken:
         "Ten numer nosi już inny dokument. Dwa dokumenty o tym samym numerze rozsypałyby rejestr.",
       cancelledNotSent: "Dokument jest anulowany. Nie wysyłamy go najemcy.",
+      draftNotSent: "To szkic. Zatwierdź go najpierw, dopiero wtedy można go wysłać najemcy.",
+      paymentOnDraft: "To szkic. Wpłatę da się zapisać dopiero po zatwierdzeniu dokumentu.",
+      invoiceNotDraft: "Ten dokument jest już wystawiony. Wystawionego nie da się edytować.",
+      draftNothingToBill: "Szkic nie ma nic do zapłaty. Popraw pozycje albo anuluj szkic.",
       noAccountEmail: "Twoje konto nie ma adresu e-mail, na który wysłać test.",
     },
 
@@ -1942,6 +1960,8 @@ export const pl = {
       periodOrder: "Koniec okresu nie może być wcześniejszy niż jego początek",
       paymentPositive: "Kwota wpłaty musi być większa od zera",
       numberInvalid: "Numer może mieć litery, cyfry, spacje oraz znaki / - . _",
+      /** Zamiast numeru przy szkicu — numer z rejestru nadaje się przy zatwierdzeniu. */
+      draftNumber: "Bez numeru",
       status: {
         DRAFT: "Szkic",
         PAID: "Opłacona",
@@ -2115,6 +2135,8 @@ export const pl = {
     invoice: {
       batchTitle: "Dokumenty rozliczeniowe ({count})",
       cancelled: " (ANULOWANY)",
+      /** Numer na podglądzie szkicu — prawdziwy nadaje się przy zatwierdzeniu. */
+      draftNumber: "SZKIC",
       /*
         „numer", nie skrót „nr": wiersz czyta się wtedy pełnym zdaniem —
         „Faktura numer 8/09/2026" — i tak samo brzmi w stopce każdej strony.

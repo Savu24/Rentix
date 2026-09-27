@@ -157,6 +157,35 @@ export type InvoiceCreateInput = z.input<ReturnType<typeof invoiceCreateSchema>>
 export type InvoiceCreateOutput = z.output<ReturnType<typeof invoiceCreateSchema>>;
 
 /**
+ * Poprawki szkicu przed zatwierdzeniem — patrz `src/lib/invoices/draft.ts`.
+ *
+ * Nabywca, umowa i okres zostają z naliczenia: to one mówią, czego dokument
+ * dotyczy. Zmienia się to, co właściciel ustala z najemcą — kwoty, pozycje,
+ * daty i uwagi.
+ */
+export const invoiceDraftSchema = (c: ValidationContext) =>
+  z
+  .object({
+    issueDate: dateInput(c, c.d.panel.invoices.fields.issueDate),
+    saleDate: dateInput(c, c.d.panel.invoices.fields.saleDate),
+    dueDate: dateInput(c, c.d.panel.invoices.fields.dueDate),
+
+    lines: z
+      .array(invoiceLineSchema(c))
+      .min(1, c.d.panel.invoices.linesRequired)
+      .max(50, c.d.panel.invoices.linesTooMany),
+
+    notes: optionalText(c, 2000),
+  })
+  .refine((data) => data.dueDate >= data.issueDate, {
+    message: c.d.panel.invoices.dueBeforeIssue,
+    path: ["dueDate"],
+  });
+
+export type InvoiceDraftInput = z.input<ReturnType<typeof invoiceDraftSchema>>;
+export type InvoiceDraftOutput = z.output<ReturnType<typeof invoiceDraftSchema>>;
+
+/**
  * Poprawka numeru dokumentu — patrz `src/lib/invoices/renumber.ts`.
  *
  * Wzorzec jest szeroki celowo: numer wpisuje się po to, żeby zgadzał się

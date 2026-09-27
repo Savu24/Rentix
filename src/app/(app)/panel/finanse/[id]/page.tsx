@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CancelInvoice } from "@/components/panel/invoices/cancel-invoice";
+import { DraftInvoiceEditor } from "@/components/panel/invoices/draft-invoice-editor";
 import { EditInvoiceNumber } from "@/components/panel/invoices/edit-invoice-number";
 import { DeletePayment, RecordPayment } from "@/components/panel/invoices/record-payment";
 import { SendInvoice } from "@/components/panel/invoices/send-invoice";
@@ -14,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getInvoice, mayRenumberInvoices } from "@/lib/invoices/service";
 import { invoiceNumberEditable } from "@/lib/invoices/renumber";
+import { hasRegisterNumber } from "@/lib/invoices/draft";
 import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { vatLabels } from "@/lib/invoices/vat";
 import { fill, formatDateIn } from "@/lib/i18n/format";
@@ -29,9 +31,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const session = await requireOwnerSession();
   const { id } = await params;
   const invoice = await getInvoice(session.user.organizationId, id);
+  const d = await panelDictionary();
 
+  if (!invoice) return { title: d.panel.panelMisc.meta.document };
   return {
-    title: invoice ? invoice.number : (await panelDictionary()).panel.panelMisc.meta.document,
+    title: hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber,
   };
 }
 
@@ -51,6 +55,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
   const remaining = remainingGrosze(invoice);
 
   const property = invoice.lease?.property;
+  const isDraft = invoice.status === "DRAFT";
 
   /*
     Poprawka numeru — wyjątek dla kont, które weszły do Rentiksa z dokumentami
@@ -58,6 +63,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
     ten sam warunek pilnuje endpoint, bo ukryty przycisk nie jest bramką.
   */
   const canEditNumber =
+    !isDraft &&
     invoiceNumberEditable(invoice) &&
     (await mayRenumberInvoices(session.user.organizationId));
 
@@ -79,7 +85,9 @@ export default async function InvoiceDetailPage({ params }: Params) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1.5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="r-display text-[26px] leading-tight text-fg">{invoice.number}</h1>
+              <h1 className="r-display text-[26px] leading-tight text-fg">
+                {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
+              </h1>
               <Badge tone={tone}>{d.panel.invoices.status[status]}</Badge>
               <Badge>{invoiceKindLabels(d)[invoice.kind]}</Badge>
             </div>
@@ -118,6 +126,25 @@ export default async function InvoiceDetailPage({ params }: Params) {
           </Link>
           .
         </Alert>
+      ) : null}
+
+      {isDraft ? (
+        <DraftInvoiceEditor
+          invoice={{
+            id: invoice.id,
+            issueDate: dateField(invoice.issueDate),
+            saleDate: dateField(invoice.saleDate),
+            dueDate: dateField(invoice.dueDate),
+            notes: invoice.notes,
+            lines: invoice.lines.map((line) => ({
+              description: line.description,
+              quantity: Number(line.quantity),
+              unit: line.unit,
+              unitPriceNetGrosze: line.unitPriceNetGrosze,
+              vatRate: line.vatRate,
+            })),
+          }}
+        />
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -299,12 +326,15 @@ export default async function InvoiceDetailPage({ params }: Params) {
 
       {invoice.status !== "CANCELLED" ? (
         <div className="flex flex-col gap-3">
-          <SendInvoice
-            invoiceId={invoice.id}
-            tenantEmail={invoice.lease?.tenants[0]?.tenant.email ?? null}
-            hasLease={Boolean(invoice.lease?.tenants[0])}
-          />
-          {remaining > 0 ? (
+          {/* Szkic nie idzie do najemcy i nie przyjmuje wpłat — najpierw akceptacja. */}
+          {!isDraft ? (
+            <SendInvoice
+              invoiceId={invoice.id}
+              tenantEmail={invoice.lease?.tenants[0]?.tenant.email ?? null}
+              hasLease={Boolean(invoice.lease?.tenants[0])}
+            />
+          ) : null}
+          {!isDraft && remaining > 0 ? (
             <RecordPayment invoiceId={invoice.id} remainingGrosze={remaining} />
           ) : null}
           <CancelInvoice invoiceId={invoice.id} />
@@ -321,6 +351,11 @@ export default async function InvoiceDetailPage({ params }: Params) {
       ) : null}
     </div>
   );
+}
+
+/** Data z bazy → wartość pola daty („2026-10-01"). Daty dokumentu są w UTC. */
+function dateField(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {

@@ -2,8 +2,13 @@ import type { NextRequest } from "next/server";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
 import { requireApiOwner } from "@/lib/auth/session";
-import { cancelInvoice, getInvoice, renumberInvoice } from "@/lib/invoices/service";
-import { invoiceNumberSchema } from "@/lib/validations/invoice";
+import {
+  cancelInvoice,
+  getInvoice,
+  renumberInvoice,
+  updateDraftInvoice,
+} from "@/lib/invoices/service";
+import { invoiceDraftSchema, invoiceNumberSchema } from "@/lib/validations/invoice";
 
 export const runtime = "nodejs";
 
@@ -62,6 +67,42 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       return apiError("CONFLICT", auth.d.panel.api.invoiceNumberTaken, {
         fields: { number: [auth.d.panel.api.invoiceNumberTaken] },
       });
+  }
+}
+
+/**
+ * PUT /api/invoices/:id — poprawki szkicu przed zatwierdzeniem.
+ *
+ * Tylko szkic: wystawiony dokument jest niezmienny, pomyłkę w nim anuluje się
+ * i wystawia na nowo. Patrz `src/lib/invoices/draft.ts`.
+ *
+ * 409 → dokument nie jest już szkicem
+ */
+export async function PUT(request: NextRequest, { params }: Params) {
+  const auth = await requireApiOwner();
+  if ("response" in auth) return auth.response;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return apiError("VALIDATION_ERROR", auth.d.panel.api.invalidJson);
+  }
+
+  const parsed = invoiceDraftSchema(auth.v).safeParse(body);
+  if (!parsed.success) return validationError(parsed.error);
+
+  const { id } = await params;
+  const result = await updateDraftInvoice(auth.organizationId, id, parsed.data);
+
+  if (result.ok) return ok({ id });
+
+  switch (result.reason) {
+    case "NOT_FOUND":
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
+    case "NOT_DRAFT":
+    case "NOTHING_TO_BILL":
+      return apiError("CONFLICT", auth.d.panel.api.invoiceNotDraft);
   }
 }
 

@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MarkPaid } from "@/components/panel/invoices/mark-paid";
 import { useI18n } from "@/lib/i18n/client";
 import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
+import { hasRegisterNumber } from "@/lib/invoices/draft";
 import { INVOICE_STATUS_TONE, type DisplayInvoiceStatus } from "@/lib/invoices/status";
 import { formatMoney } from "@/lib/money";
 
@@ -137,7 +138,9 @@ export function InvoiceList({ invoices }: { invoices: InvoiceRow[] }) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[15px] font-semibold text-fg">{invoice.number}</p>
+                  <p className="text-[15px] font-semibold text-fg">
+                    {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
+                  </p>
                   <Badge tone={tone}>{d.panel.invoices.status[invoice.displayStatus]}</Badge>
                 </div>
 

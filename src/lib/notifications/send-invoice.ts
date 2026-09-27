@@ -24,6 +24,8 @@ export type SendInvoiceResult =
   | { ok: false; reason: "NO_TENANT" }
   | { ok: false; reason: "NO_RECIPIENT" }
   | { ok: false; reason: "CANCELLED" }
+  /** Szkic czeka na akceptację właściciela — najemca go jeszcze nie dostaje. */
+  | { ok: false; reason: "DRAFT" }
   | { ok: false; reason: "SEND_FAILED"; error: string };
 
 export async function sendInvoiceToTenant(
@@ -33,6 +35,7 @@ export async function sendInvoiceToTenant(
   const invoice = await getInvoice(organizationId, invoiceId);
   if (!invoice) return { ok: false, reason: "NOT_FOUND" };
   if (invoice.status === "CANCELLED") return { ok: false, reason: "CANCELLED" };
+  if (invoice.status === "DRAFT") return { ok: false, reason: "DRAFT" };
 
   /*
     Dwie rozne przyczyny, dwa rozne komunikaty.

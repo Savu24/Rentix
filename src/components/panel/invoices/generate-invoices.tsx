@@ -21,7 +21,7 @@ import { fill, pluralize } from "@/lib/i18n/format";
 const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 type GenerateResponse = {
-  created: Array<{ leaseId: string; invoiceId: string; number: string }>;
+  created: Array<{ leaseId: string; invoiceId: string; number: string; draft: boolean }>;
   skipped: Array<{ leaseId: string; reason: string }>;
 };
 
@@ -88,6 +88,9 @@ export function GenerateInvoices({
     );
   }
 
+  const issued = result?.created.filter((invoice) => !invoice.draft) ?? [];
+  const drafts = result?.created.filter((invoice) => invoice.draft) ?? [];
+
   // Rok bieżący i dwa wstecz — starsze okresy nalicza się wyjątkowo, a długa
   // lista lat tylko utrudnia trafienie w ten właściwy.
   const years = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
@@ -106,17 +109,20 @@ export function GenerateInvoices({
 
         {result ? (
           <Alert tone={result.created.length > 0 ? "success" : "info"}>
-            {result.created.length > 0 ? (
-              <>
-                {fill(t.issued, {
-                  count: result.created.length,
-                  noun: pluralize(locale, result.created.length, d.panel.financePage.documentNoun),
-                  numbers: result.created.map((invoice) => invoice.number).join(", "),
-                })}
-              </>
-            ) : (
-              t.nothingIssued
-            )}
+            {issued.length > 0
+              ? fill(t.issued, {
+                  count: issued.length,
+                  noun: pluralize(locale, issued.length, d.panel.financePage.documentNoun),
+                  numbers: issued.map((invoice) => invoice.number).join(", "),
+                })
+              : null}
+            {/* Szkice nie mają numeru — liczba wystarczy, reszta czeka na liście. */}
+            {drafts.length > 0 ? (
+              <span className={issued.length > 0 ? "mt-1 block" : undefined}>
+                {fill(t.drafted, { count: drafts.length })}
+              </span>
+            ) : null}
+            {result.created.length === 0 ? t.nothingIssued : null}
             {result.skipped.length > 0 ? (
               <span className="mt-1 block text-muted">
                 {fill(t.skipped, {

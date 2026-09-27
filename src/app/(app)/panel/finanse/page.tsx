@@ -1,10 +1,12 @@
 import { Receipt } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { GenerateInvoices } from "@/components/panel/invoices/generate-invoices";
 import { InvoiceFilters } from "@/components/panel/invoices/invoice-filters";
 import { InvoiceList } from "@/components/panel/invoices/invoice-list";
 import { FinanceTabs } from "@/components/panel/finance-tabs";
+import { Alert } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
@@ -50,6 +52,15 @@ export default async function FinancePage({
       </div>
 
       <FinanceTabs />
+
+      {summary.draftCount > 0 && query.status !== "DRAFT" ? (
+        <Alert tone="warning">
+          {fill(t.draftsWaiting, { count: summary.draftCount })}{" "}
+          <Link href="/panel/finanse?status=DRAFT" className="font-medium underline">
+            {t.showDrafts}
+          </Link>
+        </Alert>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryTile
