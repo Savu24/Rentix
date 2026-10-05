@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  RENUMBER_CUTOFF,
   invoiceNumberEditable,
   organizationInAllowlist,
   parseOrganizationAllowlist,
@@ -10,9 +9,6 @@ import { DEFAULT_NUMBER_FORMAT, sequenceInNumber } from "@/lib/invoices/number-f
 
 /** Dowolny dzień sierpnia 2026 — licznik domyślnego wzoru jest miesięczny. */
 const AUGUST = new Date(Date.UTC(2026, 7, 15));
-
-const before = new Date(RENUMBER_CUTOFF.getTime() - 1);
-const after = new Date(RENUMBER_CUTOFF.getTime() + 1);
 
 describe("parseOrganizationAllowlist", () => {
   it("rozdziela wpisy po przecinku i przycina odstępy", () => {
@@ -58,22 +54,13 @@ describe("organizationInAllowlist", () => {
 });
 
 describe("invoiceNumberEditable", () => {
-  it("dokument sprzed odcięcia wolno poprawić", () => {
-    expect(invoiceNumberEditable({ createdAt: before, status: "ISSUED" })).toBe(true);
-  });
-
-  it("dokument wystawiony po odcięciu ma numer nienaruszalny", () => {
-    expect(invoiceNumberEditable({ createdAt: after, status: "ISSUED" })).toBe(false);
-    // Sama granica należy już do nowych zasad.
-    expect(invoiceNumberEditable({ createdAt: RENUMBER_CUTOFF, status: "ISSUED" })).toBe(false);
-  });
-
-  it("opłacony sprzed odcięcia nadal wolno poprawić — chodzi o rejestr, nie o kasę", () => {
-    expect(invoiceNumberEditable({ createdAt: before, status: "PAID" })).toBe(true);
+  it("wystawiony i opłacony wolno poprawić — chodzi o rejestr, nie o kasę", () => {
+    expect(invoiceNumberEditable({ status: "ISSUED" })).toBe(true);
+    expect(invoiceNumberEditable({ status: "PAID" })).toBe(true);
   });
 
   it("anulowany zostaje nietknięty, żeby w rejestrze nie powstała dziura", () => {
-    expect(invoiceNumberEditable({ createdAt: before, status: "CANCELLED" })).toBe(false);
+    expect(invoiceNumberEditable({ status: "CANCELLED" })).toBe(false);
   });
 });
 

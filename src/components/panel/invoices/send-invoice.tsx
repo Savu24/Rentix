@@ -22,16 +22,22 @@ import { fill } from "@/lib/i18n/format";
  * Wysyłka mailem wchodzi z planem Start. Bez niej w miejscu przycisku stoi
  * kłódka z jednym zdaniem wyjaśnienia — PDF nadal da się pobrać obok
  * i wysłać własną pocztą.
+ *
+ * `awaiting` — dokument zatwierdzony ze szkicu, którego automat nie wyśle
+ * (`autoSend`). Wtedy przycisk jest główny i stoi przy nim zdanie, że
+ * dokument jeszcze nie poszedł: bez tego właściciel czekałby na nocny przebieg.
  */
 export function SendInvoice({
   invoiceId,
   tenantEmail,
   hasLease,
+  awaiting = false,
 }: {
   invoiceId: string;
   tenantEmail: string | null;
   /** Odbiorca wisi na umowie — dokument jednorazowy nie ma go w ogole. */
   hasLease: boolean;
+  awaiting?: boolean;
 }) {
   const { d } = useI18n();
   const t = d.panel.financePage.send;
@@ -121,11 +127,18 @@ export function SendInvoice({
           </div>
         </>
       ) : (
-        <div>
-          <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
-            <Send className="h-4 w-4" aria-hidden />
-            {t.button}
-          </Button>
+        <div className="flex flex-col gap-2">
+          {awaiting ? <p className="text-xs text-muted">{t.awaiting}</p> : null}
+          <div>
+            <Button
+              size="sm"
+              variant={awaiting ? "primary" : "secondary"}
+              onClick={() => setConfirming(true)}
+            >
+              <Send className="h-4 w-4" aria-hidden />
+              {t.button}
+            </Button>
+          </div>
         </div>
       )}
     </div>

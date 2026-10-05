@@ -1,34 +1,22 @@
 import type { InvoiceStatus } from "@/generated/prisma/enums";
 
 /**
- * Poprawianie numeru wystawionego dokumentu.
+ * Poprawianie numeru dokumentu.
  *
  * Normalnie numer nadaje się raz i zostaje — na tym polega rejestr. Ten plik
- * opisuje wyjątek zrobiony dla kont, które w dniu wdrożenia miały w Rentiksie
- * dokumenty jeszcze nierozliczone z księgowością: dopóki numer nie trafił do
- * ksiąg, jego poprawienie jest korektą wpisu, a nie fałszowaniem dokumentu.
+ * opisuje wyjątek dla kont, które numerację prowadzą równolegle gdzie indziej
+ * (np. w Fakturowni) i muszą dopasować numer z Rentiksa do tamtego zeszytu,
+ * bo inaczej ten sam numer trafiłby do ksiąg dwa razy.
  *
- * Wyjątek jest zamknięty z dwóch stron naraz i obie strony są konieczne:
- *
- * 1. KONTO. Lista z `INVOICE_NUMBER_EDIT_ORGS` (slugi albo identyfikatory
- *    organizacji). Pozostałe konta nie widzą tej funkcji i nie przejdzie im
- *    żądanie do API.
- *
- * 2. DATA. `RENUMBER_CUTOFF` — dokumenty wystawione od tej chwili mają numer
- *    nienaruszalny, bez względu na konto. Dzięki temu furtka nie zostaje
- *    otwarta na zawsze: zamyka się sama, gdy bieżący zeszyt się skończy.
+ * Furtka jest zamknięta na poziomie KONTA: lista z `INVOICE_NUMBER_EDIT_ORGS`
+ * (slugi albo identyfikatory organizacji). Pozostałe konta nie widzą tej
+ * funkcji i nie przejdzie im żądanie do API. Na koncie z listy numer da się
+ * poprawić w każdym nieanulowanym dokumencie, a w szkicu wpisać przed
+ * zatwierdzeniem zamiast numeru z licznika.
  *
  * Ten plik nie dotyka Prismy ani `env` — czyta go i test, i strona panelu.
  * Odczyt konta z bazy siedzi w `service.ts` (`mayRenumberInvoices`).
  */
-
-/**
- * Granica między „stare, jeszcze nierozliczone" a „wystawione na nowych
- * zasadach". Liczona po `createdAt`, a nie po dacie wystawienia: datę
- * wystawienia wpisuje użytkownik i mógłby wsteczną datą wprowadzić nowy
- * dokument do puli edytowalnych.
- */
-export const RENUMBER_CUTOFF = new Date("2026-09-09T00:00:00.000Z");
 
 /** `INVOICE_NUMBER_EDIT_ORGS` → lista wpisów gotowa do porównania. */
 export function parseOrganizationAllowlist(raw: string): string[] {
@@ -74,10 +62,6 @@ export function organizationInAllowlist(
  * właśnie po to, żeby nie powstała dziura — przepisanie go zrobiłoby dokładnie
  * tę dziurę, przed którą broni `cancelInvoice`.
  */
-export function invoiceNumberEditable(
-  invoice: { createdAt: Date; status: InvoiceStatus },
-  cutoff: Date = RENUMBER_CUTOFF,
-): boolean {
-  if (invoice.status === "CANCELLED") return false;
-  return invoice.createdAt.getTime() < cutoff.getTime();
+export function invoiceNumberEditable(invoice: { status: InvoiceStatus }): boolean {
+  return invoice.status !== "CANCELLED";
 }

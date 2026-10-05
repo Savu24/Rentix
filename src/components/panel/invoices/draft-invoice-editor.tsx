@@ -52,8 +52,18 @@ export type DraftInvoiceData = {
  * poprawia proporcję, dopisuje pozycje (sprzątanie, rozliczenie mediów) albo
  * przesuwa termin. Zatwierdzenie idzie osobnym żądaniem, bo to ono nadaje
  * numer z rejestru — zapis poprawek numeru nie rusza.
+ *
+ * `suggestedNumber` — numer, który nadałby licznik. Podany tylko kontom, które
+ * mogą wpisać własny (`renumber.ts`); wtedy nad przyciskami stoi pole na numer,
+ * a wpisany idzie razem z zatwierdzeniem zamiast numeru z licznika.
  */
-export function DraftInvoiceEditor({ invoice }: { invoice: DraftInvoiceData }) {
+export function DraftInvoiceEditor({
+  invoice,
+  suggestedNumber = null,
+}: {
+  invoice: DraftInvoiceData;
+  suggestedNumber?: string | null;
+}) {
   const { d, locale } = useI18n();
   const t = d.panel.financePage.detail.draft;
   const m = d.panel.financePage.manualInvoice;
@@ -64,6 +74,8 @@ export function DraftInvoiceEditor({ invoice }: { invoice: DraftInvoiceData }) {
   const [issuing, setIssuing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [number, setNumber] = useState("");
+  const [numberError, setNumberError] = useState<string | null>(null);
 
   const defaultValues: InvoiceDraftInput = {
     issueDate: invoice.issueDate,
@@ -110,6 +122,8 @@ export function DraftInvoiceEditor({ invoice }: { invoice: DraftInvoiceData }) {
 
   const busy = isSubmitting || issuing;
 
+  const numberHint = suggestedNumber ? fill(t.numberHint, { number: suggestedNumber }) : undefined;
+
   /** Zapis poprawek. Zwraca, czy się udał — zatwierdzenie idzie tylko po udanym. */
   async function save(): Promise<boolean> {
     setFormError(null);
@@ -130,16 +144,20 @@ export function DraftInvoiceEditor({ invoice }: { invoice: DraftInvoiceData }) {
   async function issue() {
     setIssuing(true);
     setFormError(null);
+    setNumberError(null);
     setNotice(null);
 
     const result = await api.post<{ id: string; number: string }>(
       `/api/invoices/${invoice.id}/issue`,
-      {},
+      number.trim() === "" ? {} : { number },
     );
 
     setIssuing(false);
     if (!result.ok) {
-      setFormError(result.message);
+      // Błąd numeru stoi przy polu numeru, reszta nad formularzem.
+      const numberMessage = result.fields?.number?.[0];
+      if (numberMessage) setNumberError(numberMessage);
+      else setFormError(result.message);
       return;
     }
     router.refresh();
@@ -167,6 +185,24 @@ export function DraftInvoiceEditor({ invoice }: { invoice: DraftInvoiceData }) {
 
         {formError ? <Alert tone="error">{formError}</Alert> : null}
         {notice ? <Alert tone="success">{notice}</Alert> : null}
+
+        {suggestedNumber !== null ? (
+          <FormField
+            id="di-number"
+            label={t.number}
+            error={numberError ?? undefined}
+            hint={numberHint}
+            className="sm:max-w-xs"
+          >
+            <Input
+              {...fieldAria("di-number", { error: numberError ?? undefined, hint: numberHint })}
+              value={number}
+              placeholder={suggestedNumber}
+              onChange={(event) => setNumber(event.target.value)}
+              disabled={busy}
+            />
+          </FormField>
+        ) : null}
 
         {!editing ? (
           <div className="flex flex-col gap-2">

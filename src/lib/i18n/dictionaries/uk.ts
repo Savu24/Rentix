@@ -1060,6 +1060,8 @@ export const uk: Dictionary = {
         confirm:
           "The message goes to {email}, with the PDF attached. A sent email cannot be recalled.",
         button: "Send to tenant",
+        awaiting:
+          "This document has not gone to the tenant yet. The automatic run will not send it, so send it here when it is ready.",
         locked:
           "Emailing a document comes with the Start plan. You can still download it and send it yourself, and payment reminders work on every plan.",
       },
@@ -1121,8 +1123,10 @@ export const uk: Dictionary = {
           save: "Save changes",
           saved: "Draft changes saved.",
           issue: "Approve and issue",
-          issueHint: "The document gets its number from the register. Once issued it can no longer be edited.",
+          issueHint: "The document gets its number from the register and is not sent to the tenant automatically. Send it with “Send to tenant” below the document. Once issued it can no longer be edited.",
           close: "Close",
+          number: "Document number",
+          numberHint: "Leave it empty and the counter assigns {number}. Type your own if this document already has a number in another program.",
         },
       },
       manualInvoice: {
@@ -1487,7 +1491,7 @@ export const uk: Dictionary = {
       editInvoiceNumber: {
         button: "Correct the number",
         label: "Document number",
-        hint: "The number has to be unique in the register. Only documents issued so far can be changed — new ones get their number for good.",
+        hint: "The number has to be unique in the register. Later documents still get their number from the counter.",
         save: "Save the number",
       },
       extendTitle: "Extending the tenancy",
@@ -1974,7 +1978,7 @@ export const uk: Dictionary = {
         "Another document already covers this tenancy period. Cancel it first, or the tenant would be billed twice for the same month.",
       invoiceNumberNotAllowed: "On this account the number of an issued document cannot be changed.",
       invoiceNumberLocked:
-        "This document's number is already final. Only documents issued before the switch to fixed numbering can be corrected.",
+        "A cancelled document keeps its number, otherwise the register would have a gap.",
       invoiceNumberTaken:
         "Another document already carries this number. Two documents sharing a number would break the register.",
       cancelledNotSent: "This document is cancelled, so we are not sending it to the tenant.",
@@ -2014,6 +2018,7 @@ export const uk: Dictionary = {
       periodOrder: "The period end cannot be earlier than its start",
       paymentPositive: "The payment must be greater than zero",
       numberInvalid: "A number may contain letters, digits, spaces and the marks / - . _",
+      numberReserved: "A number cannot start with “szkic-”. That marks drafts.",
       draftNumber: "No number yet",
       status: {
         DRAFT: "Draft",

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { InvoiceKind, InvoiceStatus, PaymentMethod, VatRate } from "@/generated/prisma/enums";
 
 import type { Locale } from "@/lib/i18n/config";
+import { DRAFT_NUMBER_PREFIX } from "@/lib/invoices/draft";
 import type { Dictionary } from "@/lib/i18n/types";
 
 import {
@@ -196,15 +197,38 @@ export type InvoiceDraftOutput = z.output<ReturnType<typeof invoiceDraftSchema>>
  */
 const INVOICE_NUMBER_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N} ./_-]*$/u;
 
+/*
+  Prefiks numeru zastępczego szkicu jest zarezerwowany: dokument z numerem
+  „szkic-…" wszędzie uchodziłby za szkic — znikałby z rejestru, a anulowany
+  wracałby do naliczania co noc.
+*/
+const invoiceNumberField = (c: ValidationContext) =>
+  requiredText(c, c.d.panel.invoices.fields.number, 40)
+    .refine((value) => INVOICE_NUMBER_PATTERN.test(value), {
+      message: c.d.panel.invoices.numberInvalid,
+    })
+    .refine((value) => !value.toLowerCase().startsWith(DRAFT_NUMBER_PREFIX), {
+      message: c.d.panel.invoices.numberReserved,
+    });
+
 export const invoiceNumberSchema = (c: ValidationContext) =>
+  z.object({ number: invoiceNumberField(c) });
+
+export type InvoiceNumberOutput = z.output<ReturnType<typeof invoiceNumberSchema>>;
+
+/**
+ * Zatwierdzenie szkicu. Numer jest opcjonalny: puste pole znaczy „weź kolejny
+ * z licznika", wpisany zastępuje licznik — patrz `renumber.ts`.
+ */
+export const invoiceIssueSchema = (c: ValidationContext) =>
   z.object({
-    number: requiredText(c, c.d.panel.invoices.fields.number, 40).refine(
-      (value) => INVOICE_NUMBER_PATTERN.test(value),
-      { message: c.d.panel.invoices.numberInvalid },
+    number: z.preprocess(
+      (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+      invoiceNumberField(c).optional(),
     ),
   });
 
-export type InvoiceNumberOutput = z.output<ReturnType<typeof invoiceNumberSchema>>;
+export type InvoiceIssueOutput = z.output<ReturnType<typeof invoiceIssueSchema>>;
 
 /**
  * Filtr listy dokumentów.

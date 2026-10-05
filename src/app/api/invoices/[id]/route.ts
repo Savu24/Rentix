@@ -30,7 +30,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
  * PATCH /api/invoices/:id — poprawka numeru dokumentu.
  *
  * Jedyne pole, które wolno zmienić po wystawieniu, i tylko tam, gdzie otwiera
- * to `renumber.ts`: na wskazanym koncie i w dokumentach sprzed daty odcięcia.
+ * to `renumber.ts`: na wskazanym koncie i w dokumentach nieanulowanych.
  * Reszta treści dokumentu zostaje niezmienna — pomyłkę anuluje się i wystawia
  * na nowo.
  *

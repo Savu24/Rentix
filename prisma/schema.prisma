@@ -998,6 +998,12 @@ model Invoice {
   /// Suma wpłat. Aktualizowana w transakcji razem z zapisem płatności.
   paidGrosze       Int @default(0)
 
+  /// Czy nocny przebieg sam wysyła dokument najemcy. FALSE przy dokumencie
+  /// zatwierdzonym ze szkicu: właściciel go poprawiał, więc to on decyduje,
+  /// kiedy dokument wychodzi — przyciskiem „Wyślij najemcy". Do pierwszej
+  /// takiej wysyłki automat milczy też z przypomnieniami.
+  autoSend Boolean @default(true)
+
   // ── Migawka danych nabywcy ────────────────────────────────────────────────
   // Kopiowane z profilu najemcy w chwili wystawienia, a nie czytane przez
   // relację. Faktura jest dokumentem księgowym: musi pokazywać dane z dnia

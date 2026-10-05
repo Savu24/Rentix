@@ -1,7 +1,7 @@
 import { cache } from "react";
 
 import type { Prisma } from "@/generated/prisma/client";
-import type { InvoiceStatus } from "@/generated/prisma/enums";
+import type { InvoiceKind, InvoiceStatus } from "@/generated/prisma/enums";
 import {
   buildBillingPeriod,
   buildRentInvoiceLines,
@@ -636,11 +636,11 @@ export type RenumberInvoiceResult =
   | { ok: false; reason: "NUMBER_TAKEN" };
 
 /**
- * Poprawia numer dokumentu wystawionego przed datą odcięcia.
+ * Poprawia numer wystawionego dokumentu.
  *
- * Obie bramki — konto i data — sprawdzamy tutaj, a nie w endpoincie: to jedyne
- * miejsce, które zapisuje `number` po wystawieniu, więc żadna inna droga do
- * bazy nie ominie warunku.
+ * Bramkę konta i blokadę anulowanych sprawdzamy tutaj, a nie w endpoincie:
+ * to jedyne miejsce, które zapisuje `number` po wystawieniu, więc żadna inna
+ * droga do bazy nie ominie warunku.
  *
  * Zajętość numeru sprawdzamy wprost, żeby użytkownik dostał zdanie o kolizji
  * zamiast błędu bazy; wyścig dwóch zapisów łapie jeszcze `@@unique`
@@ -909,7 +909,9 @@ export type DraftInvoiceResult =
   | { ok: true; invoice: { id: string; number: string } }
   | { ok: false; reason: "NOT_FOUND" }
   | { ok: false; reason: "NOT_DRAFT" }
-  | { ok: false; reason: "NOTHING_TO_BILL" };
+  | { ok: false; reason: "NOTHING_TO_BILL" }
+  | { ok: false; reason: "NOT_ALLOWED" }
+  | { ok: false; reason: "NUMBER_TAKEN" };
 
 /**
  * Poprawki szkicu: pozycje, daty, uwagi.
@@ -959,10 +961,18 @@ export async function updateDraftInvoice(
  * mógł ją przesunąć, a numeracja biegnie miesiącami. Warunek `status: DRAFT`
  * siedzi w samym zapisie, więc dwa równoległe kliknięcia nie nadadzą dwóch
  * numerów: drugie nie znajdzie już szkicu.
+ *
+ * Zatwierdzony szkic nie idzie sam do najemcy (`autoSend: false`): właściciel
+ * wysyła go przyciskiem, kiedy uzna dokument za gotowy.
+ *
+ * `number` — numer wpisany przez właściciela zamiast kolejnego z licznika.
+ * Tylko na kontach z furtką z `renumber.ts`, tak samo jak poprawka numeru
+ * po wystawieniu: to ta sama decyzja, podjęta chwilę wcześniej.
  */
 export async function issueDraftInvoice(
   organizationId: string,
   invoiceId: string,
+  number?: string,
 ): Promise<DraftInvoiceResult> {
   const invoice = await prisma.invoice.findFirst({
     where: { id: invoiceId, organizationId },
@@ -973,13 +983,38 @@ export async function issueDraftInvoice(
   if (invoice.status !== "DRAFT") return { ok: false, reason: "NOT_DRAFT" };
   if (invoice.totalGrossGrosze <= 0) return { ok: false, reason: "NOTHING_TO_BILL" };
 
+  if (number !== undefined) {
+    if (!(await mayRenumberInvoices(organizationId))) return { ok: false, reason: "NOT_ALLOWED" };
+
+    const taken = await prisma.invoice.findFirst({
+      where: { organizationId, number },
+      select: { id: true },
+    });
+    if (taken) return { ok: false, reason: "NUMBER_TAKEN" };
+
+    // Bez ponawiania: wpisany numer przy kolizji byłby ten sam za każdym
+    // razem. Wyścig o ten sam numer łapie `@@unique` i wraca jako zajęty.
+    try {
+      const { count } = await prisma.invoice.updateMany({
+        where: { id: invoiceId, organizationId, status: "DRAFT" },
+        data: { status: "ISSUED", number, autoSend: false },
+      });
+      if (count !== 1) return { ok: false, reason: "NOT_DRAFT" };
+    } catch (error) {
+      if (isUniqueViolation(error)) return { ok: false, reason: "NUMBER_TAKEN" };
+      throw error;
+    }
+
+    return { ok: true, invoice: { id: invoiceId, number } };
+  }
+
   const issued = await withUniqueNumberRetry(() =>
     prisma.$transaction(async (tx) => {
       const number = await nextInvoiceNumber(tx, organizationId, invoice.kind, invoice.issueDate);
 
       const { count } = await tx.invoice.updateMany({
         where: { id: invoiceId, organizationId, status: "DRAFT" },
-        data: { status: "ISSUED", number },
+        data: { status: "ISSUED", number, autoSend: false },
       });
 
       return count === 1 ? { id: invoiceId, number } : null;
@@ -988,6 +1023,18 @@ export async function issueDraftInvoice(
 
   if (!issued) return { ok: false, reason: "NOT_DRAFT" };
   return { ok: true, invoice: issued };
+}
+
+/**
+ * Numer, który szkic dostałby z licznika, gdyby zatwierdzić go teraz —
+ * podpowiedź przy polu na własny numer. Tylko odczyt; przy zatwierdzeniu
+ * licznik liczy się od nowa, bo w międzyczasie mógł pójść inny dokument.
+ */
+export async function suggestedDraftNumber(
+  organizationId: string,
+  invoice: { kind: InvoiceKind; issueDate: Date },
+): Promise<string> {
+  return nextInvoiceNumber(prisma, organizationId, invoice.kind, invoice.issueDate);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

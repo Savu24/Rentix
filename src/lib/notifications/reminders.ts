@@ -91,6 +91,7 @@ export async function sendPaymentNotifications({
       totalGrossGrosze: true,
       paidGrosze: true,
       status: true,
+      autoSend: true,
       organizationId: true,
       organization: { select: { name: true, contactEmail: true } },
       // Nabywca dokumentu wystawionego poza umowa — bez tego jednorazowy
@@ -150,6 +151,13 @@ export async function sendPaymentNotifications({
     for (const notification of invoice.notifications) {
       if (!sentTypes.has(notification.type)) sentTypes.set(notification.type, notification.createdAt);
     }
+
+    /*
+      Zatwierdzony szkic czeka, aż właściciel wyśle go z panelu. Do tego czasu
+      milczą też przypomnienia — najemca nie może dostać wezwania do zapłaty
+      dokumentu, którego nigdy nie widział.
+    */
+    if (!invoice.autoSend && !sentTypes.has("INVOICE_ISSUED")) continue;
 
     const type = chooseNotification(
       { ...invoice, sentTypes },

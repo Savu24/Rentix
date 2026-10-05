@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { getInvoice, mayRenumberInvoices } from "@/lib/invoices/service";
+import { getInvoice, mayRenumberInvoices, suggestedDraftNumber } from "@/lib/invoices/service";
 import { invoiceNumberEditable } from "@/lib/invoices/renumber";
 import { hasRegisterNumber } from "@/lib/invoices/draft";
 import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
@@ -59,18 +59,30 @@ export default async function InvoiceDetailPage({ params }: Params) {
   const isDraft = invoice.status === "DRAFT";
 
   /*
-    Poprawka numeru — wyjątek dla kont, które weszły do Rentiksa z dokumentami
-    jeszcze nierozliczonymi z księgowością. Patrz `lib/invoices/renumber.ts`;
-    ten sam warunek pilnuje endpoint, bo ukryty przycisk nie jest bramką.
+    Własny numer — wyjątek dla kont, które numerację prowadzą też gdzie indziej.
+    Patrz `lib/invoices/renumber.ts`; ten sam warunek pilnuje endpoint, bo ukryty
+    przycisk nie jest bramką. Szkic dostaje pole na numer w swoim edytorze,
+    wystawiony — przycisk poprawki pod nagłówkiem.
   */
-  const canEditNumber =
-    !isDraft &&
-    invoiceNumberEditable(invoice) &&
-    (await mayRenumberInvoices(session.user.organizationId));
+  const mayRenumber =
+    invoiceNumberEditable(invoice) && (await mayRenumberInvoices(session.user.organizationId));
+  const canEditNumber = !isDraft && mayRenumber;
+  const suggestedNumber =
+    isDraft && mayRenumber
+      ? await suggestedDraftNumber(session.user.organizationId, invoice)
+      : null;
 
   // Ostatnie powiadomienie o tym dokumencie — właściciel widzi, czy najemca
   // w ogóle dostał wiadomość, zanim zacznie dzwonić w sprawie zaległości.
   const lastNotification = await getLastNotification(invoice.id);
+
+  // Zatwierdzony szkic czeka na wysyłkę z panelu — automat go nie wyśle.
+  const awaitingSend =
+    !isDraft &&
+    !invoice.autoSend &&
+    (await prisma.notification.count({
+      where: { invoiceId: invoice.id, type: "INVOICE_ISSUED", status: "SENT" },
+    })) === 0;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -145,6 +157,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
               vatRate: line.vatRate,
             })),
           }}
+          suggestedNumber={suggestedNumber}
         />
       ) : null}
 
@@ -333,6 +346,7 @@ export default async function InvoiceDetailPage({ params }: Params) {
               invoiceId={invoice.id}
               tenantEmail={invoice.lease?.tenants[0]?.tenant.email ?? null}
               hasLease={Boolean(invoice.lease?.tenants[0])}
+              awaiting={awaitingSend}
             />
           ) : null}
           {!isDraft && remaining > 0 ? (

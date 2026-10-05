@@ -1043,6 +1043,8 @@ export const pl = {
         confirm:
           "Wiadomość pójdzie na {email}, z dokumentem PDF w załączniku. Wysłanego e-maila nie da się cofnąć.",
         button: "Wyślij najemcy",
+        awaiting:
+          "Ten dokument nie poszedł jeszcze do najemcy. Automat go nie wyśle — zrób to tym przyciskiem, kiedy będzie gotowy.",
         locked:
           "Wysyłka dokumentu mailem wchodzi z planem Start. Dokument pobierzesz i wyślesz sam, a przypomnienia o płatności działają na każdym planie.",
       },
@@ -1105,8 +1107,10 @@ export const pl = {
           save: "Zapisz zmiany",
           saved: "Zapisano zmiany w szkicu.",
           issue: "Zatwierdź i wystaw",
-          issueHint: "Dokument dostanie numer z rejestru. Po wystawieniu nie da się go już edytować.",
+          issueHint: "Dokument dostanie numer z rejestru i nie pójdzie sam do najemcy. Wyślesz go przyciskiem „Wyślij najemcy” pod dokumentem. Po wystawieniu nie da się go już edytować.",
           close: "Zamknij",
+          number: "Numer dokumentu",
+          numberHint: "Zostaw puste, a numer nada licznik: {number}. Wpisz własny, jeśli ten dokument ma już numer w innym programie.",
         },
       },
       manualInvoice: {
@@ -1476,7 +1480,7 @@ export const pl = {
       editInvoiceNumber: {
         button: "Popraw numer",
         label: "Numer dokumentu",
-        hint: "Numer musi być niepowtarzalny w rejestrze. Zmiana dotyczy tylko dokumentów wystawionych do tej pory — nowe dostają numer na stałe.",
+        hint: "Numer musi być niepowtarzalny w rejestrze. Kolejne dokumenty i tak dostaną numer z licznika.",
         save: "Zapisz numer",
       },
       extendTitle: "Przedłużenie umowy",
@@ -1975,7 +1979,7 @@ export const pl = {
         "Za ten okres umowy jest już inny dokument. Anuluj go najpierw, inaczej najemca dostałby dwa rozliczenia za ten sam miesiąc.",
       invoiceNumberNotAllowed: "Na tym koncie numeru wystawionego dokumentu nie da się zmienić.",
       invoiceNumberLocked:
-        "Numer tego dokumentu jest już zamknięty. Poprawić da się tylko dokumenty wystawione przed przejściem na numerację stałą.",
+        "Numeru anulowanego dokumentu nie zmieniamy, bo w rejestrze zostałaby po nim dziura.",
       invoiceNumberTaken:
         "Ten numer nosi już inny dokument. Dwa dokumenty o tym samym numerze rozsypałyby rejestr.",
       cancelledNotSent: "Dokument jest anulowany. Nie wysyłamy go najemcy.",
@@ -2011,6 +2015,7 @@ export const pl = {
       periodOrder: "Koniec okresu nie może być wcześniejszy niż jego początek",
       paymentPositive: "Kwota wpłaty musi być większa od zera",
       numberInvalid: "Numer może mieć litery, cyfry, spacje oraz znaki / - . _",
+      numberReserved: "Numer nie może zaczynać się od „szkic-”. Tak oznaczamy szkice.",
       /** Zamiast numeru przy szkicu — numer z rejestru nadaje się przy zatwierdzeniu. */
       draftNumber: "Bez numeru",
       status: {
