@@ -1839,6 +1839,7 @@ export const uk: Dictionary = {
           "Symbols: {n} sequence number, {d} day, {m} month, {y} year. Everything else is copied as typed, e.g. {m}/{y}/A/{n} gives 09/2026/A/3.",
         preview: "The next document will look like",
         period: {
+          day: "The counter restarts from 1 every day.",
           month: "The counter restarts from 1 every month.",
           year: "The counter restarts from 1 every year.",
           none: "The counter runs continuously and never restarts.",

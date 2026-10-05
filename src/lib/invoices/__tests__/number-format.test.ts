@@ -30,15 +30,23 @@ describe("renderNumberFormat", () => {
 });
 
 describe("numberingPeriod", () => {
-  it("miesiąc we wzorze → licznik miesięczny, sam rok → roczny, brak daty → ciągły", () => {
+  it("dzień we wzorze → licznik dzienny, miesiąc → miesięczny, sam rok → roczny, brak daty → ciągły", () => {
     expect(numberingPeriod("{n}/{m}/{y}")).toBe("month");
-    expect(numberingPeriod("{d}/{m}/{y}/{n}")).toBe("month");
+    expect(numberingPeriod("{d}/{m}/{y}/{n}")).toBe("day");
     expect(numberingPeriod("{n}/{y}")).toBe("year");
     expect(numberingPeriod("{n}")).toBe("none");
     expect(numberingPeriod("A/{n}")).toBe("none");
   });
 
-  it("zakres dat obejmuje miesiąc, rok albo nic", () => {
+  it("zakres dat obejmuje dzień, miesiąc, rok albo nic", () => {
+    expect(numberingPeriodBounds("{d}/{m}/{y}/{n}", DATE)).toEqual({
+      gte: new Date(Date.UTC(2026, 8, 11)),
+      lt: new Date(Date.UTC(2026, 8, 12)),
+    });
+    expect(numberingPeriodBounds("{d}/{m}/{y}/{n}", new Date(Date.UTC(2026, 9, 31)))).toEqual({
+      gte: new Date(Date.UTC(2026, 9, 31)),
+      lt: new Date(Date.UTC(2026, 10, 1)),
+    });
     expect(numberingPeriodBounds("{n}/{m}/{y}", DATE)).toEqual({
       gte: new Date(Date.UTC(2026, 8, 1)),
       lt: new Date(Date.UTC(2026, 9, 1)),
@@ -58,9 +66,10 @@ describe("sequenceInNumber", () => {
     expect(sequenceInNumber("PF 09/2026/A/12", "{m}/{y}/A/{n}", DATE)).toBe(12);
   });
 
-  it("dzień jest dowolny — dokumenty z różnych dni dzielą licznik miesiąca", () => {
-    expect(sequenceInNumber("03/09/2026/4", "{d}/{m}/{y}/{n}", DATE)).toBe(4);
-    expect(sequenceInNumber("30/09/2026/5", "{d}/{m}/{y}/{n}", DATE)).toBe(5);
+  it("dzień we wzorze musi się zgadzać — każdy dzień ma własny licznik", () => {
+    expect(sequenceInNumber("11/09/2026/4", "{d}/{m}/{y}/{n}", DATE)).toBe(4);
+    expect(sequenceInNumber("03/09/2026/4", "{d}/{m}/{y}/{n}", DATE)).toBeNull();
+    expect(sequenceInNumber("12/09/2026/5", "{d}/{m}/{y}/{n}", DATE)).toBeNull();
   });
 
   it("numer z innego okresu albo innego wzoru jest nie do odczytania", () => {

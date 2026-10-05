@@ -17,10 +17,10 @@
  * Od czego zależy, kiedy licznik wraca do jedynki, mówi sam wzór — nie ma
  * osobnego przełącznika, bo osobny przełącznik pozwoliłby ustawić numerację
  * miesięczną bez miesiąca w numerze, a wtedy „3/2026" pojawiałoby się
- * w marcu i w kwietniu. Zasada: jest miesiąc → co miesiąc; jest sam rok →
- * co rok; nie ma daty → licznik biegnie bez końca. Dzień we wzorze licznika
- * nie resetuje: numeracja dzienna dawałaby „1" na każdym dokumencie, a to
- * nie jest rejestr, tylko data w przebraniu.
+ * w marcu i w kwietniu. Zasada: jest dzień → co dzień; jest miesiąc → co
+ * miesiąc; jest sam rok → co rok; nie ma daty → licznik biegnie bez końca.
+ * Przy wzorze z dniem („05/10/2026/1") każdy dzień ma własny rejestr — pełna
+ * data w numerze i tak czyni go jednoznacznym, a o tym zdecydował właściciel.
  *
  * Ten plik nie dotyka Prismy ani słownika — czyta go i numeracja na
  * serwerze, i podgląd w ustawieniach po stronie przeglądarki.
@@ -64,10 +64,11 @@ function tokensIn(template: string): string[] {
   return [...template.matchAll(TOKEN_PATTERN)].map((match) => match[1] as string);
 }
 
-export type NumberingPeriod = "month" | "year" | "none";
+export type NumberingPeriod = "day" | "month" | "year" | "none";
 
 /** Co ile licznik wraca do jedynki — patrz komentarz na górze pliku. */
 export function numberingPeriod(template: string): NumberingPeriod {
+  if (template.includes("{d}")) return "day";
   if (template.includes("{m}")) return "month";
   if (template.includes("{y}")) return "year";
   return "none";
@@ -83,8 +84,14 @@ export function numberingPeriodBounds(
 ): { gte?: Date; lt?: Date } {
   const year = issueDate.getUTCFullYear();
   const month = issueDate.getUTCMonth();
+  const day = issueDate.getUTCDate();
 
   switch (numberingPeriod(template)) {
+    case "day":
+      return {
+        gte: new Date(Date.UTC(year, month, day)),
+        lt: new Date(Date.UTC(year, month, day + 1)),
+      };
     case "month":
       return { gte: new Date(Date.UTC(year, month, 1)), lt: new Date(Date.UTC(year, month + 1, 1)) };
     case "year":
@@ -115,15 +122,15 @@ const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\
  * z podanego wzoru w tym samym okresie liczenia co `date`. NULL, gdy zapis
  * jest inny — po ręcznej korekcie albo po zmianie wzoru w ustawieniach.
  *
- * Dzień jest we wzorcu dowolny: dokumenty z różnych dni miesiąca dzielą
- * jeden licznik. Litery serii celowo nie wchodzą do wzorca (kotwica tylko
+ * Dzień, jeśli jest we wzorze, musi się zgadzać — każdy dzień ma własny
+ * licznik. Litery serii celowo nie wchodzą do wzorca (kotwica tylko
  * na końcu): dokument mógł powstać, zanim konto zmieniło kraj, a jego numer
  * i tak zajmuje miejsce w rejestrze.
  */
 export function sequenceInNumber(number: string, template: string, date: Date): number | null {
   const parts: Record<Token, string> = {
     n: "(\\d+)",
-    d: "\\d{2}",
+    d: pad(date.getUTCDate()),
     m: pad(date.getUTCMonth() + 1),
     y: String(date.getUTCFullYear()),
   };

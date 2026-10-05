@@ -35,6 +35,21 @@ describe("sortByInvoiceNumber", () => {
     ]);
   });
 
+  it("przy liczniku dziennym najpierw dzień, potem numer", () => {
+    const list = [
+      doc("02/10/2026/1", "2026-10-02"),
+      doc("01/10/2026/12", "2026-10-01"),
+      doc("02/10/2026/2", "2026-10-02"),
+      doc("01/10/2026/2", "2026-10-01"),
+    ];
+    expect(numbers(sortByInvoiceNumber(list, "{d}/{m}/{y}/{n}", "asc"))).toEqual([
+      "01/10/2026/2",
+      "01/10/2026/12",
+      "02/10/2026/1",
+      "02/10/2026/2",
+    ]);
+  });
+
   it("przy liczniku rocznym miesiąc wystawienia nie rozdziela okresu", () => {
     const list = [doc("12/2026", "2026-03-01"), doc("3/2026", "2026-01-10"), doc("1/2027", "2027-01-02")];
     expect(numbers(sortByInvoiceNumber(list, "{n}/{y}", "asc"))).toEqual(["3/2026", "12/2026", "1/2027"]);

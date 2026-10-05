@@ -1838,6 +1838,7 @@ export const pl = {
           "Symbole: {n} kolejny numer, {d} dzień, {m} miesiąc, {y} rok. Resztę znaków przepisujemy dosłownie, np. {m}/{y}/A/{n} daje 09/2026/A/3.",
         preview: "Tak wyjdzie następny dokument",
         period: {
+          day: "Licznik zaczyna od 1 każdego dnia.",
           month: "Licznik zaczyna od 1 co miesiąc.",
           year: "Licznik zaczyna od 1 co rok.",
           none: "Licznik biegnie bez przerwy, bez zerowania.",

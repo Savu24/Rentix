@@ -8,7 +8,7 @@ import { numberingPeriodBounds, sequenceInNumber } from "./number-format";
  * „2/08/2026". Samo porównanie liczb też nie: przy domyślnym wzorze licznik
  * stoi z przodu i wraca do jedynki co miesiąc, więc „1/09/2026" wyszłoby przed
  * „2/08/2026". Dlatego klucz idzie za wzorem numeracji organizacji: najpierw
- * okres, w którym licznik biegnie (miesiąc, rok albo cały rejestr), potem
+ * okres, w którym licznik biegnie (dzień, miesiąc, rok albo cały rejestr), potem
  * numer porządkowy w tym okresie.
  *
  * Numer, którego wzór nie odczyta — nadany przed zmianą formatu albo

@@ -20,7 +20,7 @@ import {
  *
  * Układ cyfr wybiera organizacja w ustawieniach — gotowe wzory albo własny,
  * patrz `number-format.ts`. Ten sam wzór mówi, co ile licznik wraca do
- * jedynki: co miesiąc, co rok albo nigdy. Litery serii NIE są częścią wzoru:
+ * jedynki: co dzień, co miesiąc, co rok albo nigdy. Litery serii NIE są częścią wzoru:
  * to one rozdzielają rejestry, więc doklejamy je zawsze, z przodu.
  *
  * Prefiks zmienia się z wersją krajową, żeby litery serii nie wyglądały jak
@@ -60,7 +60,7 @@ export function formatInvoiceNumber(
 }
 
 /**
- * Kolejny wolny numer dla organizacji, rodzaju i okresu wystawienia — miesiąca,
+ * Kolejny wolny numer dla organizacji, rodzaju i okresu wystawienia — dnia, miesiąca,
  * roku albo całego rejestru, zależnie od wzoru numeru.
  *
  * Liczy z dokumentów już wystawionych w tym okresie zamiast trzymać licznik
