@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/email/client";
+import { emailCopy } from "@/lib/email/copy";
 import { invoiceIssuedEmail } from "@/lib/email/templates";
 import { renderInvoicePdf } from "@/lib/invoices/render";
 import { getInvoice } from "@/lib/invoices/service";
@@ -85,7 +86,7 @@ export async function sendInvoiceToTenant(
 
   const pdf = await renderInvoicePdf(invoice);
 
-  const result = await sendEmail({
+  const message = {
     to: tenant.email,
     // Najemca widzi w skrzynce swojego wynajmującego, a nie platformę,
     // i odpisuje prosto do niego. Patrz `src/lib/email/sender.ts`.
@@ -93,7 +94,8 @@ export async function sendInvoiceToTenant(
     replyTo: settings.replyTo,
     ...content,
     attachments: [{ filename: pdf.filename, content: pdf.buffer }],
-  });
+  };
+  const result = await sendEmail(message);
 
   await prisma.notification.create({
     data: {
@@ -109,6 +111,7 @@ export async function sendInvoiceToTenant(
       invoiceId: invoice.id,
       sentAt: result.ok ? new Date() : null,
       error: result.ok ? null : result.error,
+      ...emailCopy(message, result),
     },
   });
 

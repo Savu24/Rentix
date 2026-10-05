@@ -168,3 +168,36 @@ export function monthNames(
 export function formatNumber(value: number, locale: Locale = DEFAULT_LOCALE): string {
   return new Intl.NumberFormat(LOCALE_META[locale].intl).format(value);
 }
+
+const RELATIVE_STEPS: readonly [Intl.RelativeTimeFormatUnit, number][] = [
+  ["second", 60],
+  ["minute", 60],
+  ["hour", 24],
+  ["day", 7],
+  ["week", 4.35],
+  ["month", 12],
+  ["year", Infinity],
+];
+
+/**
+ * Czas względny: „2 godziny temu" / „2 hours ago" — jak lista wysyłek w Resend.
+ *
+ * Do chwil z niedawnej przeszłości, gdzie „kiedy" liczy się bardziej niż
+ * data. Obok zawsze powinna stać pełna data (np. w `title`), bo „3 miesiące
+ * temu" nie powie, czy to było przed terminem płatności, czy po nim.
+ */
+export function formatRelativeTime(
+  date: Date,
+  now: Date = new Date(),
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const format = new Intl.RelativeTimeFormat(LOCALE_META[locale].intl, { numeric: "auto" });
+  let value = (date.getTime() - now.getTime()) / 1000;
+
+  for (const [unit, size] of RELATIVE_STEPS) {
+    if (Math.abs(value) < size) return format.format(Math.round(value), unit);
+    value /= size;
+  }
+
+  return format.format(Math.round(value), "year");
+}

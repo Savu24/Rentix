@@ -1,5 +1,6 @@
 import type { NotificationType } from "@/generated/prisma/enums";
 import { sendEmail, type EmailContent } from "@/lib/email/client";
+import { emailCopy } from "@/lib/email/copy";
 import {
   invoiceIssuedEmail,
   paymentOverdueEmail,
@@ -238,13 +239,14 @@ export async function sendPaymentNotifications({
     // Nazwa wynajmującego w polu nadawcy, jego adres w Reply-To — nocny przebieg
     // obsługuje wszystkie organizacje naraz, więc nadawca musi wynikać
     // z dokumentu, a nie z konfiguracji. Patrz `src/lib/email/sender.ts`.
-    const result = await sendEmail({
+    const message = {
       to: tenant.email,
       fromName: emailData.landlordName,
       replyTo: settings.replyTo,
       ...content,
       attachments,
-    });
+    };
+    const result = await sendEmail(message);
 
     await prisma.notification.create({
       data: {
@@ -262,6 +264,7 @@ export async function sendPaymentNotifications({
         invoiceId: invoice.id,
         sentAt: result.ok ? new Date() : null,
         error: result.ok ? null : result.error,
+        ...emailCopy(message, result),
       },
     });
 

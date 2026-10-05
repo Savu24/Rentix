@@ -37,6 +37,8 @@ export function ListSearch({
 
     const timer = setTimeout(() => {
       const next = new URLSearchParams(searchParams);
+      // Nowa fraza to nowa lista — trzecia strona starego wyniku nie ma sensu.
+      next.delete("page");
       const trimmed = query.trim();
       if (trimmed) next.set("q", trimmed);
       else next.delete("q");

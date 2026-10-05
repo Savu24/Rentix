@@ -4,6 +4,7 @@ import {
   KeyRound,
   FileText,
   LayoutDashboard,
+  Mail,
   Settings,
   Users,
   Wallet,
@@ -46,6 +47,7 @@ export const PANEL_NAV: NavItem[] = [
   { href: "/panel/wlasciciele", id: "owners", shortId: "ownersShort", icon: KeyRound },
   { href: "/panel/umowy", id: "leases", icon: FileText },
   { href: "/panel/finanse", id: "finance", icon: Wallet },
+  { href: "/panel/wiadomosci", id: "messages", icon: Mail },
   // Zgłoszenia usterek świadomie poza zakresem: najemcy zgłaszają awarie
   // telefonem, więc moduł dublowałby kanał, z którego i tak nikt by nie
   // korzystał. Tabele w bazie zostają — nic nie kosztują, a odwrócenie tej

@@ -28,7 +28,7 @@ const globalForMail = globalThis as unknown as {
   smtp?: nodemailer.Transporter;
 };
 
-function resendClient(): Resend | null {
+export function resendClient(): Resend | null {
   if (!env.RESEND_API_KEY) return null;
   globalForMail.resend ??= new Resend(env.RESEND_API_KEY);
   return globalForMail.resend;

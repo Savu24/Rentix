@@ -1496,6 +1496,21 @@ model Notification {
   /// Treść błędu z bramki e-mail, gdy status = FAILED.
   error  String?
 
+  /// Kopia wysłanej wiadomości dla zakładki „Wiadomości": nadawca, adres
+  /// odpowiedzi, HTML i nazwy załączników — tak, jak poszły, a nie tak, jak
+  /// wyglądałyby po dzisiejszej zmianie szablonu. Puste w wierszach sprzed
+  /// tej zmiany.
+  fromAddress     String?
+  replyTo         String?
+  html            String?  @db.Text
+  attachmentNames String[] @default([])
+
+  /// Identyfikator wiadomości u dostawcy (Resend albo Message-ID z SMTP).
+  providerId    String?
+  /// Ostatnie zdarzenie dostawy z Resend: delivered, bounced, opened… NULL,
+  /// dopóki nikt nie zapytał albo poczta szła SMTP-em, który tego nie zna.
+  deliveryEvent String?
+
   createdAt DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

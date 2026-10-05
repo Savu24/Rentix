@@ -30,6 +30,8 @@ export function ListFilterSelect({
 
   function setValue(value: string) {
     const next = new URLSearchParams(searchParams);
+    // Inny filtr to inna lista — numer strony ze starej nie ma tu znaczenia.
+    next.delete("page");
     if (value) next.set(param, value);
     else next.delete(param);
 
