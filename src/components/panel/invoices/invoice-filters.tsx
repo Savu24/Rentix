@@ -228,9 +228,9 @@ export function InvoiceFilters({ total }: { total: number }) {
         <span aria-live="polite">
           {isPending
             ? t.filtering
-            : fill(pluralize(locale, total, d.panel.financePage.documentNoun), {
-                count: total,
-              })}
+            : // Sam rzeczownik, bez liczby — ten sam wpis słownika służy też
+              // do „Pobierz 3 dokumenty", więc liczbę dokładamy tutaj.
+              `${total} ${pluralize(locale, total, d.panel.financePage.documentNoun)}`}
         </span>
 
         {hasFilters ? (
