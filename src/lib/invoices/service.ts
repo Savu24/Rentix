@@ -35,6 +35,8 @@ import {
   settlementStatus,
 } from "./rules";
 import { overdueWhere, remainingGrosze, resolveInvoiceStatus } from "./status";
+import { DEFAULT_NUMBER_FORMAT } from "./number-format";
+import { sortByInvoiceNumber } from "./number-sort";
 import { calculateInvoiceTotals, type InvoiceLineInput } from "./totals";
 import { getDictionary } from "@/lib/i18n";
 import { fill } from "@/lib/i18n/format";
@@ -148,7 +150,10 @@ export type InvoiceListItem = Awaited<ReturnType<typeof listInvoices>>[number];
  * Porządek listy dla każdego wyboru. Drugi klucz rozstrzyga remisy — bez niego
  * dwa dokumenty z tą samą kwotą zamieniałyby się miejscami między odświeżeniami.
  */
-const INVOICE_ORDER: Record<InvoiceSort, Prisma.InvoiceOrderByWithRelationInput[]> = {
+const INVOICE_ORDER: Record<
+  Exclude<InvoiceSort, "numberAsc" | "numberDesc">,
+  Prisma.InvoiceOrderByWithRelationInput[]
+> = {
   newest: [{ issueDate: "desc" }, { number: "desc" }],
   oldest: [{ issueDate: "asc" }, { number: "asc" }],
   dueDate: [{ dueDate: "asc" }, { issueDate: "asc" }, { number: "asc" }],
@@ -156,7 +161,116 @@ const INVOICE_ORDER: Record<InvoiceSort, Prisma.InvoiceOrderByWithRelationInput[
   amountAsc: [{ totalGrossGrosze: "asc" }, { issueDate: "desc" }, { number: "desc" }],
   buyer: [{ buyerName: "asc" }, { issueDate: "desc" }, { number: "desc" }],
   property: [{ lease: { property: { name: "asc" } } }, { issueDate: "desc" }, { number: "desc" }],
+  propertyDesc: [{ lease: { property: { name: "desc" } } }, { issueDate: "desc" }, { number: "desc" }],
 };
+
+/** Ile dokumentów pokazuje lista naraz. */
+const INVOICE_LIST_LIMIT = 200;
+
+/**
+ * Identyfikatory dokumentów w porządku numeru, już przycięte do limitu.
+ *
+ * Porządku rejestru baza sama nie ułoży — zależy od wzoru numeracji
+ * organizacji, patrz `number-sort.ts`. Żeby limit nie obcinał listy przed
+ * posortowaniem, najpierw idzie lekkie zapytanie o same numery i daty
+ * wszystkich pasujących dokumentów, a pełne wiersze dopiero dla wybranych.
+ */
+async function invoiceIdsByNumber(
+  organizationId: string,
+  where: Prisma.InvoiceWhereInput,
+  direction: "asc" | "desc",
+): Promise<string[]> {
+  const [organization, keys] = await Promise.all([
+    prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { invoiceNumberFormat: true },
+    }),
+    prisma.invoice.findMany({
+      where,
+      select: { id: true, number: true, issueDate: true, status: true },
+    }),
+  ]);
+
+  const template = organization?.invoiceNumberFormat ?? DEFAULT_NUMBER_FORMAT;
+  return sortByInvoiceNumber(keys, template, direction)
+    .slice(0, INVOICE_LIST_LIMIT)
+    .map((invoice) => invoice.id);
+}
+
+/** Kolumny wiersza listy dokumentów. */
+const INVOICE_LIST_SELECT = {
+  id: true,
+  number: true,
+  kind: true,
+  status: true,
+  issueDate: true,
+  dueDate: true,
+  periodStart: true,
+  periodEnd: true,
+  buyerName: true,
+  totalGrossGrosze: true,
+  paidGrosze: true,
+  lease: {
+    select: {
+      id: true,
+      property: { select: { id: true, name: true } },
+      room: { select: { id: true, name: true } },
+    },
+  },
+} satisfies Prisma.InvoiceSelect;
+
+/**
+ * Wiersze listy w wybranym porządku, przycięte do limitu.
+ *
+ * Sortuje baza, a nie strona: przy limicie porządek w pamięci przekładałby
+ * tylko wycinek, a nie wybierał, co się w nim znajdzie. Dwa wyjątki:
+ * - numer — porządek rejestru układa `invoiceIdsByNumber`;
+ * - nieruchomość Z–A — Postgres przy sortowaniu malejącym stawia dokumenty
+ *   bez umowy (kaucja, dokument ręczny) na górze, a Prisma nie pozwala tego
+ *   odwrócić na polu wymaganym. Dlatego najpierw dokumenty z nieruchomością,
+ *   a resztę limitu dopełniają te bez niej — jak przy A–Z.
+ */
+async function fetchInvoiceRows(
+  organizationId: string,
+  where: Prisma.InvoiceWhereInput,
+  sort: InvoiceSort,
+) {
+  if (sort === "numberAsc" || sort === "numberDesc") {
+    const ids = await invoiceIdsByNumber(organizationId, where, sort === "numberAsc" ? "asc" : "desc");
+    const rows = await prisma.invoice.findMany({
+      where: { id: { in: ids }, organizationId },
+      select: INVOICE_LIST_SELECT,
+    });
+    // `IN (…)` nie trzyma kolejności — przywracamy tę z rejestru.
+    const position = new Map(ids.map((id, index) => [id, index]));
+    return rows.sort((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0));
+  }
+
+  if (sort === "propertyDesc") {
+    const withProperty = await prisma.invoice.findMany({
+      where: { AND: [where, { leaseId: { not: null } }] },
+      select: INVOICE_LIST_SELECT,
+      orderBy: INVOICE_ORDER.propertyDesc,
+      take: INVOICE_LIST_LIMIT,
+    });
+    if (withProperty.length === INVOICE_LIST_LIMIT) return withProperty;
+
+    const withoutProperty = await prisma.invoice.findMany({
+      where: { AND: [where, { leaseId: null }] },
+      select: INVOICE_LIST_SELECT,
+      orderBy: INVOICE_ORDER.newest,
+      take: INVOICE_LIST_LIMIT - withProperty.length,
+    });
+    return [...withProperty, ...withoutProperty];
+  }
+
+  return prisma.invoice.findMany({
+    where,
+    select: INVOICE_LIST_SELECT,
+    orderBy: INVOICE_ORDER[sort],
+    take: INVOICE_LIST_LIMIT,
+  });
+}
 
 export async function listInvoices(organizationId: string, query: InvoiceListQuery) {
   const now = new Date();
@@ -182,33 +296,7 @@ export async function listInvoices(organizationId: string, query: InvoiceListQue
       : {}),
   };
 
-  const invoices = await prisma.invoice.findMany({
-    where,
-    select: {
-      id: true,
-      number: true,
-      kind: true,
-      status: true,
-      issueDate: true,
-      dueDate: true,
-      periodStart: true,
-      periodEnd: true,
-      buyerName: true,
-      totalGrossGrosze: true,
-      paidGrosze: true,
-      lease: {
-        select: {
-          id: true,
-          property: { select: { id: true, name: true } },
-          room: { select: { id: true, name: true } },
-        },
-      },
-    },
-    // Sortuje baza, a nie strona: przy limicie 200 porządek w pamięci
-    // przekładałby tylko wycinek, a nie wybierał, co się w nim znajdzie.
-    orderBy: INVOICE_ORDER[query.sort],
-    take: 200,
-  });
+  const invoices = await fetchInvoiceRows(organizationId, where, query.sort);
 
   return invoices.map((invoice) => ({
     ...invoice,

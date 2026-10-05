@@ -251,11 +251,14 @@ const filterDate = z
 export const INVOICE_SORT_OPTIONS = [
   "newest",
   "oldest",
+  "numberDesc",
+  "numberAsc",
   "dueDate",
   "amountDesc",
   "amountAsc",
   "buyer",
   "property",
+  "propertyDesc",
 ] as const;
 
 export type InvoiceSort = (typeof INVOICE_SORT_OPTIONS)[number];
