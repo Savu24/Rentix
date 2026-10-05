@@ -5,18 +5,21 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Input } from "@/components/ui/input";
-import { useI18n } from "@/lib/i18n/client";
 
 /**
- * Wyszukiwarka najemców.
+ * Wyszukiwarka listy — najemców, umów i każdej innej, która jej potrzebuje.
  *
  * Fraza siedzi w URL-u obok porządku, tak jak filtry dokumentów: wynik da się
  * wysłać linkiem, a filtruje serwer. Wybrany porządek zostaje — szukanie
  * zawęża listę, a nie przestawia jej od nowa.
  */
-export function TenantSearch() {
-  const { d } = useI18n();
-  const t = d.panel.tenantsPage;
+export function ListSearch({
+  placeholder,
+  ariaLabel,
+}: {
+  placeholder: string;
+  ariaLabel: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,8 +63,8 @@ export function TenantSearch() {
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder={t.searchPlaceholder}
-        aria-label={t.searchLabel}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
         aria-busy={isPending}
         className="pl-10"
       />

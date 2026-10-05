@@ -807,6 +807,20 @@ export const pl = {
       openEnded: "bezterminowo",
       numberPrefix: "nr {number}",
       perMonth: "miesięcznie",
+      searchPlaceholder: "Szukaj po nieruchomości, adresie, najemcy lub numerze…",
+      searchLabel: "Szukaj umów",
+      propertyFilter: "Nieruchomość",
+      allProperties: "Wszystkie nieruchomości",
+      sortAria: "Sortowanie umów",
+      sort: {
+        status: "Najpierw aktywne",
+        newest: "Najnowsze",
+        oldest: "Najstarsze",
+        property: "Nieruchomość A–Z",
+        propertyDesc: "Nieruchomość Z–A",
+      },
+      noMatchTitle: "Żadna umowa nie pasuje",
+      noMatchLead: "Zmień frazę albo wybierz inną nieruchomość.",
       newTitle: "Nowa umowa najmu",
       newLead: "Po zapisaniu wygenerujesz gotowy PDF do podpisu.",
       newLeadNoDocument: "Warunki najmu w jednym miejscu, gotowe do naliczania czynszu.",
@@ -1450,6 +1464,15 @@ export const pl = {
         confirm:
           "Dokument zostanie oznaczony jako anulowany. Numer zostaje zajęty, żeby w rejestrze nie powstała dziura.",
       },
+      cancelledInvoice: {
+        restore: "Przywróć dokument",
+        delete: "Usuń dokument",
+        confirmDelete: "Usuń na stałe",
+        keep: "Zostaw",
+        deleteWarning:
+          "Dokument zniknie na stałe razem z pozycjami i załącznikami. Jego numer zwolni się, więc w rejestrze zostanie dziura — księgowy może o nią zapytać.",
+        deleteDraftWarning: "Szkic zniknie na stałe. Nie miał numeru, więc rejestr zostaje nietknięty.",
+      },
       editInvoiceNumber: {
         button: "Popraw numer",
         label: "Numer dokumentu",
@@ -1946,6 +1969,9 @@ export const pl = {
       fixFields: "Popraw zaznaczone pola.",
       noInvoiceSelected: "Nie wskazano żadnego dokumentu.",
       alreadyCancelled: "Ten dokument jest już anulowany.",
+      invoiceNotCancelled: "Ten dokument nie jest anulowany. Usunąć albo przywrócić można tylko anulowany.",
+      invoicePeriodTaken:
+        "Za ten okres umowy jest już inny dokument. Anuluj go najpierw, inaczej najemca dostałby dwa rozliczenia za ten sam miesiąc.",
       invoiceNumberNotAllowed: "Na tym koncie numeru wystawionego dokumentu nie da się zmienić.",
       invoiceNumberLocked:
         "Numer tego dokumentu jest już zamknięty. Poprawić da się tylko dokumenty wystawione przed przejściem na numerację stałą.",

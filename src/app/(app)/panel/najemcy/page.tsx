@@ -2,8 +2,8 @@ import { Archive, CalendarClock, Plus, SearchX, UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ListSearch } from "@/components/panel/list-search";
 import { ListSort } from "@/components/panel/list-sort";
-import { TenantSearch } from "@/components/panel/tenants/tenant-search";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,7 +80,7 @@ export default async function TenantsPage({
       {/* Szukanie i porządek w jednym wierszu: oba mówią, co widać na liście,
           a nie co się z nią robi — to zostaje przy przyciskach wyżej. */}
       <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-        <TenantSearch />
+        <ListSearch placeholder={t.searchPlaceholder} ariaLabel={t.searchLabel} />
         <ListSort
           options={TENANT_SORT_OPTIONS}
           labels={tenantSortLabels(d)}

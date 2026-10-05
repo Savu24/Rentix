@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CancelInvoice } from "@/components/panel/invoices/cancel-invoice";
+import { CancelledInvoiceActions } from "@/components/panel/invoices/cancelled-invoice-actions";
 import { DraftInvoiceEditor } from "@/components/panel/invoices/draft-invoice-editor";
 import { EditInvoiceNumber } from "@/components/panel/invoices/edit-invoice-number";
 import { DeletePayment, RecordPayment } from "@/components/panel/invoices/record-payment";
@@ -339,7 +340,12 @@ export default async function InvoiceDetailPage({ params }: Params) {
           ) : null}
           <CancelInvoice invoiceId={invoice.id} />
         </div>
-      ) : null}
+      ) : (
+        <CancelledInvoiceActions
+          invoiceId={invoice.id}
+          isDraft={!hasRegisterNumber(invoice.number)}
+        />
+      )}
 
       {invoice.notes ? (
         <Card className="bg-surface-alt">

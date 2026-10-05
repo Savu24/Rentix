@@ -820,6 +820,20 @@ export const uk: Dictionary = {
       openEnded: "no end date",
       numberPrefix: "no. {number}",
       perMonth: "per month",
+      searchPlaceholder: "Search by property, address, tenant or number…",
+      searchLabel: "Search tenancies",
+      propertyFilter: "Property",
+      allProperties: "All properties",
+      sortAria: "Sort tenancies",
+      sort: {
+        status: "Active first",
+        newest: "Newest",
+        oldest: "Oldest",
+        property: "Property A–Z",
+        propertyDesc: "Property Z–A",
+      },
+      noMatchTitle: "No tenancy matches",
+      noMatchLead: "Change the search or pick another property.",
       newTitle: "New tenancy",
       /*
         Polska wersja obiecuje tu gotowy PDF do podpisu. Brytyjska nie —
@@ -1461,6 +1475,15 @@ export const uk: Dictionary = {
         confirm:
           "The document will be marked as cancelled. Its number stays taken, so the register has no gap.",
       },
+      cancelledInvoice: {
+        restore: "Restore document",
+        delete: "Delete document",
+        confirmDelete: "Delete for good",
+        keep: "Keep it",
+        deleteWarning:
+          "The document will be gone for good, with its lines and attachments. Its number is freed, leaving a gap in the register your accountant may ask about.",
+        deleteDraftWarning: "The draft will be gone for good. It had no number, so the register is unaffected.",
+      },
       editInvoiceNumber: {
         button: "Correct the number",
         label: "Document number",
@@ -1945,6 +1968,9 @@ export const uk: Dictionary = {
       fixFields: "Please correct the highlighted fields.",
       noInvoiceSelected: "No document was selected.",
       alreadyCancelled: "This document is already cancelled.",
+      invoiceNotCancelled: "This document is not cancelled. Only a cancelled document can be deleted or restored.",
+      invoicePeriodTaken:
+        "Another document already covers this tenancy period. Cancel it first, or the tenant would be billed twice for the same month.",
       invoiceNumberNotAllowed: "On this account the number of an issued document cannot be changed.",
       invoiceNumberLocked:
         "This document's number is already final. Only documents issued before the switch to fixed numbering can be corrected.",

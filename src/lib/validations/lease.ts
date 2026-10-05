@@ -303,7 +303,22 @@ export const leaseExtendSchema = (c: ValidationContext) =>
     endDate: dateInput(c, c.d.panel.leases.fields.newEndDate),
   });
 
+export const LEASE_SORT_OPTIONS = [
+  "status",
+  "newest",
+  "oldest",
+  "property",
+  "propertyDesc",
+] as const;
+
+export type LeaseSort = (typeof LEASE_SORT_OPTIONS)[number];
+
+export function leaseSortLabels(d: Pick<Dictionary, "panel">): Record<LeaseSort, string> {
+  return d.panel.leasesPage.sort;
+}
+
 export const leaseListQuerySchema = z.object({
+  sort: z.enum(LEASE_SORT_OPTIONS).default("status"),
   q: z.string().trim().max(120).optional(),
   status: z.enum(leaseStatuses).optional(),
   propertyId: z.string().max(64).optional(),

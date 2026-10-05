@@ -1,7 +1,10 @@
-import { Archive, FileText, Plus } from "lucide-react";
+import { Archive, FileText, Plus, SearchX } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { ListFilterSelect } from "@/components/panel/list-filter-select";
+import { ListSearch } from "@/components/panel/list-search";
+import { ListSort } from "@/components/panel/list-sort";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +13,11 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { listLeases } from "@/lib/leases/service";
 import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
+import { prisma } from "@/lib/prisma";
 import {
+  leaseSortLabels,
   leaseStatusLabels,
+  LEASE_SORT_OPTIONS,
   LEASE_STATUS_TONE,
   leaseListQuerySchema,
 } from "@/lib/validations/lease";
@@ -34,7 +40,20 @@ export default async function LeasesPage({
   const parsed = leaseListQuerySchema.safeParse(params);
   const query = parsed.success ? parsed.data : leaseListQuerySchema.parse({});
 
-  const leases = await listLeases(session.user.organizationId, query);
+  const [leases, properties] = await Promise.all([
+    listLeases(session.user.organizationId, query),
+    // Do filtra tylko nieruchomości, które mają umowy na tej liście — pozycja
+    // bez żadnej umowy dawałaby zawsze pusty wynik.
+    prisma.property.findMany({
+      where: {
+        organizationId: session.user.organizationId,
+        leases: { some: { archivedAt: null } },
+      },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  const filtered = Boolean(query.q || query.propertyId);
   const active = leases.filter((lease) => lease.status === "ACTIVE").length;
 
   return (
@@ -65,7 +84,31 @@ export default async function LeasesPage({
         </div>
       </div>
 
-      {leases.length === 0 ? (
+      {/* Szukanie, nieruchomość i porządek w jednym wierszu, jak przy
+          najemcach: wszystkie trzy mówią, co widać na liście. */}
+      {leases.length > 0 || filtered ? (
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+          <ListSearch placeholder={t.searchPlaceholder} ariaLabel={t.searchLabel} />
+          {properties.length > 1 ? (
+            <ListFilterSelect
+              param="propertyId"
+              options={properties.map((property) => ({ value: property.id, label: property.name }))}
+              allLabel={t.allProperties}
+              ariaLabel={t.propertyFilter}
+            />
+          ) : null}
+          <ListSort
+            options={LEASE_SORT_OPTIONS}
+            labels={leaseSortLabels(d)}
+            defaultValue="status"
+            ariaLabel={t.sortAria}
+          />
+        </div>
+      ) : null}
+
+      {leases.length === 0 && filtered ? (
+        <EmptyState icon={SearchX} title={t.noMatchTitle} description={t.noMatchLead} />
+      ) : leases.length === 0 ? (
         <EmptyState
           icon={FileText}
           title={t.emptyTitle}

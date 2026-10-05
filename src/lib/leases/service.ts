@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import type {
   LeaseFormOutput,
   LeaseListQuery,
+  LeaseSort,
 } from "@/lib/validations/lease";
 
 /**
@@ -14,7 +15,54 @@ import type {
 
 export type LeaseListItem = Awaited<ReturnType<typeof listLeases>>[number];
 
-export async function listLeases(organizationId: string, query: LeaseListQuery) {
+/**
+ * Wyszukiwanie umów: każde słowo frazy osobno, jak przy najemcach —
+ * „Kowalski Długa" znajduje umowę Kowalskiego na mieszkanie przy Długiej.
+ * Nieruchomość łapiemy po nazwie i adresie, bo właściciel pamięta raz jedno,
+ * raz drugie.
+ */
+function buildSearchFilter(q: string | undefined): Prisma.LeaseWhereInput {
+  const words = q?.split(/\s+/).filter(Boolean) ?? [];
+  if (words.length === 0) return {};
+
+  return {
+    AND: words.map((word) => {
+      const contains = { contains: word, mode: "insensitive" as const };
+      return {
+        OR: [
+          { number: contains },
+          { property: { name: contains } },
+          { property: { street: contains } },
+          { property: { city: contains } },
+          { room: { name: contains } },
+          {
+            tenants: {
+              some: { tenant: { OR: [{ firstName: contains }, { lastName: contains }] } },
+            },
+          },
+        ],
+      };
+    }),
+  };
+}
+
+/**
+ * Porządki listy. Każdy kończy się datą rozpoczęcia i datą utworzenia, żeby
+ * umowy z tą samą nieruchomością albo z tego samego dnia nie skakały między
+ * odświeżeniami.
+ */
+const LEASE_ORDER: Record<LeaseSort, Prisma.LeaseOrderByWithRelationInput[]> = {
+  status: [{ status: "asc" }, { startDate: "desc" }, { createdAt: "desc" }],
+  newest: [{ startDate: "desc" }, { createdAt: "desc" }],
+  oldest: [{ startDate: "asc" }, { createdAt: "asc" }],
+  property: [{ property: { name: "asc" } }, { startDate: "desc" }, { createdAt: "desc" }],
+  propertyDesc: [{ property: { name: "desc" } }, { startDate: "desc" }, { createdAt: "desc" }],
+};
+
+export async function listLeases(
+  organizationId: string,
+  query: Omit<LeaseListQuery, "sort"> & { sort?: LeaseSort },
+) {
   const where: Prisma.LeaseWhereInput = {
     organizationId,
     ...(query.includeArchived ? {} : { archivedAt: null }),
@@ -30,27 +78,7 @@ export async function listLeases(organizationId: string, query: LeaseListQuery) 
           },
         }
       : {}),
-    ...(query.q
-      ? {
-          OR: [
-            { number: { contains: query.q, mode: "insensitive" } },
-            { property: { name: { contains: query.q, mode: "insensitive" } } },
-            { room: { name: { contains: query.q, mode: "insensitive" } } },
-            {
-              tenants: {
-                some: {
-                  tenant: {
-                    OR: [
-                      { firstName: { contains: query.q, mode: "insensitive" } },
-                      { lastName: { contains: query.q, mode: "insensitive" } },
-                    ],
-                  },
-                },
-              },
-            },
-          ],
-        }
-      : {}),
+    ...buildSearchFilter(query.q),
   };
 
   const leases = await prisma.lease.findMany({
@@ -79,7 +107,7 @@ export async function listLeases(organizationId: string, query: LeaseListQuery) 
         select: { status: true, dueDate: true, totalGrossGrosze: true, paidGrosze: true },
       },
     },
-    orderBy: [{ status: "asc" }, { startDate: "desc" }],
+    orderBy: LEASE_ORDER[query.sort ?? "status"],
   });
 
   const now = new Date();

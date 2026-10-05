@@ -511,6 +511,101 @@ export async function cancelInvoice(
   return { ok: true };
 }
 
+/**
+ * Cofnięcie anulowania.
+ *
+ * Anulowanie jest pomyłką równie często jak sam dokument, a numer przez cały
+ * czas był zajęty — więc wystarczy zdjąć status. Anulować dało się tylko
+ * dokument bez wpłat, więc wraca jako wystawiony; szkic (numer z prefiksem
+ * szkicu) wraca jako szkic do akceptacji.
+ *
+ * Gdy za ten sam okres umowy powstał już inny dokument, odmawiamy: dwa
+ * rozliczenia czynszu za jeden miesiąc to podwójne obciążenie najemcy.
+ */
+export type RestoreInvoiceResult =
+  | { ok: true; status: "DRAFT" | "ISSUED" }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "NOT_CANCELLED" }
+  | { ok: false; reason: "PERIOD_TAKEN" };
+
+export async function restoreInvoice(
+  organizationId: string,
+  invoiceId: string,
+): Promise<RestoreInvoiceResult> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, organizationId },
+    select: { id: true, status: true, number: true, leaseId: true, periodStart: true },
+  });
+
+  if (!invoice) return { ok: false, reason: "NOT_FOUND" };
+  if (invoice.status !== "CANCELLED") return { ok: false, reason: "NOT_CANCELLED" };
+
+  if (invoice.leaseId && invoice.periodStart) {
+    const duplicate = await prisma.invoice.findFirst({
+      where: {
+        organizationId,
+        leaseId: invoice.leaseId,
+        periodStart: invoice.periodStart,
+        status: { not: "CANCELLED" },
+        id: { not: invoice.id },
+      },
+      select: { id: true },
+    });
+    if (duplicate) return { ok: false, reason: "PERIOD_TAKEN" };
+  }
+
+  const status = invoice.number.startsWith(DRAFT_NUMBER_PREFIX) ? "DRAFT" : "ISSUED";
+
+  // Warunek na status w samym zapisie: dwa równoległe kliknięcia nie
+  // przywrócą dokumentu dwa razy ani nie nadpiszą świeższej zmiany.
+  const { count } = await prisma.invoice.updateMany({
+    where: { id: invoiceId, organizationId, status: "CANCELLED" },
+    data: { status },
+  });
+  if (count === 0) return { ok: false, reason: "NOT_CANCELLED" };
+
+  return { ok: true, status };
+}
+
+/**
+ * Trwałe usunięcie anulowanego dokumentu.
+ *
+ * Tylko anulowanego: wystawiony trzeba najpierw anulować, żeby usunięcie
+ * było dwiema świadomymi decyzjami, a nie jednym kliknięciem. Anulowany
+ * nie ma wpłat (pilnuje tego `cancelInvoice`), więc w kasie nic nie zostaje
+ * bez dokumentu. Pozycje, załączniki i powiadomienia idą kaskadą.
+ *
+ * Numer z rejestru się zwalnia — w rejestrze zostaje dziura, przed czym
+ * ostrzega okno potwierdzenia. Kolejne wystawienie nie wejdzie w nią, bo
+ * numeracja bierze największy numer w okresie, a nie pierwszy wolny.
+ */
+export type DeleteInvoiceResult =
+  | { ok: true }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "NOT_CANCELLED" }
+  | { ok: false; reason: "HAS_PAYMENTS" };
+
+export async function deleteCancelledInvoice(
+  organizationId: string,
+  invoiceId: string,
+): Promise<DeleteInvoiceResult> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, organizationId },
+    select: { id: true, status: true, _count: { select: { payments: true } } },
+  });
+
+  if (!invoice) return { ok: false, reason: "NOT_FOUND" };
+  if (invoice.status !== "CANCELLED") return { ok: false, reason: "NOT_CANCELLED" };
+  if (invoice._count.payments > 0) return { ok: false, reason: "HAS_PAYMENTS" };
+
+  const { count } = await prisma.invoice.deleteMany({
+    where: { id: invoiceId, organizationId, status: "CANCELLED" },
+  });
+  if (count === 0) return { ok: false, reason: "NOT_CANCELLED" };
+
+  return { ok: true };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Poprawianie numeru
 // ═══════════════════════════════════════════════════════════════════════════
