@@ -55,6 +55,8 @@ export type TenantOption = {
   street: string | null;
   postalCode: string | null;
   city: string | null;
+  /** Nieruchomości, pod których adresem najemca mieszka albo miał umowę. */
+  propertyIds: string[];
 };
 
 const EMPTY: LeaseFormInput = {
@@ -93,6 +95,7 @@ export function LeaseForm({
   const v = useValidationContext();
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  const [showAllTenants, setShowAllTenants] = useState(false);
 
   const presetProperty = properties.find((property) => property.id === preset?.propertyId);
   const presetRoom = presetProperty?.rooms.find((room) => room.id === preset?.roomId);
@@ -137,7 +140,22 @@ export function LeaseForm({
     .map((id) => tenants.find((tenant) => tenant.id === id))
     .filter((tenant): tenant is TenantOption => Boolean(tenant));
 
-  const availableTenants = tenants.filter((tenant) => !selectedTenantIds.includes(tenant.id));
+  /*
+    Po wyborze nieruchomości lista najemców zawęża się do tych spod jej
+    adresu — w kamienicy z kilkunastoma pokojami szukanie lokatora wśród
+    wszystkich najemców portfela to przewijanie cudzych nazwisk. Furtka
+    „pokaż wszystkich" zostaje, bo nowy najemca często nie ma jeszcze
+    adresu w karcie.
+  */
+  const propertyTenants = selectedPropertyId
+    ? tenants.filter((tenant) => tenant.propertyIds.includes(selectedPropertyId))
+    : tenants;
+  const filteringByProperty = Boolean(selectedPropertyId) && !showAllTenants;
+  const pickableTenants = filteringByProperty ? propertyTenants : tenants;
+
+  const availableTenants = pickableTenants.filter(
+    (tenant) => !selectedTenantIds.includes(tenant.id),
+  );
 
   /**
    * Wybór jednostki podpowiada czynsz i kaucję z ceny wywoławczej.
@@ -148,6 +166,8 @@ export function LeaseForm({
     setValue("propertyId", propertyId, { shouldValidate: true });
     // Pokój z poprzedniej nieruchomości przestaje istnieć w nowym kontekście.
     setValue("roomId", "");
+    // Nowy adres to nowa lista najemców — zaczynamy znów od zawężonej.
+    setShowAllTenants(false);
 
     const property = properties.find((entry) => entry.id === propertyId);
     if (!property?.askingRentGrosze) return;
@@ -309,9 +329,11 @@ export function LeaseForm({
                     disabled={isSubmitting || availableTenants.length === 0}
                   >
                     <option value="">
-                      {availableTenants.length === 0
-                        ? t.allTenantsAdded
-                        : t.addTenant}
+                      {pickableTenants.length === 0
+                        ? t.noTenantsAtProperty
+                        : availableTenants.length === 0
+                          ? t.allTenantsAdded
+                          : t.addTenant}
                     </option>
                     {availableTenants.map((tenant) => (
                       <option key={tenant.id} value={tenant.id}>
@@ -320,6 +342,22 @@ export function LeaseForm({
                       </option>
                     ))}
                   </Select>
+
+                  {selectedPropertyId ? (
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                      {/* Przy pustej liście mówi to już samo pole wyboru. */}
+                      {filteringByProperty && propertyTenants.length > 0 ? (
+                        <span>{t.tenantsAtProperty}</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setShowAllTenants((current) => !current)}
+                        className="rounded-btn font-medium text-accent hover:underline"
+                      >
+                        {showAllTenants ? t.showPropertyTenants : t.showAllTenants}
+                      </button>
+                    </p>
+                  ) : null}
                 </div>
               )}
             />

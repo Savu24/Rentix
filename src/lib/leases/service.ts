@@ -486,6 +486,10 @@ export async function listPropertiesForPicker(organizationId: string) {
     select: {
       id: true,
       name: true,
+      street: true,
+      buildingNumber: true,
+      apartmentNumber: true,
+      postalCode: true,
       city: true,
       status: true,
       askingRentGrosze: true,
@@ -504,6 +508,13 @@ export async function listPropertiesForPicker(organizationId: string) {
     city: property.city,
     status: property.status,
     askingRentGrosze: property.askingRentGrosze,
+    address: {
+      street: property.street,
+      buildingNumber: property.buildingNumber,
+      apartmentNumber: property.apartmentNumber,
+      postalCode: property.postalCode,
+      city: property.city,
+    },
     // Pokoje jadą razem z nieruchomościami jednym zapytaniem — kreator nie musi
     // dociągać ich osobno przy każdej zmianie wyboru.
     rooms: property.rooms,

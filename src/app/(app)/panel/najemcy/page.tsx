@@ -1,8 +1,9 @@
-import { Archive, CalendarClock, Plus, UserPlus } from "lucide-react";
+import { Archive, CalendarClock, Plus, SearchX, UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { TenantSort } from "@/components/panel/tenants/tenant-sort";
+import { ListSort } from "@/components/panel/list-sort";
+import { TenantSearch } from "@/components/panel/tenants/tenant-search";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,8 @@ import {
   tenantStatusLabels,
   TENANT_STATUS_TONE,
   tenantListQuerySchema,
+  tenantSortLabels,
+  TENANT_SORT_OPTIONS,
 } from "@/lib/validations/tenant";
 import { fill, pluralize } from "@/lib/i18n/format";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
@@ -58,8 +61,6 @@ export default async function TenantsPage({
         {/* Archiwum obok dodawania, bo to para: jedno chowa, drugie
             przywraca. Schowane w menu byłoby nie do znalezienia. */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <TenantSort />
-
           <Button asChild size="sm" variant="secondary">
             <Link href="/panel/najemcy/archiwum">
               <Archive className="h-4 w-4" aria-hidden />
@@ -76,7 +77,25 @@ export default async function TenantsPage({
         </div>
       </div>
 
-      {tenants.length === 0 ? (
+      {/* Szukanie i porządek w jednym wierszu: oba mówią, co widać na liście,
+          a nie co się z nią robi — to zostaje przy przyciskach wyżej. */}
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+        <TenantSearch />
+        <ListSort
+          options={TENANT_SORT_OPTIONS}
+          labels={tenantSortLabels(d)}
+          defaultValue="name"
+          ariaLabel={t.sortAria}
+        />
+      </div>
+
+      {tenants.length === 0 && query.q ? (
+        <EmptyState
+          icon={SearchX}
+          title={t.noMatchTitle}
+          description={fill(t.noMatchLead, { query: query.q })}
+        />
+      ) : tenants.length === 0 ? (
         <EmptyState
           icon={UserPlus}
           title={t.emptyTitle}

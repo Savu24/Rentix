@@ -13,16 +13,46 @@ import type { TenantFormOutput, TenantListQuery } from "@/lib/validations/tenant
 
 export type TenantListItem = Awaited<ReturnType<typeof listTenants>>[number];
 
+/**
+ * Wyszukiwanie po najemcy i po tym, gdzie mieszka.
+ *
+ * Każde słowo z frazy musi trafić w któreś pole, ale nie musi w to samo —
+ * „Jan Kowalski" znajduje Jana Kowalskiego, a „Kowalski Długa" Kowalskiego
+ * z Długiej. Adres bierzemy i z danych najemcy, i z nieruchomości z jego umów,
+ * bo właściciel pamięta zwykle mieszkanie, a nie adres do korespondencji.
+ */
 function buildSearchFilter(q: string | undefined): Prisma.TenantWhereInput {
-  if (!q) return {};
-  const contains = { contains: q, mode: "insensitive" as const };
+  const words = q?.split(/\s+/).filter(Boolean) ?? [];
+  if (words.length === 0) return {};
+
   return {
-    OR: [
-      { firstName: contains },
-      { lastName: contains },
-      { email: contains },
-      { phone: contains },
-    ],
+    AND: words.map((word) => {
+      const contains = { contains: word, mode: "insensitive" as const };
+      return {
+        OR: [
+          { firstName: contains },
+          { lastName: contains },
+          { email: contains },
+          { phone: contains },
+          { street: contains },
+          { city: contains },
+          {
+            leases: {
+              some: {
+                lease: {
+                  OR: [
+                    { property: { name: contains } },
+                    { property: { street: contains } },
+                    { property: { city: contains } },
+                    { room: { name: contains } },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      };
+    }),
   };
 }
 
@@ -208,12 +238,77 @@ export async function updateTenant(
   return prisma.tenant.findFirst({ where: { id: tenantId, organizationId } });
 }
 
-export async function archiveTenant(organizationId: string, tenantId: string) {
-  const { count } = await prisma.tenant.updateMany({
+export type ArchiveTenantResult =
+  | { ok: true; archivedLeases: number }
+  | { ok: false; reason: "NOT_FOUND" }
+  | { ok: false; reason: "ACTIVE_LEASE"; leaseId: string };
+
+/**
+ * Archiwizacja najemcy — razem z jego umowami.
+ *
+ * Najemca w archiwum z umową na liście roboczej to umowa bez nikogo, kim
+ * można się zająć, więc umowy idą do archiwum razem z nim. Odwrotnie nie:
+ * archiwizacja umowy najemcy nie rusza, bo ten sam człowiek może za chwilę
+ * podpisać następną.
+ *
+ * Wyjątki:
+ * - umowa aktywna blokuje całość, tak jak przy archiwizacji samej umowy —
+ *   inaczej lokal zostałby zajęty przez umowę, której nikt już nie widzi,
+ *   a czynsz naliczałby się dalej najemcy z archiwum;
+ * - umowa wspólna zostaje na liście, dopóki ktoś z jej pozostałych najemców
+ *   jest poza archiwum — to wciąż jego umowa.
+ */
+export async function archiveTenant(
+  organizationId: string,
+  tenantId: string,
+): Promise<ArchiveTenantResult> {
+  const tenant = await prisma.tenant.findFirst({
     where: { id: tenantId, organizationId, archivedAt: null },
-    data: { archivedAt: new Date(), status: "FORMER" },
+    select: {
+      id: true,
+      leases: {
+        where: { lease: { archivedAt: null } },
+        select: {
+          lease: {
+            select: {
+              id: true,
+              status: true,
+              tenants: { select: { tenant: { select: { id: true, archivedAt: true } } } },
+            },
+          },
+        },
+      },
+    },
   });
-  return count > 0;
+  if (!tenant) return { ok: false, reason: "NOT_FOUND" };
+
+  const leases = tenant.leases.map((entry) => entry.lease);
+
+  const active = leases.find((lease) => lease.status === "ACTIVE");
+  if (active) return { ok: false, reason: "ACTIVE_LEASE", leaseId: active.id };
+
+  const leaseIds = leases
+    .filter((lease) =>
+      lease.tenants.every(
+        (entry) => entry.tenant.id === tenantId || entry.tenant.archivedAt !== null,
+      ),
+    )
+    .map((lease) => lease.id);
+
+  const archivedAt = new Date();
+
+  await prisma.$transaction([
+    prisma.tenant.update({
+      where: { id: tenantId },
+      data: { archivedAt, status: "FORMER" },
+    }),
+    prisma.lease.updateMany({
+      where: { id: { in: leaseIds }, organizationId, archivedAt: null },
+      data: { archivedAt },
+    }),
+  ]);
+
+  return { ok: true, archivedLeases: leaseIds.length };
 }
 
 /**
@@ -273,6 +368,9 @@ export async function listTenantsForPicker(organizationId: string) {
       city: true,
       taxId: true,
       documentKind: true,
+      // Nieruchomości z dotychczasowych umów — kreator zawęża po nich listę
+      // do najemców spod wybranego adresu.
+      leases: { select: { lease: { select: { propertyId: true } } } },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });

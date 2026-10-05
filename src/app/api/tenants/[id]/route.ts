@@ -52,8 +52,11 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
   if (!force) {
     const archived = await archiveTenant(auth.organizationId, id);
-    if (!archived) return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant);
-    return ok({ id, archived: true });
+    if (archived.ok) return ok({ id, archived: true, archivedLeases: archived.archivedLeases });
+    if (archived.reason === "NOT_FOUND") {
+      return apiError("NOT_FOUND", auth.d.panel.api.notFound.tenant);
+    }
+    return apiError("CONFLICT", auth.d.panel.api.tenantHasActiveLease);
   }
 
   const result = await deleteTenant(auth.organizationId, id);

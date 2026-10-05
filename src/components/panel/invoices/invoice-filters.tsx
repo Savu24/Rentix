@@ -4,12 +4,17 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { ListSort } from "@/components/panel/list-sort";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { invoiceKindLabels } from "@/lib/validations/invoice";
+import {
+  invoiceKindLabels,
+  invoiceSortLabels,
+  INVOICE_SORT_OPTIONS,
+} from "@/lib/validations/invoice";
 import { useI18n } from "@/lib/i18n/client";
 import { LOCALE_META } from "@/lib/i18n/config";
 import { fill, pluralize } from "@/lib/i18n/format";
@@ -125,7 +130,7 @@ export function InvoiceFilters({ total }: { total: number }) {
         </Select>
       </div>
 
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         <Button
           type="button"
           size="sm"
@@ -141,6 +146,13 @@ export function InvoiceFilters({ total }: { total: number }) {
             </span>
           ) : null}
         </Button>
+
+        <ListSort
+          options={INVOICE_SORT_OPTIONS}
+          labels={invoiceSortLabels(d)}
+          defaultValue="newest"
+          ariaLabel={d.panel.financePage.sortAria}
+        />
       </div>
 
       {detailed ? (
@@ -226,7 +238,12 @@ export function InvoiceFilters({ total }: { total: number }) {
             type="button"
             onClick={() => {
               setQuery("");
-              apply(new URLSearchParams());
+              // Porządek to nie filtr — czyszczenie zawęża z powrotem do
+              // wszystkich dokumentów, ale ułożonych tak, jak wybrano.
+              const next = new URLSearchParams();
+              const sort = searchParams.get("sort");
+              if (sort) next.set("sort", sort);
+              apply(next);
             }}
             className="inline-flex items-center gap-1 rounded-btn font-medium text-accent hover:underline"
           >

@@ -241,7 +241,31 @@ const filterDate = z
     return roundTrips ? date : undefined;
   });
 
+/**
+ * Porządki listy dokumentów.
+ *
+ * Najnowsze na górze to domyślny widok: po listę sięga się zwykle po to, co
+ * właśnie wyszło. Termin płatności odpowiada na „co wpływa w tym tygodniu",
+ * kwota i nabywca — na pytania księgowego.
+ */
+export const INVOICE_SORT_OPTIONS = [
+  "newest",
+  "oldest",
+  "dueDate",
+  "amountDesc",
+  "amountAsc",
+  "buyer",
+  "property",
+] as const;
+
+export type InvoiceSort = (typeof INVOICE_SORT_OPTIONS)[number];
+
+export function invoiceSortLabels(d: Pick<Dictionary, "panel">): Record<InvoiceSort, string> {
+  return d.panel.financePage.invoiceSort;
+}
+
 export const invoiceListQuerySchema = z.object({
+  sort: z.enum(INVOICE_SORT_OPTIONS).default("newest"),
   q: z.string().trim().max(120).optional(),
   status: z.enum(INVOICE_FILTERS).default("all"),
   kind: z.enum(invoiceKinds).optional(),

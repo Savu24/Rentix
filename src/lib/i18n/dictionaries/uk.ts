@@ -631,6 +631,7 @@ export const uk: Dictionary = {
     },
 
     common: {
+      sort: "Sort",
       cancel: "Cancel",
       save: "Save",
       saveChanges: "Save changes",
@@ -656,6 +657,10 @@ export const uk: Dictionary = {
       overdueCount: "{count} overdue",
       toPay: "outstanding",
       settled: "Settled",
+      searchPlaceholder: "Search by name, phone, email or address…",
+      searchLabel: "Search tenants",
+      noMatchTitle: "No tenants match your search",
+      noMatchLead: "Nothing found for “{query}”. Check the spelling or clear the search box.",
       form: {
         firstName: "First name",
         lastName: "Surname",
@@ -725,7 +730,7 @@ export const uk: Dictionary = {
         company: "Company",
         archiveLabel: "this tenant",
         archiveHint:
-          "They disappear from the tenant list. Their tenancies and issued documents stay untouched — they appear on those as the recipient.",
+          "They disappear from the tenant list and their tenancies move to the tenancy archive. A shared tenancy stays while it has another tenant. Issued documents stay untouched.",
         outstanding: "Outstanding",
         paidTotal: "Paid in total",
         leases: "Tenancies",
@@ -861,7 +866,7 @@ export const uk: Dictionary = {
         invoices: "Invoices",
         archiveLabel: "this tenancy",
         archiveHint:
-          "It disappears from the tenancy list. Invoices, payments and the whole payment history stay untouched.",
+          "It disappears from the tenancy list. The tenants stay on the tenant list; invoices, payments and the whole payment history stay untouched.",
       },
       form: {
         property: "Property",
@@ -874,6 +879,10 @@ export const uk: Dictionary = {
         tenantsHint: "The first one is the lead tenant. Invoices go to them.",
         allTenantsAdded: "All tenants added",
         addTenant: "Add tenant",
+        tenantsAtProperty: "Showing tenants at this property's address: the same address on their record, or an earlier tenancy there.",
+        noTenantsAtProperty: "Nobody has this property's address on their record.",
+        showAllTenants: "Show all tenants",
+        showPropertyTenants: "Only this address",
         contractData: "Details for the record",
         missingAddress: "no address — add one on the tenant record",
         startDate: "Start date",
@@ -1138,6 +1147,16 @@ export const uk: Dictionary = {
       markPaid: "Mark as paid: {amount}",
       downloadSelected: "Download selected",
       documentNoun: ["document", "documents"],
+      sortAria: "Sort documents",
+      invoiceSort: {
+        newest: "Newest",
+        oldest: "Oldest",
+        dueDate: "Due date",
+        amountDesc: "Amount: highest first",
+        amountAsc: "Amount: lowest first",
+        buyer: "Recipient A–Z",
+        property: "Property A–Z",
+      },
       draftsWaiting: "Drafts awaiting approval: {count}. This is rent for a part month. Check the amounts and approve.",
       showDrafts: "Show drafts",
       downloadCount: "Download {count} {noun}",
@@ -1892,6 +1911,8 @@ export const uk: Dictionary = {
         "This unit already has an active tenancy. End it first — two active tenancies on one unit would break the occupancy figures.",
       leaseStillActive:
         "The tenancy is active. End it first, or the unit would stay occupied by a tenancy nobody can see on the list.",
+      tenantHasActiveLease:
+        "This tenant has an active tenancy. End it first — archiving a tenant also archives their tenancies, and an active one would keep the unit occupied while hidden from the list.",
       leaseLimitReached:
         "The {plan} covers {limit} {noun}. Archive a finished tenancy or move up a plan.",
       leaseHasInvoices:

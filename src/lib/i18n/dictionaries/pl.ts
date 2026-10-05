@@ -633,6 +633,7 @@ export const pl = {
     },
 
     common: {
+      sort: "Sortuj",
       cancel: "Anuluj",
       save: "Zapisz",
       saveChanges: "Zapisz zmiany",
@@ -658,6 +659,10 @@ export const pl = {
       overdueCount: "{count} po terminie",
       toPay: "do zapłaty",
       settled: "Rozliczony",
+      searchPlaceholder: "Szukaj po nazwisku, telefonie, e-mailu lub adresie…",
+      searchLabel: "Szukaj najemców",
+      noMatchTitle: "Nikt nie pasuje do wyszukiwania",
+      noMatchLead: "Brak najemców dla frazy „{query}”. Sprawdź pisownię albo wyczyść pole wyszukiwania.",
       form: {
         firstName: "Imię",
         lastName: "Nazwisko",
@@ -718,7 +723,7 @@ export const pl = {
         company: "Firma",
         archiveLabel: "najemcę",
         archiveHint:
-          "Zniknie z listy najemców. Jego umowy i wystawione dokumenty zostaną nietknięte. Widnieje na nich jako nabywca.",
+          "Zniknie z listy najemców, a jego umowy trafią do archiwum umów. Umowę wspólną zostawimy, dopóki ma innego najemcę. Wystawione dokumenty zostaną nietknięte.",
         outstanding: "Do zapłaty",
         paidTotal: "Wpłacono łącznie",
         leases: "Umowy",
@@ -845,7 +850,7 @@ export const pl = {
         invoices: "Rozliczenia",
         archiveLabel: "umowę",
         archiveHint:
-          "Zniknie z listy umów. Faktury, wpłaty i cała historia rozliczeń zostaną nietknięte.",
+          "Zniknie z listy umów. Najemcy zostaną na liście najemców, a faktury, wpłaty i cała historia rozliczeń nietknięte.",
       },
       form: {
         property: "Nieruchomość",
@@ -858,6 +863,10 @@ export const pl = {
         tenantsHint: "Pierwszy z listy jest głównym najemcą. To on dostaje faktury.",
         allTenantsAdded: "Wszyscy najemcy dodani",
         addTenant: "Dodaj najemcę",
+        tenantsAtProperty: "Pokazujemy najemców spod adresu tej nieruchomości: z tym samym adresem w karcie albo z wcześniejszą umową na nią.",
+        noTenantsAtProperty: "Nikt nie ma w karcie adresu tej nieruchomości.",
+        showAllTenants: "Pokaż wszystkich najemców",
+        showPropertyTenants: "Tylko spod tego adresu",
         contractData: "Dane na umowę",
         missingAddress: "brak adresu, uzupełnij w karcie najemcy",
         startDate: "Data rozpoczęcia",
@@ -1122,6 +1131,16 @@ export const pl = {
       markPaid: "Oznacz jako opłaconą: {amount}",
       downloadSelected: "Pobierz zaznaczone",
       documentNoun: ["dokument", "dokumenty", "dokumentów"],
+      sortAria: "Sortowanie dokumentów",
+      invoiceSort: {
+        newest: "Najnowsze",
+        oldest: "Najstarsze",
+        dueDate: "Termin płatności",
+        amountDesc: "Kwota: od najwyższej",
+        amountAsc: "Kwota: od najniższej",
+        buyer: "Nabywca A–Z",
+        property: "Nieruchomość A–Z",
+      },
       draftsWaiting: "Szkice do akceptacji: {count}. To czynsz za niepełny miesiąc. Sprawdź kwoty i zatwierdź.",
       showDrafts: "Pokaż szkice",
       downloadCount: "Pobierz {count} {noun}",
@@ -1892,6 +1911,8 @@ export const pl = {
         "Ten lokal ma już aktywną umowę. Zakończ ją najpierw. Dwie aktywne umowy na jednej jednostce rozjechałyby stan zajętości.",
       leaseStillActive:
         "Umowa jest aktywna. Zakończ ją najpierw, inaczej jednostka zostałaby zajęta przez umowę, której nie widać na liście.",
+      tenantHasActiveLease:
+        "Najemca ma aktywną umowę. Zakończ ją najpierw. Archiwizacja najemcy chowa też jego umowy, a aktywna zajmowałaby lokal, nie będąc na liście.",
       leaseLimitReached:
         "{plan} obejmuje {limit} {noun}. Zarchiwizuj zakończoną umowę albo przejdź na wyższy plan.",
       leaseHasInvoices:

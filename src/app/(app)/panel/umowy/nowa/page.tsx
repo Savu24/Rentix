@@ -8,6 +8,7 @@ import { requireOwnerSession } from "@/lib/auth/session";
 import { listPropertiesForPicker } from "@/lib/leases/service";
 import { fill } from "@/lib/i18n/format";
 import { panelDictionary } from "@/lib/panel/dictionary";
+import { tenantPropertyIds } from "@/lib/tenants/address-match";
 import { listTenantsForPicker } from "@/lib/tenants/service";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -25,11 +26,22 @@ export default async function NewLeasePage({
   // podpowiedzią dla formularza — API i tak sprawdza, czy należą do organizacji.
   const preset = await searchParams;
 
-  const [properties, tenants, dictionary] = await Promise.all([
+  const [properties, tenantRows, dictionary] = await Promise.all([
     listPropertiesForPicker(organizationId),
     listTenantsForPicker(organizationId),
     panelDictionary(),
   ]);
+
+  // Dopasowanie do adresów liczy serwer: formularz dostaje gotową listę
+  // nieruchomości przy każdym najemcy, a nie adresy do porównywania.
+  const addresses = properties.map(({ id, address }) => ({ id, ...address }));
+  const tenants = tenantRows.map(({ leases, ...tenant }) => ({
+    ...tenant,
+    propertyIds: tenantPropertyIds(
+      { ...tenant, leasePropertyIds: leases.map((entry) => entry.lease.propertyId) },
+      addresses,
+    ),
+  }));
   const t = dictionary.panel.leasesPage;
 
   const missing: string[] = [];

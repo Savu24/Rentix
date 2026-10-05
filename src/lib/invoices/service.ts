@@ -16,6 +16,7 @@ import type {
   InvoiceCreateOutput,
   InvoiceDraftOutput,
   InvoiceListQuery,
+  InvoiceSort,
   PaymentFormOutput,
 } from "@/lib/validations/invoice";
 
@@ -143,6 +144,20 @@ const nextDay = (date: Date) => new Date(date.getTime() + 24 * 60 * 60 * 1000);
 
 export type InvoiceListItem = Awaited<ReturnType<typeof listInvoices>>[number];
 
+/**
+ * Porządek listy dla każdego wyboru. Drugi klucz rozstrzyga remisy — bez niego
+ * dwa dokumenty z tą samą kwotą zamieniałyby się miejscami między odświeżeniami.
+ */
+const INVOICE_ORDER: Record<InvoiceSort, Prisma.InvoiceOrderByWithRelationInput[]> = {
+  newest: [{ issueDate: "desc" }, { number: "desc" }],
+  oldest: [{ issueDate: "asc" }, { number: "asc" }],
+  dueDate: [{ dueDate: "asc" }, { issueDate: "asc" }, { number: "asc" }],
+  amountDesc: [{ totalGrossGrosze: "desc" }, { issueDate: "desc" }, { number: "desc" }],
+  amountAsc: [{ totalGrossGrosze: "asc" }, { issueDate: "desc" }, { number: "desc" }],
+  buyer: [{ buyerName: "asc" }, { issueDate: "desc" }, { number: "desc" }],
+  property: [{ lease: { property: { name: "asc" } } }, { issueDate: "desc" }, { number: "desc" }],
+};
+
 export async function listInvoices(organizationId: string, query: InvoiceListQuery) {
   const now = new Date();
 
@@ -189,7 +204,9 @@ export async function listInvoices(organizationId: string, query: InvoiceListQue
         },
       },
     },
-    orderBy: [{ issueDate: "desc" }, { number: "desc" }],
+    // Sortuje baza, a nie strona: przy limicie 200 porządek w pamięci
+    // przekładałby tylko wycinek, a nie wybierał, co się w nim znajdzie.
+    orderBy: INVOICE_ORDER[query.sort],
     take: 200,
   });
 

@@ -48,4 +48,13 @@ describe("filtry listy dokumentów", () => {
   it("odrzuca ujemną kwotę", () => {
     expect(invoiceListQuerySchema.safeParse({ minAmount: "-5" }).success).toBe(false);
   });
+
+  it("domyślnie układa od najnowszych", () => {
+    expect(invoiceListQuerySchema.parse({}).sort).toBe("newest");
+  });
+
+  it("przyjmuje porządek z adresu i odrzuca nieznany", () => {
+    expect(invoiceListQuerySchema.parse({ sort: "dueDate" }).sort).toBe("dueDate");
+    expect(invoiceListQuerySchema.safeParse({ sort: "losowo" }).success).toBe(false);
+  });
 });
