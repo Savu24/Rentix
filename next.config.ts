@@ -19,6 +19,38 @@ const nextConfig: NextConfig = {
   devIndicators: { position: "bottom-right" },
 
   /**
+   * Nagłówki bezpieczeństwa na każdej odpowiedzi.
+   *
+   * - `frame-ancestors 'none'` + `X-Frame-Options` — panelu nie da się osadzić
+   *   w ramce na obcej stronie, więc nikt nie podsunie użytkownikowi
+   *   niewidocznego przycisku „usuń" pod własnym (clickjacking). Podgląd maila
+   *   w edytorze szablonów to `srcDoc`, którego to nie dotyczy.
+   * - `Referrer-Policy` — adres zaproszenia niesie token w ścieżce; na obce
+   *   domeny wychodzi sam origin, bez ścieżki.
+   * - `nosniff` — przeglądarka nie zgaduje typu pliku wbrew nagłówkowi.
+   * - HSTS — po pierwszej wizycie tylko HTTPS. Przeglądarki ignorują go
+   *   na `http://localhost`, więc praca lokalna działa jak dotąd.
+   */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=()",
+          },
+        ],
+      },
+    ];
+  },
+
+  /**
    * Generator PDF czyta pliki TTF z dysku w czasie żądania, więc analiza
    * importów ich nie wykryje — trzeba wskazać je wprost, inaczej na produkcji
    * endpoint padnie na „ENOENT: Inter_400Regular.ttf".

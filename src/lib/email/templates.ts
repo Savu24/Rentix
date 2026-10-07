@@ -112,8 +112,8 @@ function layout(options: {
     .map(
       ([label, value]) => `
         <tr>
-          <td style="padding:6px 0;color:${COLORS.muted};font-size:14px;">${label}</td>
-          <td style="padding:6px 0;color:${COLORS.ink};font-size:14px;font-weight:600;text-align:right;">${value}</td>
+          <td style="padding:6px 0;color:${COLORS.muted};font-size:14px;">${escapeHtml(label)}</td>
+          <td style="padding:6px 0;color:${COLORS.ink};font-size:14px;font-weight:600;text-align:right;">${escapeHtml(value)}</td>
         </tr>`,
     )
     .join("");

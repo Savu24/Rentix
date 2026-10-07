@@ -129,6 +129,25 @@ export async function getProperty(organizationId: string, propertyId: string) {
 }
 
 /**
+ * Czy właściciel należy do tej organizacji. Brak właściciela (nieruchomość
+ * własna) jest zawsze w porządku.
+ *
+ * Bez tego dałoby się podpiąć nieruchomość pod cudzego właściciela, podając
+ * jego identyfikator: atakujący widziałby jego nazwę, a prawowity wynajmujący
+ * dostałby obcą nieruchomość na karcie właściciela i nie mógłby go usunąć.
+ */
+async function ownerAllowed(organizationId: string, ownerId: string | null | undefined) {
+  if (!ownerId) return true;
+
+  const owner = await prisma.propertyOwner.findFirst({
+    where: { id: ownerId, organizationId },
+    select: { id: true },
+  });
+
+  return owner !== null;
+}
+
+/**
  * Zakłada nieruchomość razem z pokojami.
  *
  * Pokoje powstają w tej samej transakcji co nieruchomość: użytkownik podał ich
@@ -142,6 +161,9 @@ export async function createProperty(
   d: Dictionary,
 ) {
   const { roomCount, ...propertyData } = data;
+
+  // NULL = właściciel spoza organizacji; route odpowiada wtedy 404 przy polu.
+  if (!(await ownerAllowed(organizationId, propertyData.ownerId))) return null;
 
   return prisma.property.create({
     data: {
@@ -163,7 +185,14 @@ export async function updateProperty(
   organizationId: string,
   propertyId: string,
   data: Partial<PropertyFormOutput>,
-) {
+): Promise<
+  | { ok: true; property: Awaited<ReturnType<typeof prisma.property.findFirst>> }
+  | { ok: false; reason: "NOT_FOUND" | "OWNER_NOT_FOUND" }
+> {
+  if (!(await ownerAllowed(organizationId, data.ownerId))) {
+    return { ok: false, reason: "OWNER_NOT_FOUND" };
+  }
+
   // updateMany zamiast update: pozwala zawęzić po organizationId w jednym
   // zapytaniu. `update` przyjmuje w `where` tylko klucze unikalne.
   const { count } = await prisma.property.updateMany({
@@ -171,8 +200,11 @@ export async function updateProperty(
     data,
   });
 
-  if (count === 0) return null;
-  return prisma.property.findFirst({ where: { id: propertyId, organizationId } });
+  if (count === 0) return { ok: false, reason: "NOT_FOUND" };
+  return {
+    ok: true,
+    property: await prisma.property.findFirst({ where: { id: propertyId, organizationId } }),
+  };
 }
 
 /**

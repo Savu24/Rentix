@@ -48,8 +48,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const { id } = await params;
   const updated = await updateProperty(auth.organizationId, id, parsed.data);
 
-  if (!updated) return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
-  return ok(updated);
+  if (updated.ok) return ok(updated.property);
+  if (updated.reason === "OWNER_NOT_FOUND") {
+    return apiError("NOT_FOUND", auth.d.panel.api.notFound.owner, {
+      fields: { ownerId: [auth.d.panel.api.notFound.owner] },
+    });
+  }
+  return apiError("NOT_FOUND", auth.d.panel.api.notFound.property);
 }
 
 /**

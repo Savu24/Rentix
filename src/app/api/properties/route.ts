@@ -47,5 +47,13 @@ export async function POST(request: NextRequest) {
   const parsed = propertyCreateSchema(auth.v).safeParse(body);
   if (!parsed.success) return validationError(parsed.error);
 
-  return created(await createProperty(auth.organizationId, parsed.data, auth.d));
+  const property = await createProperty(auth.organizationId, parsed.data, auth.d);
+
+  if (!property) {
+    return apiError("NOT_FOUND", auth.d.panel.api.notFound.owner, {
+      fields: { ownerId: [auth.d.panel.api.notFound.owner] },
+    });
+  }
+
+  return created(property);
 }

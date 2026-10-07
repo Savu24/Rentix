@@ -1,3 +1,5 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import type { NextRequest } from "next/server";
 
 import { apiError, ok } from "@/lib/api/response";
@@ -10,6 +12,18 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 // Naliczanie chodzi po wszystkich organizacjach — wynik nie może trafić do cache'u.
 export const dynamic = "force-dynamic";
+
+/**
+ * Porównanie sekretu w stałym czasie. Zwykłe `!==` kończy się na pierwszym
+ * różnym znaku, więc czas odpowiedzi zdradza, ile początkowych znaków jest
+ * trafionych. Skróty SHA-256 mają równą długość, więc `timingSafeEqual`
+ * nie rzuca przy nagłówku innej długości niż sekret.
+ */
+function secretMatches(provided: string | null, expected: string): boolean {
+  if (!provided) return false;
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(provided), digest(expected));
+}
 
 /**
  * Nocny przebieg rozliczeniowy: naliczenie czynszu i wysyłka przypomnień.
@@ -31,8 +45,7 @@ async function run(request: NextRequest) {
     );
   }
 
-  const provided = request.headers.get("authorization");
-  if (provided !== `Bearer ${env.CRON_SECRET}`) {
+  if (!secretMatches(request.headers.get("authorization"), `Bearer ${env.CRON_SECRET}`)) {
     return apiError("UNAUTHORIZED", "Nieprawidłowy sekret zadania cyklicznego.");
   }
 
