@@ -3,7 +3,7 @@ import { MobileNav } from "@/components/panel/mobile-nav";
 import { PanelLocaleSync } from "@/components/panel/panel-locale";
 import { Sidebar } from "@/components/panel/sidebar";
 import { Topbar } from "@/components/panel/topbar";
-import { membershipRole, requireOwnerSession, userOrganizations } from "@/lib/auth/session";
+import { membershipRole, resolveOwnerSession, userOrganizations } from "@/lib/auth/session";
 import { PlanFeaturesProvider } from "@/lib/billing/client";
 import { organizationFeatures, organizationPlan } from "@/lib/billing/server";
 import { clientDictionary, getDictionary } from "@/lib/i18n";
@@ -24,7 +24,9 @@ import { initials } from "@/lib/utils";
  * z korzenia aplikacji, który zna tylko preferencję odwiedzającego.
  */
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireOwnerSession("/panel");
+  // Wariant bez sprawdzenia członkostwa — ten layout robi je sam, niżej,
+  // żeby zamiast 404 pokazać ekran „odebrano dostęp".
+  const session = await resolveOwnerSession("/panel");
 
   /*
     Odkąd w organizacji bywa więcej niż jedna osoba, samo posiadanie ważnego

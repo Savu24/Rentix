@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Session } from "next-auth";
 
 import type { MembershipRole } from "@/generated/prisma/enums";
@@ -48,9 +48,29 @@ export async function requireSession(returnTo?: string): Promise<AppSession> {
 
 /**
  * Dla Server Componentów panelu właściciela: wymusza rolę OWNER/ADMIN
- * i przypisanie do organizacji.
+ * i **aktualne** członkostwo w organizacji, z której strona czyta dane.
+ *
+ * Sprawdzenie członkostwa musi siedzieć tutaj, a nie tylko w layoucie panelu.
+ * Layout w App Routerze nie jest granicą bezpieczeństwa: strona renderuje się
+ * równolegle z nim, a przy nawigacji po stronie klienta layout w ogóle się nie
+ * odświeża — usunięty współpracownik z otwartą kartą dostawałby dane
+ * organizacji z każdej kolejnej podstrony. Bez członkostwa strona kończy się
+ * 404, a pełne wejście i tak pokazuje ekran „odebrano dostęp" z layoutu.
  */
 export async function requireOwnerSession(returnTo?: string): Promise<OwnerSession> {
+  const session = await resolveOwnerSession(returnTo);
+
+  if (!(await membershipRole(session.user.id, session.user.organizationId))) notFound();
+
+  return session;
+}
+
+/**
+ * Sesja panelu bez sprawdzenia członkostwa — wyłącznie dla layoutu panelu,
+ * który przy jego braku sam rysuje ekran „odebrano dostęp". Strony z danymi
+ * wołają `requireOwnerSession`.
+ */
+export async function resolveOwnerSession(returnTo?: string): Promise<OwnerSession> {
   const session = await requireSession(returnTo);
 
   if (session.user.role === "TENANT") {

@@ -65,6 +65,29 @@ export function loginPathWithReturn(locale: Locale, returnTo: string): string {
   return `${publicRoutes(locale).login}?${RETURN_PARAM[locale]}=${encodeURIComponent(returnTo)}`;
 }
 
+/**
+ * Adres powrotu po zalogowaniu — wyłącznie ścieżka w obrębie tej domeny.
+ *
+ * Samo „zaczyna się od `/`, ale nie od `//`" nie wystarcza: przeglądarka
+ * zamienia `\` na `/` i wycina tabulatory oraz złamania wiersza, więc
+ * `/\evil.com` i `/<TAB>/evil.com` lądują na `//evil.com`, czyli na obcej
+ * domenie. Odrzucamy więc znaki sterujące i ukośnik wsteczny, a na koniec
+ * sprawdzamy wynik tym samym parserem, którego używa przeglądarka.
+ */
+export function safeReturnPath(raw: string | undefined | null): string | undefined {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return undefined;
+  if (/[\\\u0000-\u001f\u007f]/.test(raw)) return undefined;
+
+  const base = "https://rentix.invalid";
+  try {
+    const url = new URL(raw, base);
+    if (url.origin !== base) return undefined;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Prefiksy wymagające zalogowania. */
 export const PROTECTED_PREFIXES: string[] = [
   ROUTES.ownerDashboard,

@@ -85,8 +85,16 @@ describe("clientIp", () => {
     expect(clientIp(headers)).toBe("203.0.113.7");
   });
 
-  it("spada na x-real-ip", () => {
+  it("bierze x-real-ip", () => {
     expect(clientIp(new Headers({ "x-real-ip": "198.51.100.4" }))).toBe("198.51.100.4");
+  });
+
+  it("nagłówek infrastruktury wygrywa z x-forwarded-for podanym przez klienta", () => {
+    const headers = new Headers({
+      "x-forwarded-for": "1.2.3.4, 198.51.100.4",
+      "x-vercel-forwarded-for": "198.51.100.4",
+    });
+    expect(clientIp(headers)).toBe("198.51.100.4");
   });
 
   it("bez nagłówków zwraca wspólny klucz zamiast pomijać limit", () => {

@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { AuthDivider, GoogleButton } from "@/components/auth/google-button";
 import { LoginForm } from "@/components/auth/login-form";
 import { googleEnabled } from "@/lib/auth/google";
-import { publicRoutes, RETURN_PARAMS } from "@/lib/auth/routes";
+import { publicRoutes, RETURN_PARAMS, safeReturnPath } from "@/lib/auth/routes";
 import { getDictionary, type Locale } from "@/lib/i18n";
 
 /** Parametry adresu, jakie strona logowania przyjmuje w każdej wersji krajowej. */
@@ -25,14 +25,14 @@ export function LoginView({
     czytamy oba: link skopiowany z polskiej strony ma zadziałać także wtedy, gdy
     ktoś podmienił w nim prefiks kraju.
 
-    Przyjmujemy wyłącznie ścieżki względne — bez tego `?powrot=https://…`
-    zamieniłby logowanie w otwarte przekierowanie na obcą domenę.
+    Przyjmujemy wyłącznie ścieżki w obrębie tej domeny — bez tego
+    `?powrot=https://…` zamieniłby logowanie w otwarte przekierowanie na obcą
+    domenę. Szczegóły w `safeReturnPath`.
   */
   const rawReturn = RETURN_PARAMS.map((name) => searchParams[name]).find(
     (value): value is string => typeof value === "string",
   );
-  const returnTo =
-    rawReturn?.startsWith("/") && !rawReturn.startsWith("//") ? rawReturn : undefined;
+  const returnTo = safeReturnPath(rawReturn);
 
   const error = typeof searchParams.error === "string" ? searchParams.error : undefined;
 

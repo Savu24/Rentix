@@ -179,6 +179,14 @@ export function resetAll() {
 export const LIMITS = {
   /** Logowanie: 5 prób na 15 minut na jeden adres e-mail. */
   login: { limit: 5, windowSeconds: 15 * 60 },
+  /**
+   * Logowanie z jednego IP: 30 prób na 15 minut, niezależnie od adresu e-mail.
+   *
+   * Limit per konto nie hamuje sprawdzania wyciekniętych par e-mail–hasło
+   * (credential stuffing): tam każda próba trafia w inne konto. Próg jest
+   * wysoko ponad biurem z kilkoma osobami za jednym NAT-em.
+   */
+  loginIp: { limit: 30, windowSeconds: 15 * 60 },
   /** Rejestracja: 5 kont na godzinę z jednego IP. */
   register: { limit: 5, windowSeconds: 60 * 60 },
   /**
@@ -205,6 +213,15 @@ export const LIMITS = {
  * jeden licznik, co jest bezpieczniejsze niż brak limitu.
  */
 export function clientIp(headers: Headers): string {
+  /*
+    Najpierw nagłówki, które ustawia sama infrastruktura i których klient nie
+    nadpisze. Pierwszy wpis `X-Forwarded-For` podaje klient — za proxy, które
+    dopisuje się na końcu zamiast nadpisywać, atakujący wybierałby sobie
+    licznik, wysyłając przy każdej próbie inny wymyślony adres.
+  */
+  const trusted = headers.get("x-vercel-forwarded-for") ?? headers.get("x-real-ip");
+  if (trusted) return trusted.split(",")[0]!.trim();
+
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]!.trim();
   return headers.get("x-real-ip") ?? "unknown";

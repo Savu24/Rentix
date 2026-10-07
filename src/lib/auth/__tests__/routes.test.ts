@@ -6,6 +6,7 @@ import {
   landingPathForRole,
   publicRoutes,
   ROUTES,
+  safeReturnPath,
 } from "@/lib/auth/routes";
 
 describe("isProtectedPath", () => {
@@ -56,5 +57,32 @@ describe("landingPathForRole", () => {
 
   it("przy nieznanej roli wybiera panel właściciela", () => {
     expect(landingPathForRole(undefined)).toBe(ROUTES.ownerDashboard);
+  });
+});
+
+describe("safeReturnPath", () => {
+  it("przepuszcza ścieżki w obrębie domeny razem z zapytaniem", () => {
+    expect(safeReturnPath("/panel")).toBe("/panel");
+    expect(safeReturnPath("/panel/finanse?status=OVERDUE")).toBe("/panel/finanse?status=OVERDUE");
+  });
+
+  it("odrzuca adresy prowadzące na obcą domenę", () => {
+    for (const raw of [
+      "https://evil.com",
+      "//evil.com",
+      "/\\evil.com",
+      "/\tevil.com",
+      "/\t/evil.com",
+      "/\n/evil.com",
+      "\\\\evil.com",
+      "javascript:alert(1)",
+    ]) {
+      expect(safeReturnPath(raw), raw).toBeUndefined();
+    }
+  });
+
+  it("przy braku wartości zwraca undefined", () => {
+    expect(safeReturnPath(undefined)).toBeUndefined();
+    expect(safeReturnPath("")).toBeUndefined();
   });
 });

@@ -5,7 +5,7 @@ import Google from "next-auth/providers/google";
 
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
-import { consume, LIMITS, reset } from "@/lib/rate-limit";
+import { clientIp, consume, LIMITS, reset } from "@/lib/rate-limit";
 import { getDictionary } from "@/lib/i18n";
 import { DEFAULT_LOCALE } from "@/lib/i18n/config";
 import { loginSchema } from "@/lib/validations/auth";
@@ -36,10 +36,10 @@ const googleProviders =
             wyjść — a to najczęstsza droga do tego przycisku.
 
             „Dangerous" w nazwie opcji dotyczy dostawców, którzy nie weryfikują
-            adresu; Google weryfikuje. Zostaje jedno ryzyko: dopóki rejestracja
-            hasłem nie potwierdza adresu mailem, ktoś może założyć konto na cudzy
-            Gmail i zostać w nim po połączeniu. Domknie to dopiero weryfikacja
-            e-maila przy rejestracji.
+            adresu; Google weryfikuje. Ryzyko po naszej stronie — rejestracja
+            hasłem nie potwierdza adresu, więc ktoś może założyć konto na cudzy
+            Gmail — zamyka zdarzenie `linkAccount` niżej: przy połączeniu
+            kasuje hasło niepotwierdzonego konta i unieważnia jego sesje.
           */
           allowDangerousEmailAccountLinking: true,
         }),
@@ -73,15 +73,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt(params) {
       const token = authConfig.callbacks.jwt(params);
 
-      if (params.user && !token.organizationId) {
-        const membership = await prisma.membership.findFirst({
-          where: { userId: token.id },
-          orderBy: { createdAt: "asc" },
-          select: { organizationId: true },
+      if (params.user) {
+        // Wersję czytamy z bazy, a nie z `params.user`: przy łączeniu z Google
+        // `linkAccount` podbija ją już po tym, jak adapter odczytał wiersz.
+        const fresh = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { sessionVersion: true },
         });
+        token.sessionVersion = fresh?.sessionVersion ?? 0;
 
-        token.organizationId = membership?.organizationId ?? null;
+        if (!token.organizationId) {
+          const membership = await prisma.membership.findFirst({
+            where: { userId: token.id },
+            orderBy: { createdAt: "asc" },
+            select: { organizationId: true },
+          });
+
+          token.organizationId = membership?.organizationId ?? null;
+        }
+
+        return token;
       }
+
+      /*
+        Każdy kolejny odczyt sesji po stronie serwera sprawdza, czy token nie
+        został unieważniony. Bez tego JWT żyje trzydzieści dni i odświeża się
+        sam przy każdej wizycie — skasowane konto albo przejęte i odzyskane
+        zostawałoby otwarte w cudzej przeglądarce bez końca. NULL kasuje
+        ciasteczko sesji. Tokeny sprzed wprowadzenia wersji liczą się jako 0,
+        więc wdrożenie nikogo nie wylogowuje.
+      */
+      const current = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: { sessionVersion: true },
+      });
+
+      if (!current || current.sessionVersion !== (token.sessionVersion ?? 0)) return null;
 
       return token;
     },
@@ -96,6 +123,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async createUser({ user }) {
       if (user.id) await ensureOwnerOrganization(user.id);
     },
+
+    /**
+     * Konto Google dopięte do konta z tym samym adresem.
+     *
+     * Rejestracja hasłem nie potwierdza adresu, więc konto z hasłem
+     * i niepotwierdzonym e-mailem mógł założyć ktokolwiek — także na cudzy
+     * Gmail, czekając, aż prawowity właściciel zaloguje się przez Google
+     * i zacznie wpisywać tu swoje dane. Logowanie Google jest pierwszym
+     * dowodem, kto naprawdę ma tę skrzynkę: hasło ustawione przed nim
+     * kasujemy, a sesje otwarte nim unieważniamy podbiciem wersji.
+     *
+     * Konto z potwierdzonym adresem (np. z zaproszenia) zostaje nietknięte —
+     * tam hasło ustawiła osoba, która już udowodniła dostęp do skrzynki.
+     */
+    async linkAccount({ user }) {
+      if (!user.id) return;
+
+      const existing = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { passwordHash: true, emailVerified: true },
+      });
+      if (!existing) return;
+
+      const unverifiedPassword = Boolean(existing.passwordHash) && !existing.emailVerified;
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerified: existing.emailVerified ?? new Date(),
+          ...(unverifiedPassword
+            ? { passwordHash: null, sessionVersion: { increment: 1 } }
+            : {}),
+        },
+      });
+    },
   },
 
   providers: [
@@ -108,7 +170,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Hasło", type: "password" },
       },
 
-      async authorize(rawCredentials) {
+      async authorize(rawCredentials, request) {
         /*
           Komunikaty walidacji nie opuszczają tej funkcji — przy złych danych
           i tak lecimy `InvalidCredentialsError`, którego tekst formularz
@@ -121,8 +183,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data;
 
+        // Limit per IP — chroni przed sprawdzaniem wielu kont z jednego
+        // adresu (credential stuffing), czego limit per konto nie widzi.
+        const ipRate = await consume(`login-ip:${clientIp(request.headers)}`, LIMITS.loginIp);
+        if (!ipRate.success) throw new RateLimitError();
+
         // Limit prób per konto — chroni przed zgadywaniem hasła jednego
-        // użytkownika. Limitem per IP zajmuje się osobno endpoint rejestracji.
+        // użytkownika.
         const rate = await consume(`login:${email}`, LIMITS.login);
         if (!rate.success) throw new RateLimitError();
 

@@ -38,6 +38,8 @@ declare module "@auth/core/jwt" {
     id: string;
     role: AppRole;
     organizationId: string | null;
+    /** Wersja sesji z chwili logowania — porównywana z `users.sessionVersion`. */
+    sessionVersion?: number;
   }
 }
 
@@ -46,6 +48,8 @@ declare module "next-auth/jwt" {
     id: string;
     role: AppRole;
     organizationId: string | null;
+    /** Wersja sesji z chwili logowania — porównywana z `users.sessionVersion`. */
+    sessionVersion?: number;
   }
 }
 

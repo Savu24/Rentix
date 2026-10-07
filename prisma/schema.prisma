@@ -199,6 +199,12 @@ model User {
   role          UserRole  @default(OWNER)
   emailVerified DateTime?
 
+  /// Wersja sesji. Token JWT niesie wartość z chwili logowania; podbicie tej
+  /// liczby unieważnia od razu wszystkie wydane tokeny konta — patrz callback
+  /// `jwt` w `src/lib/auth/index.ts`. Bez tego token żyłby trzydzieści dni
+  /// i odświeżał się sam, niezależnie od tego, co stało się z kontem.
+  sessionVersion Int @default(0)
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
