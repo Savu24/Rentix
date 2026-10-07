@@ -1298,6 +1298,11 @@ export const uk: Dictionary = {
       byProperty: "Result by property",
       currencyNote: "({currency})",
       noYearData: "No data for this year.",
+      currentMonthly: "Current, per month",
+      yearTotal: "Total in {year}",
+      profitColumn: "Profit",
+      currentMonthlyNote:
+        "Current, per month: rent plus utilities advance from active tenancies and recurring costs converted to a monthly amount.",
       byCategory: "Costs by category",
       noCategoryData: "No costs recorded for this year yet.",
       property: "Property",

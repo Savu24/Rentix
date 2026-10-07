@@ -5,6 +5,7 @@ import type { Locale } from "@/lib/i18n/config";
 import {
   collectionStats,
   monthlyBreakdown,
+  monthlyCost,
   propertyBreakdown,
   type CashEntry,
   type CollectionStats,
@@ -42,7 +43,7 @@ export async function annualReport(
 ): Promise<AnnualReport> {
   const range = yearRange(year);
 
-  const [payments, expenses, properties, invoices] = await Promise.all([
+  const [payments, expenses, properties, invoices, activeLeases, recurringExpenses] = await Promise.all([
     // Wpłata wie, do której nieruchomości należy, dopiero przez fakturę i umowę —
     // stąd zagnieżdżony select zamiast płaskiego pola.
     prisma.payment.findMany({
@@ -77,6 +78,23 @@ export async function annualReport(
         payments: { orderBy: { paidAt: "desc" }, take: 1, select: { paidAt: true } },
       },
     }),
+    // Kolumny „obecnie, miesięcznie" pokazują stan na dziś, niezależnie od
+    // wybranego roku: ile nieruchomość ma przynosić i kosztować co miesiąc.
+    prisma.lease.findMany({
+      where: { organizationId, status: "ACTIVE" },
+      select: { propertyId: true, rentGrosze: true, utilitiesAdvanceGrosze: true },
+    }),
+    // Tylko wzorce — wystąpienia naliczone z nich to już zwykłe koszty
+    // w zestawieniu rocznym.
+    prisma.expense.findMany({
+      where: { organizationId, recurrence: { not: null }, recurringFromId: null },
+      select: {
+        propertyId: true,
+        amountGrosze: true,
+        recurrence: true,
+        recurrenceEveryDays: true,
+      },
+    }),
   ]);
 
   const incomeEntries: CashEntry[] = payments.map((payment) => ({
@@ -105,7 +123,18 @@ export async function annualReport(
   return {
     year,
     months,
-    properties: propertyBreakdown(incomeEntries, expenseEntries, names, labels),
+    properties: propertyBreakdown(incomeEntries, expenseEntries, names, labels, {
+      // Zaliczka na media wchodzi do przychodu, bo przychód roczny też ją
+      // zawiera — najemca płaci jedną fakturą czynsz razem z zaliczką.
+      income: activeLeases.map((lease) => ({
+        propertyId: lease.propertyId,
+        amountGrosze: lease.rentGrosze + lease.utilitiesAdvanceGrosze,
+      })),
+      expenses: recurringExpenses.map((expense) => ({
+        propertyId: expense.propertyId,
+        amountGrosze: monthlyCost(expense.amountGrosze, expense.recurrence!, expense.recurrenceEveryDays),
+      })),
+    }),
     expensesByCategory: [...byCategory.entries()]
       .map(([category, totalGrosze]) => ({ category, totalGrosze }))
       .sort((a, b) => b.totalGrosze - a.totalGrosze),

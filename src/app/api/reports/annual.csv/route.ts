@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
 
   rows.push([]);
   rows.push([t.property, t.income, t.expenses, t.profit]);
-  for (const property of report.properties) {
+  // Wiersz z samymi kwotami bieżącymi nie ma ruchu w roku — w zestawieniu
+  // dla księgowego byłby pustą linią.
+  for (const property of report.properties.filter((row) => row.incomeGrosze || row.expenseGrosze)) {
     rows.push([
       property.name,
       toCsvAmount(property.incomeGrosze, auth.locale),

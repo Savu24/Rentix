@@ -1282,6 +1282,11 @@ export const pl = {
       byProperty: "Wynik wg nieruchomości",
       currencyNote: "({currency})",
       noYearData: "Brak danych za ten rok.",
+      currentMonthly: "Obecnie, miesięcznie",
+      yearTotal: "Razem w {year}",
+      profitColumn: "Zysk",
+      currentMonthlyNote:
+        "Obecnie, miesięcznie: czynsz z zaliczką na media z aktywnych umów i koszty cykliczne przeliczone na miesiąc.",
       byCategory: "Koszty wg kategorii",
       noCategoryData: "Nie wpisano jeszcze żadnych kosztów za ten rok.",
       property: "Nieruchomość",

