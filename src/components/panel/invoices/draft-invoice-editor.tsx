@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Loader2, Pencil, Plus, X } from "lucide-react";
+import { CheckCircle2, Loader2, Pencil, Plus, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -35,6 +35,10 @@ export type DraftInvoiceData = {
   issueDate: string;
   saleDate: string;
   dueDate: string;
+  periodStart: string | null;
+  periodEnd: string | null;
+  /** Czy szkic ma umowę, z której da się go przeliczyć. */
+  hasLease: boolean;
   notes: string | null;
   lines: Array<{
     description: string;
@@ -52,6 +56,9 @@ export type DraftInvoiceData = {
  * poprawia proporcję, dopisuje pozycje (sprzątanie, rozliczenie mediów) albo
  * przesuwa termin. Zatwierdzenie idzie osobnym żądaniem, bo to ono nadaje
  * numer z rejestru — zapis poprawek numeru nie rusza.
+ *
+ * „Przelicz z umowy" liczy szkic od nowa, gdy umowę zmieniono już po
+ * naliczeniu — patrz `refreshDraftFromLease`.
  *
  * `suggestedNumber` — numer, który nadałby licznik. Podany tylko kontom, które
  * mogą wpisać własny (`renumber.ts`); wtedy nad przyciskami stoi pole na numer,
@@ -72,6 +79,8 @@ export function DraftInvoiceEditor({
 
   const [editing, setEditing] = useState(false);
   const [issuing, setIssuing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [confirmingRefresh, setConfirmingRefresh] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [number, setNumber] = useState("");
@@ -81,6 +90,7 @@ export function DraftInvoiceEditor({
     issueDate: invoice.issueDate,
     saleDate: invoice.saleDate,
     dueDate: invoice.dueDate,
+    periodEnd: invoice.periodEnd ?? "",
     notes: invoice.notes ?? "",
     lines: invoice.lines.map((line) => ({
       description: line.description,
@@ -102,7 +112,9 @@ export function DraftInvoiceEditor({
     formState: { errors, isSubmitting },
   } = useForm<InvoiceDraftInput, unknown, InvoiceDraftOutput>({
     resolver: zodResolver(invoiceDraftSchema(v)),
-    defaultValues,
+    // `values`, a nie `defaultValues`: po przeliczeniu z umowy strona przychodzi
+    // z nowym szkicem i formularz ma go pokazać, a nie stan sprzed przeliczenia.
+    values: defaultValues,
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
@@ -120,7 +132,7 @@ export function DraftInvoiceEditor({
       .filter((line) => line.unitPriceNetGrosze > 0 && line.quantityMilli > 0),
   );
 
-  const busy = isSubmitting || issuing;
+  const busy = isSubmitting || issuing || refreshing;
 
   const numberHint = suggestedNumber ? fill(t.numberHint, { number: suggestedNumber }) : undefined;
 
@@ -160,6 +172,24 @@ export function DraftInvoiceEditor({
       else setFormError(result.message);
       return;
     }
+    router.refresh();
+  }
+
+  async function refreshFromLease() {
+    setRefreshing(true);
+    setFormError(null);
+    setNotice(null);
+
+    const result = await api.post<{ id: string }>(`/api/invoices/${invoice.id}/refresh`, {});
+
+    setRefreshing(false);
+    setConfirmingRefresh(false);
+    if (!result.ok) {
+      setFormError(result.message);
+      return;
+    }
+    setEditing(false);
+    setNotice(t.refreshed);
     router.refresh();
   }
 
@@ -227,8 +257,49 @@ export function DraftInvoiceEditor({
                 <Pencil className="h-4 w-4" aria-hidden />
                 {t.edit}
               </Button>
+              {invoice.hasLease && !confirmingRefresh ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setNotice(null);
+                    setConfirmingRefresh(true);
+                  }}
+                  disabled={busy}
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden />
+                  {t.refresh}
+                </Button>
+              ) : null}
             </div>
             <p className="text-xs text-muted">{t.issueHint}</p>
+            {invoice.hasLease ? (
+              confirmingRefresh ? (
+                <div className="flex flex-col gap-2 rounded-control bg-surface-alt px-3.5 py-3">
+                  <p className="text-xs text-fg">{t.refreshConfirm}</p>
+                  <div className="flex flex-wrap gap-2.5">
+                    <Button size="sm" onClick={refreshFromLease} disabled={busy}>
+                      {refreshing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" aria-hidden />
+                      )}
+                      {t.refresh}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setConfirmingRefresh(false)}
+                      disabled={busy}
+                    >
+                      {t.refreshKeep}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted">{t.refreshHint}</p>
+              )
+            ) : null}
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSave)} noValidate className="flex flex-col gap-4">
@@ -259,6 +330,31 @@ export function DraftInvoiceEditor({
                   {...fieldAria("di-dueDate", { error: errors.dueDate?.message })}
                   disabled={busy}
                   {...register("dueDate")}
+                />
+              </FormField>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <FormField
+                id="di-periodStart"
+                label={t.periodStart}
+                hint={invoice.hasLease ? t.periodStartHint : undefined}
+              >
+                <DateInput
+                  {...fieldAria("di-periodStart", {
+                    hint: invoice.hasLease ? t.periodStartHint : undefined,
+                  })}
+                  value={invoice.periodStart ?? ""}
+                  readOnly
+                  disabled
+                />
+              </FormField>
+
+              <FormField id="di-periodEnd" label={t.periodEnd} error={errors.periodEnd?.message}>
+                <DateInput
+                  {...fieldAria("di-periodEnd", { error: errors.periodEnd?.message })}
+                  disabled={busy}
+                  {...register("periodEnd")}
                 />
               </FormField>
             </div>

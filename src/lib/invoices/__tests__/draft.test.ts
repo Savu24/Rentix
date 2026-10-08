@@ -128,4 +128,16 @@ describe("invoiceDraftSchema", () => {
   it("nie przepuszcza szkicu bez pozycji", () => {
     expect(invoiceDraftSchema(C).safeParse({ ...VALID, lines: [] }).success).toBe(false);
   });
+
+  it("przyjmuje przesunięty koniec okresu — umowa przedłużona po naliczeniu", () => {
+    const parsed = invoiceDraftSchema(C).parse({ ...VALID, periodEnd: "2026-10-31" });
+
+    expect(parsed.periodEnd).toEqual(new Date(Date.UTC(2026, 9, 31)));
+  });
+
+  it("nie przyjmuje początku okresu — po nim naliczanie rozpoznaje rozliczony miesiąc", () => {
+    const parsed = invoiceDraftSchema(C).parse({ ...VALID, periodStart: "2026-10-05" });
+
+    expect(parsed).not.toHaveProperty("periodStart");
+  });
 });

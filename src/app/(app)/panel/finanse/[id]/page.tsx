@@ -148,6 +148,9 @@ export default async function InvoiceDetailPage({ params }: Params) {
             issueDate: dateField(invoice.issueDate),
             saleDate: dateField(invoice.saleDate),
             dueDate: dateField(invoice.dueDate),
+            periodStart: invoice.periodStart ? dateField(invoice.periodStart) : null,
+            periodEnd: invoice.periodEnd ? dateField(invoice.periodEnd) : null,
+            hasLease: invoice.leaseId !== null,
             notes: invoice.notes,
             lines: invoice.lines.map((line) => ({
               description: line.description,

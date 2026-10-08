@@ -8,6 +8,7 @@ import {
   periodLabel,
   shouldBillPeriod,
   type BillingLease,
+  type BillingPeriod,
 } from "@/lib/leases/billing";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
@@ -715,6 +716,54 @@ export type GenerateInvoicesResult = {
   skipped: SkippedLease[];
 };
 
+/** Pola umowy potrzebne do naliczenia czynszu — wspólne dla naliczania i odświeżania szkicu. */
+const BILLING_LEASE_SELECT = {
+  id: true,
+  startDate: true,
+  endDate: true,
+  rentGrosze: true,
+  utilitiesMode: true,
+  utilitiesAdvanceGrosze: true,
+  billingDay: true,
+  billingStartsAt: true,
+  paymentTermDays: true,
+  property: { select: { type: true } },
+  tenants: {
+    orderBy: { isPrimary: "desc" },
+    take: 1,
+    select: { tenant: true },
+  },
+} satisfies Prisma.LeaseSelect;
+
+type BillingLeaseRow = Prisma.LeaseGetPayload<{ select: typeof BILLING_LEASE_SELECT }>;
+
+function billingLease(lease: BillingLeaseRow): BillingLease {
+  return {
+    startDate: lease.startDate,
+    endDate: lease.endDate,
+    rentGrosze: lease.rentGrosze,
+    utilitiesMode: lease.utilitiesMode,
+    utilitiesAdvanceGrosze: lease.utilitiesAdvanceGrosze,
+    billingDay: lease.billingDay,
+    paymentTermDays: lease.paymentTermDays,
+  };
+}
+
+function rentLines(
+  lease: BillingLeaseRow,
+  period: BillingPeriod,
+  year: number,
+  monthIndex: number,
+  d: ReturnType<typeof getDictionary>,
+  locale: Awaited<ReturnType<typeof organizationLocale>>,
+) {
+  const vatRate = rentVatRate(lease.property.type);
+  return buildRentInvoiceLines(billingLease(lease), period, year, monthIndex, d, locale, {
+    rentVatRate: vatRate,
+    utilitiesVatRate: vatRate,
+  });
+}
+
 /**
  * Wystawia dokumenty czynszowe za wskazany miesiąc.
  *
@@ -761,38 +810,14 @@ export async function generateInvoicesForMonth(
       startDate: { lt: new Date(Date.UTC(year, monthIndex + 1, 1)) },
       OR: [{ endDate: null }, { endDate: { gte: new Date(Date.UTC(year, monthIndex, 1)) } }],
     },
-    select: {
-      id: true,
-      startDate: true,
-      endDate: true,
-      rentGrosze: true,
-      utilitiesMode: true,
-      utilitiesAdvanceGrosze: true,
-      billingDay: true,
-      billingStartsAt: true,
-      paymentTermDays: true,
-      property: { select: { type: true } },
-      tenants: {
-        orderBy: { isPrimary: "desc" },
-        take: 1,
-        select: { tenant: true },
-      },
-    },
+    select: BILLING_LEASE_SELECT,
   });
 
   const created: GeneratedInvoice[] = [];
   const skipped: SkippedLease[] = [];
 
   for (const lease of leases) {
-    const billing: BillingLease = {
-      startDate: lease.startDate,
-      endDate: lease.endDate,
-      rentGrosze: lease.rentGrosze,
-      utilitiesMode: lease.utilitiesMode,
-      utilitiesAdvanceGrosze: lease.utilitiesAdvanceGrosze,
-      billingDay: lease.billingDay,
-      paymentTermDays: lease.paymentTermDays,
-    };
+    const billing = billingLease(lease);
 
     const period = buildBillingPeriod(billing, year, monthIndex);
     if (!period) {
@@ -819,11 +844,7 @@ export async function generateInvoicesForMonth(
       continue;
     }
 
-    const vatRate = rentVatRate(lease.property.type);
-    const lines = buildRentInvoiceLines(billing, period, year, monthIndex, d, locale, {
-      rentVatRate: vatRate,
-      utilitiesVatRate: vatRate,
-    });
+    const lines = rentLines(lease, period, year, monthIndex, d, locale);
 
     const { totals, lines: lineData } = linesCreateData(lines);
     if (totals.totalGrossGrosze === 0) {
@@ -911,10 +932,11 @@ export type DraftInvoiceResult =
   | { ok: false; reason: "NOT_DRAFT" }
   | { ok: false; reason: "NOTHING_TO_BILL" }
   | { ok: false; reason: "NOT_ALLOWED" }
-  | { ok: false; reason: "NUMBER_TAKEN" };
+  | { ok: false; reason: "NUMBER_TAKEN" }
+  | { ok: false; reason: "PERIOD_ORDER" };
 
 /**
- * Poprawki szkicu: pozycje, daty, uwagi.
+ * Poprawki szkicu: pozycje, daty, koniec okresu, uwagi.
  *
  * Pozycje podmieniamy w całości, a nie łatamy po jednej — formularz i tak
  * wysyła cały dokument, a sumy liczą się od nowa z tego, co przyszło.
@@ -926,11 +948,14 @@ export async function updateDraftInvoice(
 ): Promise<DraftInvoiceResult> {
   const invoice = await prisma.invoice.findFirst({
     where: { id: invoiceId, organizationId },
-    select: { id: true, status: true },
+    select: { id: true, status: true, periodStart: true },
   });
 
   if (!invoice) return { ok: false, reason: "NOT_FOUND" };
   if (invoice.status !== "DRAFT") return { ok: false, reason: "NOT_DRAFT" };
+  if (data.periodEnd && invoice.periodStart && data.periodEnd < invoice.periodStart) {
+    return { ok: false, reason: "PERIOD_ORDER" };
+  }
 
   const { totals, lines } = linesCreateData(data.lines);
 
@@ -943,6 +968,7 @@ export async function updateDraftInvoice(
         issueDate: data.issueDate,
         saleDate: data.saleDate,
         dueDate: data.dueDate,
+        periodEnd: data.periodEnd,
         notes: data.notes,
         ...totals,
         lines: { create: lines },
@@ -952,6 +978,101 @@ export async function updateDraftInvoice(
   });
 
   return { ok: true, invoice: updated };
+}
+
+export type RefreshDraftResult =
+  | { ok: true }
+  | { ok: false; reason: "NOT_FOUND" | "NOT_DRAFT" | "NO_LEASE" }
+  | { ok: false; reason: "OUTSIDE_LEASE_PERIOD" | "NOTHING_TO_BILL" | "ALREADY_INVOICED" };
+
+/**
+ * Szkic liczony od nowa z aktualnej umowy.
+ *
+ * Szkic to migawka umowy z nocy naliczania. Gdy właściciel potem przedłuży
+ * umowę („do 21.10" → „do 31.10") albo zmieni czynsz, szkic dalej pokazuje
+ * stary okres i starą proporcję. Ten sam miesiąc liczymy więc jeszcze raz,
+ * dokładnie tak jak naliczanie — okres, daty, pozycje, uwagi i nabywca.
+ * Ręczne poprawki szkicu przepadają; o tym uprzedza przycisk.
+ *
+ * Miesiąc bierzemy z początku okresu szkicu: to on mówi, za co jest dokument.
+ */
+export async function refreshDraftFromLease(
+  organizationId: string,
+  invoiceId: string,
+): Promise<RefreshDraftResult> {
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, organizationId },
+    select: { status: true, leaseId: true, periodStart: true, issueDate: true },
+  });
+
+  if (!invoice) return { ok: false, reason: "NOT_FOUND" };
+  if (invoice.status !== "DRAFT") return { ok: false, reason: "NOT_DRAFT" };
+  if (!invoice.leaseId) return { ok: false, reason: "NO_LEASE" };
+
+  const lease = await prisma.lease.findFirst({
+    where: { id: invoice.leaseId, organizationId },
+    select: BILLING_LEASE_SELECT,
+  });
+  if (!lease) return { ok: false, reason: "NO_LEASE" };
+
+  const reference = invoice.periodStart ?? invoice.issueDate;
+  const year = reference.getUTCFullYear();
+  const monthIndex = reference.getUTCMonth();
+
+  const period = buildBillingPeriod(billingLease(lease), year, monthIndex);
+  if (!period) return { ok: false, reason: "OUTSIDE_LEASE_PERIOD" };
+
+  const locale = await organizationLocale(organizationId);
+  const d = getDictionary(locale);
+  const lines = rentLines(lease, period, year, monthIndex, d, locale);
+
+  const { totals, lines: lineData } = linesCreateData(lines);
+  if (totals.totalGrossGrosze === 0) return { ok: false, reason: "NOTHING_TO_BILL" };
+
+  // Nowy początek okresu (zmieniona data zawarcia) nie może zdublować
+  // dokumentu, który ten okres już rozlicza.
+  const duplicate = await prisma.invoice.findFirst({
+    where: {
+      organizationId,
+      leaseId: lease.id,
+      periodStart: period.periodStart,
+      status: { not: "CANCELLED" },
+      id: { not: invoiceId },
+    },
+    select: { id: true },
+  });
+  if (duplicate) return { ok: false, reason: "ALREADY_INVOICED" };
+
+  // Bez najemcy na umowie zostaje nabywca ze szkicu — lepszy niż żaden.
+  const tenant = lease.tenants[0]?.tenant;
+
+  const { count } = await prisma.$transaction(async (tx) => {
+    const result = await tx.invoice.updateMany({
+      where: { id: invoiceId, organizationId, status: "DRAFT" },
+      data: {
+        issueDate: period.issueDate,
+        saleDate: period.saleDate,
+        dueDate: period.dueDate,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        notes: fill(d.billing.invoiceNote, { period: periodLabel(year, monthIndex, locale) }),
+        ...totals,
+        ...(tenant
+          ? { kind: resolveDocumentKind(tenant.documentKind, lines), ...buyerSnapshot(tenant) }
+          : {}),
+      },
+    });
+    if (result.count !== 1) return result;
+
+    await tx.invoiceLine.deleteMany({ where: { invoiceId } });
+    await tx.invoiceLine.createMany({
+      data: lineData.map((line) => ({ ...line, invoiceId })),
+    });
+    return result;
+  });
+
+  if (count !== 1) return { ok: false, reason: "NOT_DRAFT" };
+  return { ok: true };
 }
 
 /**

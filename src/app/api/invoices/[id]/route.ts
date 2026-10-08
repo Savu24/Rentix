@@ -100,6 +100,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
   switch (result.reason) {
     case "NOT_FOUND":
       return apiError("NOT_FOUND", auth.d.panel.api.notFound.invoice);
+    case "PERIOD_ORDER":
+      return apiError("VALIDATION_ERROR", auth.d.panel.invoices.periodOrder, {
+        fields: { periodEnd: [auth.d.panel.invoices.periodOrder] },
+      });
     case "NOT_DRAFT":
     case "NOTHING_TO_BILL":
       return apiError("CONFLICT", auth.d.panel.api.invoiceNotDraft);

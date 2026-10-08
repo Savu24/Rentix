@@ -160,9 +160,12 @@ export type InvoiceCreateOutput = z.output<ReturnType<typeof invoiceCreateSchema
 /**
  * Poprawki szkicu przed zatwierdzeniem — patrz `src/lib/invoices/draft.ts`.
  *
- * Nabywca, umowa i okres zostają z naliczenia: to one mówią, czego dokument
- * dotyczy. Zmienia się to, co właściciel ustala z najemcą — kwoty, pozycje,
- * daty i uwagi.
+ * Nabywca i umowa zostają z naliczenia: to one mówią, czego dokument dotyczy.
+ * Zmienia się to, co właściciel ustala z najemcą — kwoty, pozycje, daty,
+ * koniec okresu i uwagi. Koniec okresu też, bo umowę bywa, że przedłuża się
+ * już po naliczeniu. Początek nie: po nim naliczanie rozpoznaje, że okres ma
+ * już dokument (`generateInvoicesForMonth`), więc jego zmiana dałaby co noc
+ * drugi szkic za ten sam miesiąc.
  */
 export const invoiceDraftSchema = (c: ValidationContext) =>
   z
@@ -170,6 +173,8 @@ export const invoiceDraftSchema = (c: ValidationContext) =>
     issueDate: dateInput(c, c.d.panel.invoices.fields.issueDate),
     saleDate: dateInput(c, c.d.panel.invoices.fields.saleDate),
     dueDate: dateInput(c, c.d.panel.invoices.fields.dueDate),
+
+    periodEnd: optionalDateInput(c, c.d.panel.invoices.fields.periodEnd),
 
     lines: z
       .array(invoiceLineSchema(c))
