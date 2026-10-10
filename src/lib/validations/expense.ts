@@ -189,6 +189,8 @@ export const expenseListQuerySchema = z.object({
   propertyId: z.string().max(64).optional(),
   /** Rok poniesienia — domyślny widok to bieżący rok obrotowy. */
   year: z.coerce.number().int().min(2000).max(2100).optional(),
+  /** Miesiąc 1–12. Działa tylko razem z rokiem — sam „październik" nie mówi, który. */
+  month: z.coerce.number().int().min(1).max(12).optional(),
 });
 
 export type ExpenseListQuery = z.output<typeof expenseListQuerySchema>;

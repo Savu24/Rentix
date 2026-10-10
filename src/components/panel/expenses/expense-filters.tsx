@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { expenseCategoryLabels, EXPENSE_CATEGORY_ORDER } from "@/lib/validations/expense";
 import { useI18n } from "@/lib/i18n/client";
-import { fill, pluralize } from "@/lib/i18n/format";
+import { fill, monthNames, pluralize } from "@/lib/i18n/format";
 /** Filtry listy kosztów. Stan w URL-u, jak przy pozostałych listach. */
 export function ExpenseFilters({
   total,
@@ -62,11 +62,38 @@ export function ExpenseFilters({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
+  /*
+    Miesiąc ma sens tylko w obrębie roku. Wybór miesiąca przy „wszystkich
+    latach" dobiera najnowszy rok z listy, a powrót do wszystkich lat zdejmuje
+    miesiąc — inaczej w adresie zostałby filtr, którego lista nie stosuje.
+  */
+  function setYear(value: string) {
+    const next = new URLSearchParams(searchParams);
+    if (value && value !== "all") next.set("year", value);
+    else {
+      next.delete("year");
+      next.delete("month");
+    }
+    apply(next);
+  }
+
+  function setMonth(value: string) {
+    const next = new URLSearchParams(searchParams);
+    if (value && value !== "all") {
+      next.set("month", value);
+      if (!next.get("year")) next.set("year", String(years[0] ?? new Date().getFullYear()));
+    } else {
+      next.delete("month");
+    }
+    apply(next);
+  }
+
   const hasFilters =
     Boolean(searchParams.get("q")) ||
     Boolean(searchParams.get("category")) ||
     Boolean(searchParams.get("propertyId")) ||
-    Boolean(searchParams.get("year"));
+    Boolean(searchParams.get("year")) ||
+    Boolean(searchParams.get("month"));
 
   return (
     <div className="flex flex-col gap-3">
@@ -90,13 +117,29 @@ export function ExpenseFilters({
           <Select
             aria-label={t.year}
             value={searchParams.get("year") ?? "all"}
-            onChange={(event) => setParam("year", event.target.value)}
+            onChange={(event) => setYear(event.target.value)}
             className="sm:w-32"
           >
             <option value="all">{t.allYears}</option>
             {years.map((year) => (
               <option key={year} value={year}>
                 {year}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            aria-label={t.month}
+            value={searchParams.get("month") ?? "all"}
+            onChange={(event) => setMonth(event.target.value)}
+            className="sm:w-40"
+          >
+            <option value="all">{t.allMonths}</option>
+            {monthNames(locale).map((name, index) => (
+              <option key={name} value={index + 1}>
+                {/* Intl podaje polskie miesiące małą literą — na liście wyboru
+                    stoją same, więc zaczynają się wielką. */}
+                {name.charAt(0).toLocaleUpperCase() + name.slice(1)}
               </option>
             ))}
           </Select>

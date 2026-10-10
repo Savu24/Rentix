@@ -990,7 +990,8 @@ export const pl = {
         vendor: "Dostawca",
         documentRef: "Nr dokumentu",
         recurring: "Koszt cykliczny",
-        recurringHint: "Rentix sam dopisze kolejne pozycje, gdy minie ich termin.",
+        recurringHint:
+          "Rentix sam dopisze kolejne pozycje, gdy minie ich termin, z kwotą z ostatniej. Gdy stawka się zmieni, popraw najnowszą pozycję — wcześniejsze miesiące zostaną bez zmian.",
         recurrence: "Co ile ponosisz ten koszt",
         everyDays: "Co ile dni",
         everyDaysHint: "Np. 90 przy przeglądzie kwartalnym.",
@@ -1003,6 +1004,8 @@ export const pl = {
         searchLabel: "Szukaj kosztów",
         year: "Rok",
         allYears: "Wszystkie lata",
+        month: "Miesiąc",
+        allMonths: "Wszystkie miesiące",
         category: "Kategoria",
         allCategories: "Wszystkie kategorie",
         property: "Nieruchomość",
@@ -1293,6 +1296,7 @@ export const pl = {
       currentMonthly: "Obecnie, miesięcznie",
       yearTotal: "Razem w {year}",
       profitColumn: "Zysk",
+      total: "Razem",
       currentMonthlyNote:
         "Obecnie, miesięcznie: czynsz z zaliczką na media z aktywnych umów i koszty cykliczne przeliczone na miesiąc.",
       byCategory: "Koszty wg kategorii",

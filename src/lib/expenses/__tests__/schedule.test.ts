@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { nextOccurrence } from "@/lib/expenses/schedule";
+import { nextOccurrence, recurrenceAnchor } from "@/lib/expenses/schedule";
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 const iso = (date: Date) => date.toISOString().slice(0, 10);
@@ -62,5 +62,24 @@ describe("nextOccurrence", () => {
     // była pusta, pętla naliczania nie może stanąć w miejscu.
     const next = nextOccurrence(utc("2026-08-01"), utc("2026-08-01"), "CUSTOM", null);
     expect(next.getTime()).toBeGreaterThan(utc("2026-08-01").getTime());
+  });
+});
+
+describe("recurrenceAnchor", () => {
+  it("bez pierwszej pozycji kotwicą jest sam wzorzec", () => {
+    expect(iso(recurrenceAnchor(utc("2026-10-10"), null))).toBe("2026-10-10");
+  });
+
+  it("przesunięty dzień płatności zostaje nową kotwicą", () => {
+    expect(iso(recurrenceAnchor(utc("2026-10-15"), utc("2026-08-10")))).toBe("2026-10-15");
+  });
+
+  it("przycięty koniec lutego wraca do 31. dnia pierwszej pozycji", () => {
+    const anchor = recurrenceAnchor(utc("2026-02-28"), utc("2026-01-31"));
+    expect(iso(nextOccurrence(anchor, utc("2026-02-28"), "MONTHLY", null))).toBe("2026-03-31");
+  });
+
+  it("koniec miesiąca bez przycięcia zostaje kotwicą", () => {
+    expect(iso(recurrenceAnchor(utc("2026-04-30"), utc("2026-01-30")))).toBe("2026-04-30");
   });
 });

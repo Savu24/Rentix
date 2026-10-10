@@ -21,14 +21,7 @@ function listWhere(organizationId: string, query: ExpenseListQuery): Prisma.Expe
     organizationId,
     ...(query.category ? { category: query.category } : {}),
     ...(query.propertyId ? { propertyId: query.propertyId } : {}),
-    ...(query.year
-      ? {
-          paidAt: {
-            gte: new Date(Date.UTC(query.year, 0, 1)),
-            lt: new Date(Date.UTC(query.year + 1, 0, 1)),
-          },
-        }
-      : {}),
+    ...(query.year ? { paidAt: periodRange(query.year, query.month) } : {}),
     ...(query.q
       ? {
           OR: [
@@ -39,6 +32,20 @@ function listWhere(organizationId: string, query: ExpenseListQuery): Prisma.Expe
         }
       : {}),
   };
+}
+
+/**
+ * Zakres dat roku albo jednego jego miesiąca.
+ *
+ * `Date.UTC` samo przenosi miesiąc 12 na styczeń kolejnego roku, więc grudzień
+ * nie potrzebuje osobnego przypadku.
+ */
+function periodRange(year: number, month: number | undefined) {
+  if (!month) {
+    return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
+  }
+
+  return { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) };
 }
 
 /** Jeden kształt wiersza dla zestawienia i dla karty nieruchomości. */

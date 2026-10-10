@@ -70,6 +70,25 @@ export default async function ReportsPage({
 
   const hasData = totals.incomeGrosze > 0 || totals.expenseGrosze > 0;
 
+  const columnTotals = report.properties.reduce(
+    (sum, row) => ({
+      monthlyIncomeGrosze: sum.monthlyIncomeGrosze + row.monthlyIncomeGrosze,
+      monthlyExpenseGrosze: sum.monthlyExpenseGrosze + row.monthlyExpenseGrosze,
+      monthlyProfitGrosze: sum.monthlyProfitGrosze + row.monthlyProfitGrosze,
+      incomeGrosze: sum.incomeGrosze + row.incomeGrosze,
+      expenseGrosze: sum.expenseGrosze + row.expenseGrosze,
+      profitGrosze: sum.profitGrosze + row.profitGrosze,
+    }),
+    {
+      monthlyIncomeGrosze: 0,
+      monthlyExpenseGrosze: 0,
+      monthlyProfitGrosze: 0,
+      incomeGrosze: 0,
+      expenseGrosze: 0,
+      profitGrosze: 0,
+    },
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -192,6 +211,32 @@ export default async function ReportsPage({
                       </tr>
                     ))}
                   </tbody>
+
+                  {/* Suma kolumn pod tabelą. Roczna część zgadza się z kafelkami
+                      nad wykresem, ale stoi też tutaj, żeby nie trzeba było
+                      dodawać wierszy w głowie, zwłaszcza w kolumnach bieżących. */}
+                  <tfoot className="border-t-2 border-border font-semibold">
+                    <tr>
+                      <th scope="row" className="py-2.5 pr-3 text-left text-sm font-semibold text-fg">
+                        {t.total}
+                      </th>
+                      <AmountCells
+                        income={columnTotals.monthlyIncomeGrosze}
+                        expense={columnTotals.monthlyExpenseGrosze}
+                        profit={columnTotals.monthlyProfitGrosze}
+                        locale={locale}
+                        emphasis
+                      />
+                      <AmountCells
+                        income={columnTotals.incomeGrosze}
+                        expense={columnTotals.expenseGrosze}
+                        profit={columnTotals.profitGrosze}
+                        locale={locale}
+                        divided
+                        emphasis
+                      />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
 
@@ -327,21 +372,25 @@ function AmountCells({
   profit,
   locale,
   divided = false,
+  /** Wiersz sum: przychód i koszty w kolorze tekstu, a nie wyciszone. */
+  emphasis = false,
 }: {
   income: number;
   expense: number;
   profit: number;
   locale: Locale;
   divided?: boolean;
+  emphasis?: boolean;
 }) {
   const cell = "tabular whitespace-nowrap py-2.5 pl-3 font-mono";
+  const secondary = emphasis ? "text-xs text-fg" : "text-xs text-muted";
 
   return (
     <>
-      <td className={`${cell} text-xs text-muted ${divided ? "border-l border-border" : ""}`}>
+      <td className={`${cell} ${secondary} ${divided ? "border-l border-border" : ""}`}>
         {formatAmount(income, locale)}
       </td>
-      <td className={`${cell} text-xs text-muted`}>
+      <td className={`${cell} ${secondary}`}>
         {expense > 0 ? "−" : ""}
         {formatAmount(expense, locale)}
       </td>

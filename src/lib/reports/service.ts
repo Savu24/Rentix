@@ -84,10 +84,10 @@ export async function annualReport(
       where: { organizationId, status: "ACTIVE" },
       select: { propertyId: true, rentGrosze: true, utilitiesAdvanceGrosze: true },
     }),
-    // Tylko wzorce — wystąpienia naliczone z nich to już zwykłe koszty
-    // w zestawieniu rocznym.
+    // Tylko wzorce, czyli najnowsze pozycje serii — wcześniejsze wystąpienia
+    // to już zwykłe koszty w zestawieniu rocznym.
     prisma.expense.findMany({
-      where: { organizationId, recurrence: { not: null }, recurringFromId: null },
+      where: { organizationId, recurrence: { not: null } },
       select: {
         propertyId: true,
         amountGrosze: true,

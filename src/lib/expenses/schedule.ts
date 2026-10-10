@@ -58,3 +58,21 @@ export function nextOccurrence(
     }
   }
 }
+
+/**
+ * Dzień, od którego liczymy kolejne terminy wzorca.
+ *
+ * Wzorcem jest zawsze najnowsza pozycja serii, więc kotwicą jest zwykle jej
+ * własna data — przesunięcie płatności na 15. ma od tej pory dawać 15. Wyjątek
+ * to termin przycięty do końca krótkiego miesiąca: 28 lutego z serii płaconej
+ * 31. dnia zostałby kotwicą na zawsze, więc wtedy wracamy do dnia pierwszej
+ * pozycji.
+ */
+export function recurrenceAnchor(paidAt: Date, firstPaidAt: Date | null): Date {
+  if (!firstPaidAt) return paidAt;
+
+  const day = paidAt.getUTCDate();
+  const clamped = day === daysInMonth(paidAt.getUTCFullYear(), paidAt.getUTCMonth());
+
+  return clamped && firstPaidAt.getUTCDate() > day ? firstPaidAt : paidAt;
+}

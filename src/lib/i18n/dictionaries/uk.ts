@@ -1007,7 +1007,8 @@ export const uk: Dictionary = {
         vendor: "Supplier",
         documentRef: "Reference",
         recurring: "Recurring cost",
-        recurringHint: "Rentix adds the next entry itself once it falls due.",
+        recurringHint:
+          "Rentix adds the next entry itself once it falls due, with the amount from the latest one. When the rate changes, edit the latest entry — earlier months stay as they were.",
         recurrence: "How often you pay it",
         everyDays: "Every how many days",
         everyDaysHint: "90, say, for a quarterly service.",
@@ -1020,6 +1021,8 @@ export const uk: Dictionary = {
         searchLabel: "Search costs",
         year: "Year",
         allYears: "All years",
+        month: "Month",
+        allMonths: "All months",
         category: "Category",
         allCategories: "All categories",
         property: "Property",
@@ -1309,6 +1312,7 @@ export const uk: Dictionary = {
       currentMonthly: "Current, per month",
       yearTotal: "Total in {year}",
       profitColumn: "Profit",
+      total: "Total",
       currentMonthlyNote:
         "Current, per month: rent plus utilities advance from active tenancies and recurring costs converted to a monthly amount.",
       byCategory: "Costs by category",
