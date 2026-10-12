@@ -7,7 +7,7 @@ const t = getDictionary("uk").marketing;
 
 export const metadata: Metadata = {
   // `absolute`, bo tytuł strony głównej sam zaczyna się od nazwy marki —
-  // szablon „%s · Rentix" z layoutu dokleiłby ją po raz drugi.
+  // szablon „%s · RentixON" z layoutu dokleiłby ją po raz drugi.
   title: { absolute: t.metaTitle },
   description: t.metaDescription,
   /*

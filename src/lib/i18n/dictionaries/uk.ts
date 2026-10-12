@@ -23,7 +23,7 @@ export const uk: Dictionary = {
   },
 
   marketing: {
-    metaTitle: "Rentix · lettings management without the spreadsheet",
+    metaTitle: "RentixON · lettings management without the spreadsheet",
     metaDescription:
       "Tenancies, rent invoices, payments and financial reports in one place. No enterprise interface, and no price that climbs with every property.",
 
@@ -180,14 +180,14 @@ export const uk: Dictionary = {
     },
 
     footer: {
-      rights: "© 2026 Rentix. All rights reserved.",
+      rights: "© 2026 RentixON. All rights reserved.",
     },
   },
 
   auth: {
     login: {
       metaTitle: "Log in",
-      metaDescription: "Log in to your Rentix dashboard.",
+      metaDescription: "Log in to your RentixON dashboard.",
       heading: "Log in",
       noAccount: "No account yet?",
       registerLink: "Create one for free",
@@ -201,7 +201,7 @@ export const uk: Dictionary = {
 
     register: {
       metaTitle: "Create an account",
-      metaDescription: "Create a free Rentix account. Two tenancies free, no time limit.",
+      metaDescription: "Create a free RentixON account. Two tenancies free, no time limit.",
       heading: "Create a free account",
       hasAccount: "Already have an account?",
       loginLink: "Log in",
@@ -215,7 +215,7 @@ export const uk: Dictionary = {
       submit: "Create a free account",
       submitting: "Creating your account…",
       terms:
-        "By creating an account you accept the Rentix terms and privacy policy. No credit card. Two tenancies free, no time limit.",
+        "By creating an account you accept the RentixON terms and privacy policy. No credit card. Two tenancies free, no time limit.",
       failed: "We couldn't create the account. Please try again in a moment.",
       emailTaken: "An account with this email address already exists.",
       emailTakenField: "This address is already taken",
@@ -924,7 +924,7 @@ export const uk: Dictionary = {
         billingDayHint: "1 to 28, so February needs no exception.",
         billingStart: "Do not invoice before",
         billingStartHint:
-          "For tenancies moved over from another system. Enter the first day of the month you start invoicing in Rentix. Blank means from the start of the tenancy.",
+          "For tenancies moved over from another system. Enter the first day of the month you start invoicing in RentixON. Blank means from the start of the tenancy.",
         billingStartShortHint:
           "Months already settled in your previous system. Blank means from the start.",
         paymentTerm: "Payment term (days)",
@@ -1014,7 +1014,7 @@ export const uk: Dictionary = {
         documentRef: "Reference",
         recurring: "Recurring cost",
         recurringHint:
-          "Rentix adds the next entry itself once it falls due, with the amount from the latest one. When the rate changes, edit the latest entry — earlier months stay as they were.",
+          "RentixON adds the next entry itself once it falls due, with the amount from the latest one. When the rate changes, edit the latest entry — earlier months stay as they were.",
         recurrence: "How often you pay it",
         everyDays: "Every how many days",
         everyDaysHint: "90, say, for a quarterly service.",
@@ -1095,7 +1095,7 @@ export const uk: Dictionary = {
           NO_TENANT: "have no tenant assigned",
           NOTHING_TO_BILL: "have nothing to invoice",
           BILLING_DAY_AHEAD: "have a billing day still ahead",
-          BEFORE_BILLING_START: "only start being invoiced in Rentix from a later month",
+          BEFORE_BILLING_START: "only start being invoiced in RentixON from a later month",
         },
         nothingIssued: "No new document was issued.",
       },
@@ -1209,7 +1209,7 @@ export const uk: Dictionary = {
 
     messagesPage: {
       title: "Messages",
-      lead: "Every email Rentix sent on your behalf: who it went to, when, and whether it arrived.",
+      lead: "Every email RentixON sent on your behalf: who it went to, when, and whether it arrived.",
       searchPlaceholder: "Search by address, subject or document number",
       searchAria: "Search messages",
       statusAria: "Message status",
@@ -1248,7 +1248,7 @@ export const uk: Dictionary = {
       },
       emptyTitle: "Nothing sent yet",
       emptyLead:
-        "When Rentix sends a tenant a document or a payment reminder, the message will show up here.",
+        "When RentixON sends a tenant a document or a payment reminder, the message will show up here.",
       noResultsTitle: "No messages match this filter",
       noResultsLead: "Change the search, status or period.",
       count: ["{count} message", "{count} messages"],
@@ -1278,7 +1278,7 @@ export const uk: Dictionary = {
         tabsAria: "Content view",
         previewFrameTitle: "Message preview: {subject}",
         noHtml:
-          "This message went out before Rentix started keeping its layout. Its plain-text version is below.",
+          "This message went out before RentixON started keeping its layout. Its plain-text version is below.",
         errorTitle: "Mail server response",
         editTemplate: "Change the wording of this kind of message",
         statusHints: {
@@ -1289,7 +1289,7 @@ export const uk: Dictionary = {
             "The recipient's server isn't accepting mail right now. Resend keeps retrying on its own.",
           suppressed:
             "Resend no longer sends to this address after an earlier bounce or spam complaint.",
-          failed: "The message never left Rentix. The tenant did not receive it.",
+          failed: "The message never left RentixON. The tenant did not receive it.",
         },
       },
     },
@@ -1350,7 +1350,7 @@ export const uk: Dictionary = {
         total: "TOTAL",
         category: "Cost category",
         amount: "Amount",
-        fileName: "rentix-summary-{year}.csv",
+        fileName: "rentixon-summary-{year}.csv",
       },
       chartNoValue: "none",
     },
@@ -1507,8 +1507,8 @@ export const uk: Dictionary = {
       download: "Download CSV",
       note: "Documents are counted by issue date, payments and costs by the date the money moved. Those are two different bases, which is why the summary does not add them into one figure.",
       csv: {
-        heading: "Rentix — accounting export {period}",
-        fileNameBase: "rentix-accounting",
+        heading: "RentixON — accounting export {period}",
+        fileNameBase: "rentixon-accounting",
         documentsTitle: "DOCUMENT REGISTER (by issue date)",
         documentsColumns: [
           "Number",
@@ -2293,9 +2293,9 @@ export const uk: Dictionary = {
       },
       utilitiesIncomplete: {
         METERED:
-          "Meter readings cannot be entered in Rentix yet, so the invoice will cover rent only. Add utility lines outside the system for now.",
+          "Meter readings cannot be entered in RentixON yet, so the invoice will cover rent only. Add utility lines outside the system for now.",
         MIXED:
-          "The utilities allowance will be invoiced as normal, but Rentix cannot yet reconcile it against meter readings.",
+          "The utilities allowance will be invoiced as normal, but RentixON cannot yet reconcile it against meter readings.",
       },
     },
 

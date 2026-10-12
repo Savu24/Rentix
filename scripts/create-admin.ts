@@ -76,7 +76,7 @@ async function main() {
   }
 
   const name = readOption(args, "name") ?? "Administrator";
-  const organizationName = readOption(args, "org") ?? "Rentix";
+  const organizationName = readOption(args, "org") ?? "RentixON";
   const password = readOption(args, "haslo") ?? generatePassword();
 
   const result = await registerOwner({ email, name, organizationName, password });

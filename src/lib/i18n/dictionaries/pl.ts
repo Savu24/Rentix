@@ -14,7 +14,7 @@ export const pl = {
   },
 
   marketing: {
-    metaTitle: "Rentix · zarządzanie najmem bez Excela",
+    metaTitle: "RentixON · zarządzanie najmem bez Excela",
     metaDescription:
       "Umowy, rachunki, płatności i raporty finansowe w jednym miejscu. Bez korporacyjnego interfejsu i bez cen rosnących z każdym mieszkaniem.",
 
@@ -182,20 +182,20 @@ export const pl = {
 
     closing: {
       titleFirstLine: "Przenieś swój najem",
-      titleSecondLine: "z Excela do Rentiksa",
+      titleSecondLine: "z Excela do RentixON",
       lead: "Dwie umowy za darmo, bez terminu.",
       cta: "Załóż darmowe konto →",
     },
 
     footer: {
-      rights: "© 2026 Rentix. Wszystkie prawa zastrzeżone.",
+      rights: "© 2026 RentixON. Wszystkie prawa zastrzeżone.",
     },
   },
 
   auth: {
     login: {
       metaTitle: "Logowanie",
-      metaDescription: "Zaloguj się do panelu Rentix.",
+      metaDescription: "Zaloguj się do panelu RentixON.",
       heading: "Zaloguj się",
       noAccount: "Nie masz jeszcze konta?",
       registerLink: "Załóż je za darmo",
@@ -209,7 +209,7 @@ export const pl = {
 
     register: {
       metaTitle: "Załóż konto",
-      metaDescription: "Załóż darmowe konto Rentix. Dwie umowy za darmo, bez terminu.",
+      metaDescription: "Załóż darmowe konto RentixON. Dwie umowy za darmo, bez terminu.",
       heading: "Załóż darmowe konto",
       hasAccount: "Masz już konto?",
       loginLink: "Zaloguj się",
@@ -223,7 +223,7 @@ export const pl = {
       submit: "Załóż darmowe konto",
       submitting: "Zakładanie konta…",
       terms:
-        "Zakładając konto akceptujesz regulamin i politykę prywatności Rentix. Bez karty kredytowej. Dwie umowy za darmo, bez terminu.",
+        "Zakładając konto akceptujesz regulamin i politykę prywatności RentixON. Bez karty kredytowej. Dwie umowy za darmo, bez terminu.",
       failed: "Nie udało się założyć konta. Spróbuj ponownie za chwilę.",
       emailTaken: "Konto z tym adresem e-mail już istnieje.",
       emailTakenField: "Ten adres jest już zajęty",
@@ -908,7 +908,7 @@ export const pl = {
         billingDayHint: "1–28, żeby luty nie wymagał wyjątku.",
         billingStart: "Nie naliczaj przed",
         billingStartHint:
-          "Dla umów przeniesionych z innego programu. Wpisz pierwszy dzień miesiąca, od którego rozliczasz najemcę w Rentiksie. Puste = od początku umowy.",
+          "Dla umów przeniesionych z innego programu. Wpisz pierwszy dzień miesiąca, od którego rozliczasz najemcę w RentixON. Puste = od początku umowy.",
         billingStartShortHint: "Miesiące rozliczone w poprzednim programie. Puste = od początku umowy.",
         paymentTerm: "Termin płatności (dni)",
         sendByEmail: "Wysyłaj rachunki mailem",
@@ -997,7 +997,7 @@ export const pl = {
         documentRef: "Nr dokumentu",
         recurring: "Koszt cykliczny",
         recurringHint:
-          "Rentix sam dopisze kolejne pozycje, gdy minie ich termin, z kwotą z ostatniej. Gdy stawka się zmieni, popraw najnowszą pozycję — wcześniejsze miesiące zostaną bez zmian.",
+          "RentixON sam dopisze kolejne pozycje, gdy minie ich termin, z kwotą z ostatniej. Gdy stawka się zmieni, popraw najnowszą pozycję — wcześniejsze miesiące zostaną bez zmian.",
         recurrence: "Co ile ponosisz ten koszt",
         everyDays: "Co ile dni",
         everyDaysHint: "Np. 90 przy przeglądzie kwartalnym.",
@@ -1078,7 +1078,7 @@ export const pl = {
           NO_TENANT: "nie mają przypisanego najemcy",
           NOTHING_TO_BILL: "nie mają czego naliczyć",
           BILLING_DAY_AHEAD: "mają dzień naliczania w przyszłości",
-          BEFORE_BILLING_START: "są rozliczane w Rentiksie dopiero od późniejszego miesiąca",
+          BEFORE_BILLING_START: "są rozliczane w RentixON dopiero od późniejszego miesiąca",
         },
         nothingIssued: "Nie wystawiono żadnego nowego dokumentu.",
       },
@@ -1193,7 +1193,7 @@ export const pl = {
 
     messagesPage: {
       title: "Wiadomości",
-      lead: "Każdy e-mail, który Rentix wysłał w Twoim imieniu: do kogo, kiedy i czy dotarł.",
+      lead: "Każdy e-mail, który RentixON wysłał w Twoim imieniu: do kogo, kiedy i czy dotarł.",
       searchPlaceholder: "Szukaj po adresie, temacie albo numerze dokumentu",
       searchAria: "Szukaj wiadomości",
       statusAria: "Status wiadomości",
@@ -1232,7 +1232,7 @@ export const pl = {
       },
       emptyTitle: "Nic jeszcze nie wysłano",
       emptyLead:
-        "Gdy Rentix wyśle najemcy dokument albo przypomnienie o płatności, wiadomość pojawi się tutaj.",
+        "Gdy RentixON wyśle najemcy dokument albo przypomnienie o płatności, wiadomość pojawi się tutaj.",
       noResultsTitle: "Brak wiadomości dla tego filtra",
       noResultsLead: "Zmień frazę, status albo okres.",
       count: ["{count} wiadomość", "{count} wiadomości", "{count} wiadomości"],
@@ -1262,7 +1262,7 @@ export const pl = {
         tabsAria: "Widok treści",
         previewFrameTitle: "Podgląd wiadomości: {subject}",
         noHtml:
-          "Ta wiadomość wyszła, zanim Rentix zaczął zachowywać jej wygląd. Poniżej jej treść w wersji tekstowej.",
+          "Ta wiadomość wyszła, zanim RentixON zaczął zachowywać jej wygląd. Poniżej jej treść w wersji tekstowej.",
         errorTitle: "Odpowiedź serwera pocztowego",
         editTemplate: "Zmień treść tego rodzaju wiadomości",
         statusHints: {
@@ -1273,7 +1273,7 @@ export const pl = {
             "Serwer odbiorcy chwilowo nie przyjmuje poczty. Resend ponawia próby sam.",
           suppressed:
             "Resend nie wysyła już na ten adres po wcześniejszym odbiciu albo zgłoszeniu spamu.",
-          failed: "Wiadomość nie wyszła z Rentixa. Najemca jej nie dostał.",
+          failed: "Wiadomość nie wyszła z RentixON. Najemca jej nie dostał.",
         },
       },
     },
@@ -1332,7 +1332,7 @@ export const pl = {
         total: "RAZEM",
         category: "Kategoria kosztu",
         amount: "Kwota",
-        fileName: "rentix-zestawienie-{year}.csv",
+        fileName: "rentixon-zestawienie-{year}.csv",
       },
       chartNoValue: "brak",
     },
@@ -1490,8 +1490,8 @@ export const pl = {
       download: "Pobierz CSV",
       note: "Dokumenty liczymy po dacie wystawienia, wpłaty i koszty po dacie przepływu pieniędzy. To dwie różne podstawy, dlatego podsumowanie nie skleja ich w jedną kwotę.",
       csv: {
-        heading: "Rentix — eksport księgowy {period}",
-        fileNameBase: "rentix-ksiegowosc",
+        heading: "RentixON — eksport księgowy {period}",
+        fileNameBase: "rentixon-ksiegowosc",
         documentsTitle: "REJESTR DOKUMENTÓW (wg daty wystawienia)",
         documentsColumns: [
           "Numer",
@@ -2254,9 +2254,9 @@ export const pl = {
       },
       utilitiesIncomplete: {
         METERED:
-          "Odczytów liczników nie da się jeszcze wpisać w Rentiksie, więc rozliczenie obejmie sam czynsz. Pozycje za media dolicz na razie poza systemem.",
+          "Odczytów liczników nie da się jeszcze wpisać w RentixON, więc rozliczenie obejmie sam czynsz. Pozycje za media dolicz na razie poza systemem.",
         MIXED:
-          "Zaliczka na media będzie naliczana normalnie, ale rozliczenia po odczytach liczników Rentix jeszcze nie zrobi.",
+          "Zaliczka na media będzie naliczana normalnie, ale rozliczenia po odczytach liczników RentixON jeszcze nie zrobi.",
       },
     },
 

@@ -38,10 +38,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: {
       default: t.metaTitle,
-      template: "%s · Rentix",
+      template: "%s · RentixON",
     },
     description: t.metaDescription,
-    applicationName: "Rentix",
+    applicationName: "RentixON",
     /*
       Adres bazowy podglądów linków. Bierzemy go ze zwalidowanego `env`, a nie
       wprost z `process.env`: panel hostingu pozwala dodać zmienną z pustą
@@ -69,7 +69,7 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     },
     appleWebApp: {
-      title: "Rentix",
+      title: "RentixON",
       capable: true,
       statusBarStyle: "default",
     },

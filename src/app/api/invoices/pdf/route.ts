@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   const buffer = await renderToBuffer(InvoiceBatchDocument({ documents, authorName }));
 
   const stamp = new Date().toISOString().slice(0, 10);
-  const filename = `rentix-dokumenty-${stamp}-${documents.length}.pdf`;
+  const filename = `rentixon-dokumenty-${stamp}-${documents.length}.pdf`;
 
   return new Response(new Uint8Array(buffer), {
     headers: {

@@ -17,8 +17,8 @@ import { ROUTES } from "@/lib/auth/routes";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Rentix",
-    short_name: "Rentix",
+    name: "RentixON",
+    short_name: "RentixON",
     description: "Zarządzanie najmem: nieruchomości, najemcy, umowy i płatności.",
     /*
       Aplikacja startuje w panelu, a nie na stronie ofertowej — skrót ma być
