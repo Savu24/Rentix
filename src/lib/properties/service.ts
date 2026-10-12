@@ -56,6 +56,7 @@ export async function listProperties(organizationId: string, query: PropertyList
       city: true,
       district: true,
       areaM2: true,
+      floor: true,
       intercomCode: true,
       publiclyListed: true,
       archivedAt: true,

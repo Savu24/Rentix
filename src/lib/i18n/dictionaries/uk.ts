@@ -227,10 +227,10 @@ export const uk: Dictionary = {
      */
     invitation: {
       metaTitle: "Invitation",
-      metaDescription: "Accept your invitation to Rentix.",
+      metaDescription: "Accept your invitation to RentixON.",
       team: {
         heading: "Invitation to the team",
-        lead: "{organization} invites you to work with them in Rentix as {role}.",
+        lead: "{organization} invites you to work with them in RentixON as {role}.",
       },
       tenant: {
         heading: "Tenant portal",
@@ -379,6 +379,12 @@ export const uk: Dictionary = {
         ownerPrefix: "Landlord: ",
         floor: "floor {floor}",
         wholeRent: "whole property {amount}",
+        balanceTitle: "Monthly balance",
+        balancePositive: "in the black",
+        balanceNegative: "in the red",
+        balanceIncome: "Income",
+        balanceExpenses: "Costs",
+        balanceNote: "Rent and utilities allowance from active tenancies, minus recurring costs converted to a monthly figure.",
         wholeLetTitle: "Letting the whole property to one person?",
         wholeLetLead: "One tenancy for the property instead of separate room tenancies.",
         wholeLetButton: "Let the whole property",
@@ -2416,7 +2422,7 @@ export const uk: Dictionary = {
   emails: {
     attachmentNote: "The PDF is attached to this message.",
     attachmentPlain: "The PDF is attached to this message.",
-    automaticFooter: "sent automatically by Rentix",
+    automaticFooter: "sent automatically by RentixON",
 
     /** Invitation emails. The landlord does not edit these. */
     invitations: {
@@ -2425,7 +2431,7 @@ export const uk: Dictionary = {
         subject: "Invitation to the {organization} team",
         heading: "Invitation to the team",
         intro:
-          "{organization} invites you to work with them in Rentix as {role}. Use the button below to set a password and get into the panel.",
+          "{organization} invites you to work with them in RentixON as {role}. Use the button below to set a password and get into the panel.",
         outro: "If you do not know what this is about, ignore it. Nothing happens until you click.",
         cta: "Accept invitation",
       },

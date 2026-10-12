@@ -27,10 +27,13 @@ import { cleaningSchedule } from "@/lib/cleaning/service";
 import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { propertyExpenses } from "@/lib/expenses/service";
 import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/types";
 import { fill, formatDateIn } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getProperty } from "@/lib/properties/service";
+import type { MonthlyBalance } from "@/lib/reports/aggregate";
+import { propertyMonthlyBalance } from "@/lib/reports/service";
 import {
   heatingTypeLabels,
   propertyTypeLabels,
@@ -63,7 +66,10 @@ export default async function PropertyDetailPage({ params }: Params) {
   // Zaległe pozycje cykliczne doliczamy przed odczytem, tak samo jak na liście
   // kosztów — inaczej karta pokazywałaby sumę sprzed naliczenia.
   await accrueRecurringExpenses(session.user.organizationId);
-  const expenses = await propertyExpenses(session.user.organizationId, property.id);
+  const [expenses, balance] = await Promise.all([
+    propertyExpenses(session.user.organizationId, property.id),
+    propertyMonthlyBalance(session.user.organizationId, property.id),
+  ]);
 
   const rooms: RoomView[] = property.rooms.map((room) => {
     const lease = room.leases[0];
@@ -198,6 +204,13 @@ export default async function PropertyDetailPage({ params }: Params) {
           </div>
         </div>
       </div>
+
+      {/* Bilans zaraz pod nagłówkiem, przed pokojami: to pierwsze, czego się
+          szuka, zaglądając do lokalu z telefonu. Bez umów i kosztów cyklicznych
+          byłyby same zera, więc wtedy karta się nie pokazuje. */}
+      {balance.incomeGrosze > 0 || balance.expenseGrosze > 0 ? (
+        <BalanceCard balance={balance} locale={locale} t={t} />
+      ) : null}
 
       {property.description ? (
         <Card>
@@ -340,6 +353,64 @@ export default async function PropertyDetailPage({ params }: Params) {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Bilans miesięczny lokalu: wynik dużą liczbą, przychód i koszty obok.
+ *
+ * Znak przed wynikiem jest jawny także na plusie — kolor nie wystarcza,
+ * gdy ekran telefonu jest w słońcu albo ktoś nie rozróżnia zieleni.
+ */
+function BalanceCard({
+  balance,
+  locale,
+  t,
+}: {
+  balance: MonthlyBalance;
+  locale: Locale;
+  t: Dictionary["panel"]["propertiesPage"]["detail"];
+}) {
+  const profit = balance.profitGrosze;
+  const tone = profit > 0 ? "text-good" : profit < 0 ? "text-bad" : "text-fg";
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-3 p-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs text-muted">{t.balanceTitle}</p>
+            <p className={`tabular font-mono text-[24px] leading-tight font-semibold ${tone}`}>
+              {profit > 0 ? "+" : ""}
+              {formatMoney(profit, locale)}
+            </p>
+            {profit !== 0 ? (
+              <p className="text-xs text-muted">
+                {profit > 0 ? t.balancePositive : t.balanceNegative}
+              </p>
+            ) : null}
+          </div>
+
+          <dl className="flex gap-6">
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-xs text-muted">{t.balanceIncome}</dt>
+              <dd className="tabular font-mono text-sm text-fg">
+                {formatMoney(balance.incomeGrosze, locale)}
+              </dd>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-xs text-muted">{t.balanceExpenses}</dt>
+              <dd className="tabular font-mono text-sm text-fg">
+                {balance.expenseGrosze > 0 ? "−" : ""}
+                {formatMoney(balance.expenseGrosze, locale)}
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <p className="text-xs text-muted">{t.balanceNote}</p>
+      </CardContent>
+    </Card>
   );
 }
 

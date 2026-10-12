@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCsv,
   collectionStats,
+  monthlyBalance,
   monthlyBreakdown,
   monthlyCost,
   propertyBreakdown,
@@ -55,6 +56,31 @@ describe("monthlyBreakdown", () => {
 
     expect(rows[0]?.incomeGrosze).toBe(100000);
     expect(rows[11]?.incomeGrosze).toBe(0);
+  });
+});
+
+describe("monthlyBalance", () => {
+  it("odejmuje koszty cykliczne od czynszu z zaliczką ze wszystkich umów", () => {
+    const balance = monthlyBalance(
+      [
+        { rentGrosze: 150000, utilitiesAdvanceGrosze: 20000 },
+        { rentGrosze: 140000, utilitiesAdvanceGrosze: 20000 },
+      ],
+      [
+        { amountGrosze: 60000, recurrence: "MONTHLY", recurrenceEveryDays: null },
+        { amountGrosze: 120000, recurrence: "YEARLY", recurrenceEveryDays: null },
+      ],
+    );
+
+    expect(balance).toEqual({ incomeGrosze: 330000, expenseGrosze: 70000, profitGrosze: 260000 });
+  });
+
+  it("pusty lokal z kosztami wychodzi na minus", () => {
+    const balance = monthlyBalance([], [
+      { amountGrosze: 45000, recurrence: "MONTHLY", recurrenceEveryDays: null },
+    ]);
+
+    expect(balance.profitGrosze).toBe(-45000);
   });
 });
 

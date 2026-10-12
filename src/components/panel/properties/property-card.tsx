@@ -96,6 +96,9 @@ export async function PropertyCard({ property }: { property: PropertyListItem })
           {property.areaM2 ? (
             <span className="tabular">{locale === "pl" ? property.areaM2.replace(".", ",") : property.areaM2} m²</span>
           ) : null}
+          {property.floor !== null ? (
+            <span className="tabular">{fill(t.detail.floor, { floor: property.floor })}</span>
+          ) : null}
           {/* Kod do domofonu na liście, bo po niego się tu wraca — zwykle
               stojąc przed budynkiem z telefonem w ręku. */}
           {property.intercomCode ? (

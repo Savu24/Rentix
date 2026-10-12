@@ -5,10 +5,12 @@ import type { Locale } from "@/lib/i18n/config";
 import {
   collectionStats,
   monthlyBreakdown,
+  monthlyBalance,
   monthlyCost,
   propertyBreakdown,
   type CashEntry,
   type CollectionStats,
+  type MonthlyBalance,
   type MonthlyRow,
   type PropertyRow,
 } from "./aggregate";
@@ -152,6 +154,33 @@ export async function annualReport(
       })),
     ),
   };
+}
+
+/**
+ * Bilans miesięczny jednej nieruchomości, na górę jej karty.
+ *
+ * Umowy na pokoje też niosą `propertyId`, więc jedno zapytanie łapie zarówno
+ * najem całości, jak i pokojowy.
+ */
+export async function propertyMonthlyBalance(
+  organizationId: string,
+  propertyId: string,
+): Promise<MonthlyBalance> {
+  const [leases, recurringExpenses] = await Promise.all([
+    prisma.lease.findMany({
+      where: { organizationId, propertyId, status: "ACTIVE" },
+      select: { rentGrosze: true, utilitiesAdvanceGrosze: true },
+    }),
+    prisma.expense.findMany({
+      where: { organizationId, propertyId, recurrence: { not: null } },
+      select: { amountGrosze: true, recurrence: true, recurrenceEveryDays: true },
+    }),
+  ]);
+
+  return monthlyBalance(
+    leases,
+    recurringExpenses.map((expense) => ({ ...expense, recurrence: expense.recurrence! })),
+  );
 }
 
 /**

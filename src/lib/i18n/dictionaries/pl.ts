@@ -235,10 +235,10 @@ export const pl = {
      */
     invitation: {
       metaTitle: "Zaproszenie",
-      metaDescription: "Przyjmij zaproszenie do Rentiksa.",
+      metaDescription: "Przyjmij zaproszenie do RentixON.",
       team: {
         heading: "Zaproszenie do zespołu",
-        lead: "{organization} zaprasza Cię do wspólnej pracy w Rentiksie w roli: {role}.",
+        lead: "{organization} zaprasza Cię do wspólnej pracy w RentixON w roli: {role}.",
       },
       tenant: {
         heading: "Portal najemcy",
@@ -391,6 +391,12 @@ export const pl = {
         ownerPrefix: "Właściciel: ",
         floor: "piętro {floor}",
         wholeRent: "za całość {amount}",
+        balanceTitle: "Bilans miesięczny",
+        balancePositive: "na plusie",
+        balanceNegative: "na minusie",
+        balanceIncome: "Przychód",
+        balanceExpenses: "Koszty",
+        balanceNote: "Czynsz z zaliczką na media z aktywnych umów minus koszty cykliczne przeliczone na miesiąc.",
         wholeLetTitle: "Chcesz wynająć całą nieruchomość jednej osobie?",
         wholeLetLead: "Umowa na całość zamiast osobnych umów na pokoje.",
         wholeLetButton: "Wynajmij w całości",
@@ -2392,7 +2398,7 @@ export const pl = {
   emails: {
     attachmentNote: "Dokument w formacie PDF znajdziesz w załączniku tej wiadomości.",
     attachmentPlain: "Dokument PDF jest w załączniku tej wiadomości.",
-    automaticFooter: "wiadomość wysłana automatycznie z systemu Rentix",
+    automaticFooter: "wiadomość wysłana automatycznie z systemu RentixON",
 
     /** Wiadomości z linkiem do przyjęcia zaproszenia. Wynajmujący ich nie edytuje. */
     invitations: {
@@ -2401,7 +2407,7 @@ export const pl = {
         subject: "Zaproszenie do zespołu: {organization}",
         heading: "Zaproszenie do zespołu",
         intro:
-          "{organization} zaprasza Cię do wspólnej pracy w Rentiksie w roli: {role}. Kliknij poniżej, żeby ustawić hasło i wejść do panelu.",
+          "{organization} zaprasza Cię do wspólnej pracy w RentixON w roli: {role}. Kliknij poniżej, żeby ustawić hasło i wejść do panelu.",
         outro:
           "Jeśli nie wiesz, czego dotyczy ta wiadomość, zignoruj ją. Bez kliknięcia nic się nie stanie.",
         cta: "Przyjmij zaproszenie",

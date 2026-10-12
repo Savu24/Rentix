@@ -44,7 +44,7 @@ const serverEnvSchema = z.object({
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
-  EMAIL_FROM: z.string().default("Rentix <no-reply@rentixon.com>"),
+  EMAIL_FROM: z.string().default("RentixON <no-reply@rentixon.com>"),
   /** Publiczny adres aplikacji — baza `metadataBase` dla odnośników w metadanych. */
   APP_URL: z.url().optional(),
   /**

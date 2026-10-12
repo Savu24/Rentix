@@ -35,7 +35,7 @@ services:
       # rekordy SPF i DKIM. Adres z innej domeny nie odbije się błędem, tylko
       # po cichu wyląduje w spamie, co jest znacznie trudniejsze do zauważenia.
       - key: EMAIL_FROM
-        value: "Rentix <powiadomienia@rentixon.com>"
+        value: "RentixON <powiadomienia@rentixon.com>"
       - key: APP_URL
         sync: false # ten sam adres co AUTH_URL — linki w e-mailach do najemców
       - key: CRON_SECRET

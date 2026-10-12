@@ -103,6 +103,40 @@ export function monthlyCost(
   }
 }
 
+export type MonthlyBalance = {
+  incomeGrosze: number;
+  expenseGrosze: number;
+  profitGrosze: number;
+};
+
+/**
+ * Bilans miesięczny jednej nieruchomości: ile wpływa, ile wychodzi, co zostaje.
+ *
+ * Ta sama definicja co kolumny „obecnie, miesięcznie" w raporcie — czynsz
+ * z zaliczką na media z aktywnych umów i koszty cykliczne przeliczone na
+ * miesiąc — żeby karta lokalu i raport nie pokazywały dwóch różnych liczb.
+ */
+export function monthlyBalance(
+  leases: readonly { rentGrosze: number; utilitiesAdvanceGrosze: number }[],
+  recurringExpenses: readonly {
+    amountGrosze: number;
+    recurrence: ExpenseRecurrence;
+    recurrenceEveryDays: number | null;
+  }[],
+): MonthlyBalance {
+  const incomeGrosze = leases.reduce(
+    (total, lease) => total + lease.rentGrosze + lease.utilitiesAdvanceGrosze,
+    0,
+  );
+  const expenseGrosze = recurringExpenses.reduce(
+    (total, expense) =>
+      total + monthlyCost(expense.amountGrosze, expense.recurrence, expense.recurrenceEveryDays),
+    0,
+  );
+
+  return { incomeGrosze, expenseGrosze, profitGrosze: incomeGrosze - expenseGrosze };
+}
+
 /**
  * Wynik w rozbiciu na nieruchomości.
  *

@@ -422,7 +422,7 @@ export function LeaseAgreementDocument({ data }: { data: LeasePdfData }) {
         </View>
 
         <Text style={styles.disclaimer}>
-          Dokument wygenerowany automatycznie w systemie Rentix na podstawie danych umowy.
+          Dokument wygenerowany automatycznie w systemie RentixON na podstawie danych umowy.
           Stanowi wzór do uzupełnienia i podpisania przez strony. Nie jest poradą prawną.
           Przed podpisaniem zweryfikuj treść pod kątem swojej sytuacji, w razie potrzeby
           z prawnikiem.

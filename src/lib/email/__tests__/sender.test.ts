@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { formatFrom, senderAddress } from "../sender";
 
-const PLATFORM = "Rentix <powiadomienia@rentixon.com>";
+const PLATFORM = "RentixON <powiadomienia@rentixon.com>";
 
 describe("senderAddress", () => {
   it("wyłuskuje adres z nagłówka z nazwą", () => {
