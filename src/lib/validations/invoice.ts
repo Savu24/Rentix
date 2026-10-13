@@ -127,7 +127,7 @@ export const invoiceCreateSchema = (c: ValidationContext) =>
       .optional()
       .transform((value) => (value === "" || value === undefined ? null : value)),
     /** Nabywca. Jego dane kopiujemy na dokument w chwili wystawienia. */
-    tenantId: idSchema(c),
+    tenantId: z.string().min(1, c.d.panel.leases.tenantRequired).max(64),
 
     kind: z.enum(invoiceKinds).default("BILL"),
 

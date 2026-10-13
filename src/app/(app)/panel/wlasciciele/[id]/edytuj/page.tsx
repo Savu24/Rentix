@@ -1,8 +1,7 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { FormPage } from "@/components/panel/form-page";
 import { OwnerForm } from "@/components/panel/owners/owner-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getOwner } from "@/lib/owners/service";
@@ -23,20 +22,10 @@ export default async function EditOwnerPage({ params }: Params) {
   if (!owner) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-3">
-        <Link
-          href={`/panel/wlasciciele/${owner.id}`}
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {owner.name}
-        </Link>
-        <h1 className="r-display text-[26px] leading-tight text-fg">
-          {(await panelDictionary()).panel.ownersPage.editTitle}
-        </h1>
-      </div>
-
+    <FormPage
+      back={{ href: `/panel/wlasciciele/${owner.id}`, label: owner.name }}
+      title={(await panelDictionary()).panel.ownersPage.editTitle}
+    >
       <OwnerForm
         ownerId={owner.id}
         defaultValues={{
@@ -55,6 +44,6 @@ export default async function EditOwnerPage({ params }: Params) {
           notes: owner.notes ?? "",
         }}
       />
-    </div>
+    </FormPage>
   );
 }

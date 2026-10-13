@@ -1,163 +1,223 @@
-import { BarChart3, FileText, Wallet, Wrench } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Building2,
+  Check,
+  FileText,
+  Home,
+  LayoutGrid,
+  Receipt,
+  Users,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
 
-import { Logo } from "@/components/brand/logo";
+import { Logo, LogoMark } from "@/components/brand/logo";
 import { PlanCalculator } from "@/components/marketing/plan-calculator";
+import { InvoiceStatusBadge } from "@/components/panel/status-badges";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { publicRoutes } from "@/lib/auth/routes";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 /**
- * Strona główna według „Rentix Design System.dc.html", w wersji krajowej
- * wskazanej propsem.
+ * Strona główna (redesign/23-landing-*.svg), w wersji krajowej wskazanej
+ * propsem.
  *
  * Układ jest wspólny, treść nie. Wersja brytyjska to osobny tekst pisany pod
  * inny rynek, a nie tłumaczenie polskiego — różnice i ich powody opisuje
  * komentarz w `@/lib/i18n/dictionaries/uk`. Wspólny jest tylko szkielet, żeby
  * poprawka układu nie wymagała nanoszenia jej dwa razy.
  *
- * Odstępstwa od makiety są celowe i wszystkie idą w jedną stronę — makieta
- * powstała przed decyzjami produktowymi i obiecuje rzeczy, których Rentix nie
- * robi. Nie zapowiadamy podpisu elektronicznego ani zgłoszeń usterek (moduł
+ * Nie zapowiadamy podpisu elektronicznego ani zgłoszeń usterek (moduł
  * świadomie poza zakresem), a sekcja z opiniami klientów czeka na prawdziwe
  * cytaty — wymyślone byłyby zwykłym oszustwem wobec odwiedzającego.
  */
 
-const HERO_BARS = [40, 55, 48, 70, 62, 85];
-
-/** Ikona i tło karty idą po `id` z tablicy funkcji, bo obrazek nie jest tekstem. */
-const FEATURE_STYLE: Record<string, { icon: typeof FileText; background: string }> = {
-  leases: { icon: FileText, background: "bg-mint" },
-  payments: { icon: Wallet, background: "bg-sand" },
-  costs: { icon: Wrench, background: "bg-clay" },
-  reports: { icon: BarChart3, background: "bg-mint" },
+/** Ikona karty funkcji idzie po `id` z tablicy funkcji, bo obrazek nie jest tekstem. */
+const FEATURE_ICON: Record<string, typeof FileText> = {
+  leases: FileText,
+  payments: Receipt,
+  costs: Wallet,
+  reports: BarChart3,
 };
 
-/** Przykładowy przychód na podglądzie panelu: 18 400 zł albo £18,400. */
-const PREVIEW_INCOME = 1_840_000;
+/** Ikony atrapy paska bocznego w podglądzie panelu. */
+const PREVIEW_NAV = [LayoutGrid, Building2, Users, FileText, Wallet, BarChart3];
+
+/** Przykładowe dokumenty na podglądzie: numer, kwota w groszach, status. */
+const PREVIEW_ROWS = [
+  { number: "4/08", grosze: 210_000, status: "PAID" as const, inDays: 0 },
+  { number: "5/08", grosze: 145_000, status: "DUE_SOON" as const, inDays: 3 },
+  { number: "6/08", grosze: 198_000, status: "UPCOMING" as const, inDays: 12 },
+];
 
 export function Landing({ locale }: { locale: Locale }) {
-  const t = getDictionary(locale).marketing;
+  const d = getDictionary(locale);
+  const t = d.marketing;
   const routes = publicRoutes(locale);
+  const now = new Date();
+  const notes = t.hero.note.split(" · ");
 
   return (
     <div className="min-h-dvh bg-bg">
-      <div className="px-4 pt-4 sm:px-8 sm:pt-5">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-[16px] border border-border bg-surface px-4 py-3 sm:px-[18px]">
-          <Logo />
+      <header className="px-5 pt-5 sm:px-8">
+        <nav className="mx-auto flex max-w-[1096px] items-center justify-between gap-4">
+          <Link href={routes.home} className="rounded-btn" aria-label={d.common.homeAriaLabel}>
+            <Logo />
+          </Link>
 
-          <div className="hidden items-center gap-[26px] md:flex">
-            <a href={`#${t.nav.featuresAnchor}`} className="r-navlink">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <a href={`#${t.nav.featuresAnchor}`} className="hidden rounded-btn px-3 py-2 text-sm font-[550] text-fg hover:bg-hover md:block">
               {t.nav.features}
             </a>
-            <a href={`#${t.nav.pricingAnchor}`} className="r-navlink">
+            <a href={`#${t.nav.pricingAnchor}`} className="hidden rounded-btn px-3 py-2 text-sm font-[550] text-fg hover:bg-hover md:block">
               {t.nav.pricing}
             </a>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-2.5">
+            <Link href={routes.login} className="rounded-btn px-3 py-2 text-sm font-[550] text-fg hover:bg-hover">
+              {t.nav.login}
+            </Link>
             <ThemeToggle />
-            <Button asChild size="sm">
-              <Link href={routes.login}>{t.nav.login}</Link>
+            <Button asChild size="sm" className="ml-1 hidden sm:inline-flex">
+              <Link href={routes.register}>{t.hero.primaryCta}</Link>
             </Button>
           </div>
         </nav>
-      </div>
+      </header>
 
       <main>
-        <section className="mx-auto max-w-[760px] px-5 pt-11 text-center sm:px-8 sm:pt-16">
-          <p className="mb-6 inline-flex items-center rounded-full bg-highlight px-3.5 py-1.5 font-mono text-[12.5px] font-medium uppercase tracking-[0.04em] text-highlight-text">
-            {t.hero.badge}
-          </p>
+        <section className="mx-auto grid max-w-[1096px] grid-cols-1 items-center gap-12 px-5 pt-12 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_480px] lg:pt-16 lg:pb-24">
+          <div className="flex flex-col items-start">
+            <Badge tone="accent" icon={Home}>
+              {t.hero.badge}
+            </Badge>
 
-          <h1 className="r-display text-[36px] leading-[1.05] text-fg text-pretty sm:text-[58px]">
-            {t.hero.titleLead}
-            <span className="r-mark">{t.hero.titleMark}</span>
-            <br />
-            {t.hero.titleTail}
-          </h1>
+            <h1 className="r-display mt-5 text-[42px] leading-[1.08] tracking-[-1.2px] text-fg sm:text-[56px] lg:text-[60px]">
+              {t.hero.titleLead}
+              {t.hero.titleMark}
+              <br />
+              {/* Bursztynowa kreska pod drugą linią — znak marki z projektu. */}
+              <span className="bg-[linear-gradient(var(--amber),var(--amber))] bg-[length:100%_0.16em] bg-bottom bg-no-repeat pb-1">
+                {t.hero.titleTail}
+              </span>
+            </h1>
 
-          <p className="mx-auto mt-5 max-w-[520px] text-[17.5px] leading-[1.55] text-muted">
-            {t.hero.lead}
-          </p>
+            <p className="mt-6 max-w-[520px] text-[17px] leading-[1.6] text-muted">{t.hero.lead}</p>
 
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg" className="shadow-sm">
-              <Link href={routes.register}>{t.hero.primaryCta}</Link>
-            </Button>
-            <Button asChild variant="secondary" size="lg">
-              <a href={`#${t.nav.pricingAnchor}`}>{t.hero.secondaryCta}</a>
-            </Button>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href={routes.register}>
+                  {t.hero.primaryCta}
+                  <ArrowRight className="size-[18px]" aria-hidden />
+                </Link>
+              </Button>
+              <Button asChild variant="secondary" size="lg">
+                <a href={`#${t.nav.pricingAnchor}`}>{t.hero.secondaryCta}</a>
+              </Button>
+            </div>
+
+            <ul className="mt-6 flex flex-wrap gap-x-7 gap-y-2 text-[13.5px] text-muted">
+              {notes.map((note) => (
+                <li key={note} className="flex items-center gap-2">
+                  <Check className="size-4 text-good" strokeWidth={2.2} aria-hidden />
+                  {note}
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <p className="mt-3.5 text-[13px] text-muted">{t.hero.note}</p>
-        </section>
-
-        <section className="px-5 pb-16 pt-8 sm:px-8 sm:pb-24 sm:pt-10">
-          <Card className="mx-auto max-w-[640px] shadow-md">
-            <CardContent className="p-[22px]">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-semibold text-fg">{t.preview.title}</p>
-                <p className="font-mono text-xs text-muted">{t.preview.period}</p>
-              </div>
-
-              {/* Kwota z groszami nie mieści się w połowie szerokości karty na
-                  telefonie — poniżej sm kafelki idą jeden pod drugim, zamiast
-                  wypychać liczbę poza kartę. */}
-              <div className="mb-4 grid gap-2.5 sm:grid-cols-2">
-                <div className="rounded-[10px] bg-mint p-3.5">
-                  <p className="mb-1.5 text-xs text-fg/65">{t.preview.income}</p>
-                  <p className="font-mono text-[20px] font-medium tabular text-fg sm:text-[22px]">
-                    {formatMoney(PREVIEW_INCOME, locale)}
-                  </p>
-                </div>
-                <div className="rounded-[10px] bg-sand p-3.5">
-                  <p className="mb-1.5 text-xs text-fg/65">{t.preview.occupancy}</p>
-                  <p className="font-mono text-[20px] font-medium tabular text-fg sm:text-[22px]">
-                    92%
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex h-20 items-end gap-2 px-0.5" aria-hidden>
-                {HERO_BARS.map((height, index) => (
-                  <div
+          {/* Podgląd panelu: atrapa z danymi przykładowymi — plakietka mówi to
+              wprost, żeby karta nie wyglądała na zrzut z czyjegoś konta. */}
+          <div className="flex overflow-hidden rounded-tile bg-surface shadow-float" aria-hidden>
+            <div className="hidden w-[120px] shrink-0 flex-col gap-4 bg-gradient-to-b from-side to-side-end px-4 py-5 sm:flex">
+              <LogoMark className="size-6" />
+              <div className="flex flex-col gap-1.5">
+                {PREVIEW_NAV.map((Icon, index) => (
+                  <span
                     key={index}
-                    className="flex-1 rounded-t bg-accent"
-                    style={{ height: `${height}%`, opacity: 0.5 + index * 0.09 }}
-                  />
+                    className={cn("flex h-8 items-center gap-2.5 rounded-control px-2", index === 0 && "bg-side-active")}
+                  >
+                    <Icon className={cn("size-3.5 shrink-0", index === 0 ? "text-highlight" : "text-side-ink-2")} />
+                    <span className={cn("h-1 flex-1 rounded-full", index === 0 ? "bg-side-active-ink" : "bg-side-line")} />
+                  </span>
                 ))}
               </div>
+            </div>
 
-              {/* Liczby na podglądzie są przykładowe — mówimy to wprost, żeby
-                  karta nie wyglądała na zrzut z czyjegoś konta. */}
-              <p className="mt-3 text-center text-[11px] text-muted">{t.preview.disclaimer}</p>
-            </CardContent>
-          </Card>
+            <div className="flex min-w-0 flex-1 flex-col gap-4 p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[15px] font-semibold text-fg">{t.preview.title}</p>
+                <Badge size="sm">{t.preview.disclaimer}</Badge>
+              </div>
+
+              <div className="grid grid-cols-2 rounded-card bg-hover p-4">
+                <div className="flex min-w-0 flex-col gap-1.5 pr-3">
+                  <span className="text-[12.5px] text-muted">{t.preview.arrears}</span>
+                  <span className="font-mono text-[22px] font-[650] whitespace-nowrap text-good">{formatMoney(0, locale)}</span>
+                  <Badge tone="good" size="sm" icon={Check} className="w-fit">
+                    {t.preview.settled}
+                  </Badge>
+                </div>
+                <div className="flex min-w-0 flex-col gap-1.5 border-l border-border pl-4">
+                  <span className="text-[12.5px] text-muted">{t.preview.occupancy}</span>
+                  <span className="font-mono text-[22px] font-[650] text-fg">92%</span>
+                  <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-surface-alt">
+                    <span className="block h-full w-[92%] rounded-full bg-accent" />
+                  </span>
+                </div>
+              </div>
+
+              <ul className="flex flex-col">
+                {PREVIEW_ROWS.map((row) => (
+                  <li
+                    key={row.number}
+                    className="flex items-center justify-between gap-3 border-b border-border py-3 last:border-b-0"
+                  >
+                    <span className="min-w-0 truncate text-[13.5px] font-semibold text-fg">
+                      {d.panel.invoices.kind.BILL} {row.number}
+                    </span>
+                    <InvoiceStatusBadge
+                      status={row.status}
+                      d={d}
+                      size="sm"
+                      due={{ date: new Date(now.getTime() + row.inDays * 86_400_000), now, locale }}
+                    />
+                    <span className="shrink-0 font-mono text-[13.5px] font-semibold whitespace-nowrap text-fg">
+                      {formatMoney(row.grosze, locale)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="flex items-center gap-2.5 rounded-alert bg-accent-soft px-3.5 py-3 text-[13px] font-[550] text-accent">
+                <Receipt className="size-4 shrink-0" aria-hidden />
+                {t.preview.generated}
+              </p>
+            </div>
+          </div>
         </section>
 
-        <section id={t.nav.featuresAnchor} className="px-5 py-10 sm:px-12 sm:py-14">
-          <div className="mx-auto max-w-6xl">
-            <h2 className="r-display text-center text-[32px] text-fg">{t.features.heading}</h2>
-            <p className="mx-auto mt-2 max-w-[560px] text-center text-[15.5px] text-muted">
-              {t.features.lead}
-            </p>
+        <section id={t.nav.featuresAnchor} className="scroll-mt-8 px-5 py-12 sm:px-8">
+          <div className="mx-auto max-w-[1096px]">
+            <h2 className="r-display text-[30px] leading-9 tracking-[-0.6px] text-fg sm:text-[34px]">
+              {t.features.heading}
+            </h2>
 
-            <div className="mt-8 grid gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
               {t.features.items.map((feature) => {
-                const style = FEATURE_STYLE[feature.id];
-                const Icon = style.icon;
-
+                const Icon = FEATURE_ICON[feature.id] ?? FileText;
                 return (
-                  <div key={feature.id} className={`rounded-card p-[22px] ${style.background}`}>
-                    <span className="mb-3.5 flex h-[38px] w-[38px] items-center justify-center rounded-[9px] bg-white/50 text-fg">
-                      <Icon className="h-[18px] w-[18px]" aria-hidden />
+                  <div key={feature.id} className="flex gap-5 rounded-tile border border-border bg-surface p-6">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-alert bg-accent-soft text-accent">
+                      <Icon className="size-5" aria-hidden />
                     </span>
-                    <p className="mb-1.5 text-base font-semibold text-fg">{feature.title}</p>
-                    <p className="text-sm leading-[1.55] text-fg/[0.72]">{feature.description}</p>
+                    <div className="flex min-w-0 flex-col gap-1.5">
+                      <h3 className="text-base font-semibold text-fg">{feature.title}</h3>
+                      <p className="text-sm leading-[1.6] text-muted">{feature.description}</p>
+                    </div>
                   </div>
                 );
               })}
@@ -165,114 +225,105 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section id={t.nav.pricingAnchor} className="px-5 py-10 sm:px-12 sm:py-14">
-          <div className="mx-auto max-w-6xl">
-            <h2 className="r-display text-center text-[32px] text-fg">{t.pricing.heading}</h2>
-            <p className="mx-auto mt-2 max-w-[520px] text-center text-[15px] text-muted">
-              {t.pricing.lead}
-            </p>
+        <section id={t.nav.pricingAnchor} className="scroll-mt-8 px-5 py-12 sm:px-8">
+          <div className="mx-auto max-w-[1096px]">
+            <h2 className="r-display text-[30px] leading-9 tracking-[-0.6px] text-fg sm:text-[34px]">
+              {t.pricing.heading}
+            </h2>
+            <p className="mt-2 text-[15px] text-muted">{t.pricing.lead}</p>
 
             {/* Cztery progi w rzędzie dopiero od lg — poniżej idą po dwa, bo
                 cena i przypis nie mieszczą się w ćwiartce szerokości tabletu. */}
-            <div className="mx-auto mt-7 grid max-w-[1100px] gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {t.pricing.plans.map((plan) => (
-                <Card
+                <div
                   key={plan.name}
-                  /* `flex` na karcie, nie tylko w środku: bez definitywnej
-                     wysokości `h-full` na treści nie miałoby się do czego
-                     odnieść i przyciski rozjechałyby się w pionie. */
-                  className={`relative flex flex-col ${
-                    plan.featured ? "border-transparent bg-mint" : ""
-                  }`}
+                  className={cn(
+                    "flex flex-col rounded-tile p-6",
+                    plan.featured
+                      ? "bg-gradient-to-b from-side to-side-end text-side-ink"
+                      : "border border-border bg-surface",
+                  )}
                 >
-                  {plan.featured ? (
-                    <span className="absolute -top-[11px] right-5 rounded-full bg-accent2 px-2.5 py-1 font-mono text-[11px] font-medium text-white">
-                      {t.pricing.badge}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={cn("text-base font-semibold", plan.featured ? "text-side-active-ink" : "text-fg")}>
+                      {plan.name}
+                    </p>
+                    {plan.featured ? (
+                      <Badge tone="amber" size="sm">
+                        {t.pricing.badge}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p
+                    className={cn(
+                      "r-display mt-4 text-[34px] leading-10 tracking-[-0.8px]",
+                      plan.featured ? "text-side-active-ink" : "text-fg",
+                    )}
+                  >
+                    {plan.price}
+                    <span className={cn("font-sans text-[14px] font-medium tracking-normal", plan.featured ? "text-side-ink-2" : "text-muted")}>
+                      {plan.period}
                     </span>
-                  ) : null}
+                  </p>
+                  <p className={cn("mt-1 text-[13.5px] font-semibold", plan.featured ? "text-highlight" : "text-fg")}>
+                    {plan.note}
+                  </p>
 
-                  <CardContent className="flex flex-1 flex-col p-[26px]">
-                    <p className="text-[15px] font-semibold text-fg">{plan.name}</p>
-                    <p className="r-display mt-1 text-[30px] text-fg">
-                      {plan.price}
-                      <span className="font-sans text-[15px] font-medium text-fg/60">
-                        {plan.period}
-                      </span>
-                    </p>
-                    <p className={`mt-1 text-[13.5px] ${plan.featured ? "text-fg/70" : "text-muted"}`}>
-                      {plan.note}
-                    </p>
+                  {/* `flex-1` na liście wyrównuje przyciski w rzędzie mimo
+                      różnej liczby pozycji na kartach. */}
+                  <ul className="mt-6 flex-1 space-y-2.5 text-[13.5px]">
+                    {plan.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2.5">
+                        <Check
+                          className={cn("mt-0.5 size-4 shrink-0", plan.featured ? "text-highlight" : "text-good")}
+                          strokeWidth={2.2}
+                          aria-hidden
+                        />
+                        <span className={plan.featured ? "text-side-ink" : "text-fg"}>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-                    {/* `flex-1` na liście wyrównuje przyciski w rzędzie mimo
-                        różnej liczby pozycji na kartach. */}
-                    <ul
-                      className={`mt-5 flex-1 space-y-2 text-sm ${
-                        plan.featured ? "text-fg/80" : "text-muted"
-                      }`}
-                    >
-                      {plan.items.map((item) => (
-                        <PlanItem key={item}>{item}</PlanItem>
-                      ))}
-                    </ul>
-
-                    <Button
-                      asChild
-                      block
-                      variant={plan.featured ? "primary" : "secondary"}
-                      className="mt-5"
-                    >
-                      <Link href={routes.register}>{plan.cta}</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+                  <Button asChild block variant={plan.featured ? "highlight" : "secondary"} className="mt-6">
+                    <Link href={routes.register}>{plan.cta}</Link>
+                  </Button>
+                </div>
               ))}
             </div>
 
-            <PlanCalculator
-              locale={locale}
-              t={t.pricing.calculator}
-              plans={t.pricing.plans}
-            />
+            <PlanCalculator locale={locale} t={t.pricing.calculator} plans={t.pricing.plans} />
 
-            <p className="mx-auto mt-7 max-w-[560px] text-center text-[13px] text-muted">
-              {t.pricing.note}
-            </p>
+            <p className="mt-6 text-[13px] text-muted">{t.pricing.note}</p>
           </div>
         </section>
 
-        <section className="px-5 pb-16 sm:px-12 sm:pb-24">
-          <div className="mx-auto max-w-6xl rounded-[20px] bg-accent px-8 py-12 text-center">
-            <h2 className="r-display text-[28px] leading-tight text-accent-contrast">
-              {t.closing.titleFirstLine}
-              <br />
-              {t.closing.titleSecondLine}
-            </h2>
-            <p className="mt-2.5 text-[15px] text-accent-contrast/75">{t.closing.lead}</p>
-            <Button asChild size="lg" variant="highlight" className="mt-5">
-              <Link href={routes.register}>{t.closing.cta}</Link>
+        <section className="px-5 pt-8 pb-16 sm:px-8 sm:pb-24">
+          <div className="mx-auto flex max-w-[1096px] flex-col items-start gap-8 rounded-[20px] bg-gradient-to-b from-side to-side-end px-8 py-12 sm:px-14 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3">
+              <h2 className="r-display text-[30px] leading-[1.15] tracking-[-0.8px] text-side-active-ink sm:text-[38px]">
+                {t.closing.titleFirstLine}
+                <br />
+                <span className="text-highlight">{t.closing.titleSecondLine}</span>
+              </h2>
+              <p className="text-[15px] text-side-ink">{t.closing.lead}</p>
+            </div>
+            <Button asChild size="lg" variant="highlight" className="shrink-0">
+              <Link href={routes.register}>
+                {t.closing.cta}
+                <ArrowRight className="size-[18px]" aria-hidden />
+              </Link>
             </Button>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border px-5 py-8 sm:px-12">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
+      <footer className="px-5 sm:px-8">
+        <div className="mx-auto flex max-w-[1096px] flex-wrap items-center justify-between gap-4 border-t border-border py-8">
           <Logo size="sm" />
           <p className="text-[13px] text-muted">{t.footer.rights}</p>
         </div>
       </footer>
     </div>
-  );
-}
-
-/** Pozycja listy w cenniku. Znak „✓" jest dekoracją, więc nie czyta go czytnik. */
-function PlanItem({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-2">
-      <span aria-hidden className="text-accent">
-        ✓
-      </span>
-      {children}
-    </li>
   );
 }

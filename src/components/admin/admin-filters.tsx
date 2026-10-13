@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { SegmentedFilter } from "@/components/panel/segmented-filter";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
@@ -28,11 +29,14 @@ export type AdminFilterSelect = {
 export function AdminFilters({
   placeholder,
   selects = [],
+  segmented,
   total,
   totalLabel,
 }: {
   placeholder: string;
   selects?: AdminFilterSelect[];
+  /** Jeden filtr jako przełącznik segmentowy (redesign: plan nad listą organizacji). */
+  segmented?: AdminFilterSelect;
   total: number;
   totalLabel: string;
 }) {
@@ -81,42 +85,48 @@ export function AdminFilters({
   }, [query]);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2.5 sm:flex-row">
-        <div className="relative flex-1">
-          <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
-            aria-hidden
-          />
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={placeholder}
-            aria-label={placeholder}
-            className="pl-10"
-          />
-        </div>
-
-        {selects.map((select) => (
-          <Select
-            key={select.key}
-            aria-label={select.label}
-            value={searchParams.get(select.key) ?? ""}
-            onChange={(event) => setParam(select.key, event.target.value)}
-            className="sm:w-44"
-          >
-            <option value="">{select.allLabel}</option>
-            {select.options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-        ))}
+    <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-4">
+      <div className="relative lg:w-[320px]">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-subtle"
+          aria-hidden
+        />
+        <Input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={placeholder}
+          aria-label={placeholder}
+          className="pl-10"
+        />
       </div>
 
-      <p aria-live="polite" className="text-xs text-muted">
+      {segmented ? (
+        <SegmentedFilter
+          param={segmented.key}
+          ariaLabel={segmented.label}
+          options={[{ value: "", label: segmented.allLabel }, ...segmented.options]}
+        />
+      ) : null}
+
+      {selects.map((select) => (
+        <Select
+          key={select.key}
+          aria-label={select.label}
+          value={searchParams.get(select.key) ?? ""}
+          onChange={(event) => setParam(select.key, event.target.value)}
+          className="lg:w-44"
+        >
+          <option value="">{select.allLabel}</option>
+          {select.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      ))}
+
+      <p aria-live="polite" className="text-[13.5px] whitespace-nowrap text-muted lg:ml-auto">
         {isPending ? "Szukam…" : `${total} ${totalLabel}`}
       </p>
     </div>

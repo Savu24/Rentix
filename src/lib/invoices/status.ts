@@ -78,6 +78,16 @@ export function remainingGrosze(invoice: InvoiceLike): number {
 }
 
 /**
+ * Jaka część kwoty jest już wpłacona, w procentach 0-100 — pasek spłaty
+ * w karcie dokumentu. Dokument na zero złotych jest spłacony od razu, a
+ * nadpłata nie wyrysuje paska dłuższego niż karta.
+ */
+export function paidPercent(invoice: InvoiceLike): number {
+  if (invoice.totalGrossGrosze <= 0) return 100;
+  return Math.min(100, Math.max(0, Math.round((invoice.paidGrosze / invoice.totalGrossGrosze) * 100)));
+}
+
+/**
  * Token statusu z design systemu — patrz docs/chart-palette.md.
  *
  * Sam kolor, bez etykiety: tekst zależy od języka organizacji i przychodzi
@@ -85,14 +95,14 @@ export function remainingGrosze(invoice: InvoiceLike): number {
  */
 export const INVOICE_STATUS_TONE: Record<
   DisplayInvoiceStatus,
-  "neutral" | "good" | "warning" | "critical"
+  "neutral" | "good" | "warning" | "critical" | "info"
 > = {
   DRAFT: "neutral",
   PAID: "good",
   PARTIALLY_PAID: "warning",
   DUE_SOON: "warning",
   OVERDUE: "critical",
-  UPCOMING: "neutral",
+  UPCOMING: "info",
   CANCELLED: "neutral",
 };
 

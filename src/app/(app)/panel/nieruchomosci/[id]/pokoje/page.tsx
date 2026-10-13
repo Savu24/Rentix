@@ -1,11 +1,12 @@
-import { Check } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
+import { FormPage } from "@/components/panel/form-page";
 import {
   RoomPricingForm,
   type PricedRoom,
 } from "@/components/panel/properties/room-pricing-form";
+import { Alert } from "@/components/ui/alert";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { formatAmount } from "@/lib/money";
 import { getProperty } from "@/lib/properties/service";
@@ -45,22 +46,15 @@ export default async function RoomPricingPage({
   }));
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-good-soft px-2.5 py-1 text-xs font-medium text-good">
-          <Check className="h-3 w-3" aria-hidden />
-          {fill(misc.propertyCreated, { name: property.name })}
-        </p>
-
-        <h1 className="r-display text-[26px] leading-tight text-fg">
-          {misc.roomPricingTitle}
-        </h1>
-        <p className="text-sm text-muted">
-          {misc.roomPricingLead}
-        </p>
+    <FormPage
+      back={{ href: `/panel/nieruchomosci/${property.id}`, label: property.name }}
+      title={misc.roomPricingTitle}
+      steps={{ label: misc.steps, items: misc.propertySteps, active: 1 }}
+    >
+      <div className="flex flex-col gap-4">
+        <Alert tone="success">{fill(misc.propertyCreated, { name: property.name })}</Alert>
+        <RoomPricingForm propertyId={property.id} initialRooms={rooms} />
       </div>
-
-      <RoomPricingForm propertyId={property.id} initialRooms={rooms} />
-    </div>
+    </FormPage>
   );
 }

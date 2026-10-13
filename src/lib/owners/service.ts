@@ -39,6 +39,8 @@ export async function listOwners(organizationId: string, query: OwnerListQuery) 
       city: true,
       taxId: true,
       archivedAt: true,
+      contractStartDate: true,
+      contractEndDate: true,
       properties: {
         where: { archivedAt: null },
         select: { id: true, status: true, askingRentGrosze: true },

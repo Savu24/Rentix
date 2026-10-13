@@ -1,18 +1,15 @@
 "use client";
 
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/api/client";
-import { leaseStatusLabels } from "@/lib/validations/lease";
 
 import type { LeaseStatus } from "@/generated/prisma/enums";
 import { useI18n } from "@/lib/i18n/client";
-import { fill } from "@/lib/i18n/format";
 /**
  * Uruchomienie umowy ze szkicu albo rezerwacji.
  *
@@ -52,32 +49,22 @@ export function ActivateLease({
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div>
-          <p className="text-sm font-semibold text-fg">
-            {status === "RESERVED" ? t.activate.reserved : t.activate.draft}
-          </p>
-          <p className="mt-0.5 text-xs text-muted">
-            {fill(t.activateLead, {
-              status: leaseStatusLabels(d)[status].toLowerCase(),
-            })}
-          </p>
-        </div>
+    <div className="flex flex-col gap-3 rounded-alert bg-info-soft px-4 py-3.5 text-info-ink sm:flex-row sm:items-center">
+      <span className="flex flex-1 items-center gap-3 text-sm font-medium">
+        <CalendarClock className="size-[18px] shrink-0 text-info" strokeWidth={1.9} aria-hidden />
+        {status === "RESERVED" ? t.activate.reserved : t.activate.draft}
+      </span>
 
-        {error ? <Alert tone="error">{error}</Alert> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
-        <div>
-          <Button size="sm" onClick={activate} disabled={busy}>
-            {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" aria-hidden />
-            )}
-            {t.activateButton}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <Button size="sm" onClick={activate} disabled={busy} className="self-start sm:self-auto">
+        {busy ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          <CheckCircle2 className="size-4" aria-hidden />
+        )}
+        {t.activateButton}
+      </Button>
+    </div>
   );
 }

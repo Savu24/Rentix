@@ -1,11 +1,11 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
-import { CheckboxField } from "@/components/ui/checkbox-field";
+import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 
@@ -57,15 +57,18 @@ export function EmailDeliveryToggle({
     <div className="flex flex-col gap-2">
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <div className="flex items-center gap-2">
-        <CheckboxField
-          label={t.label}
-          hint={t.off}
+      <div className="flex items-center gap-3">
+        <Mail className="size-[18px] shrink-0 text-subtle" aria-hidden />
+        <label htmlFor="sendInvoicesByEmail" className="flex-1 text-[14.5px] font-semibold text-fg">
+          {t.label}
+        </label>
+        {busy ? <Loader2 className="size-4 shrink-0 animate-spin text-subtle" aria-hidden /> : null}
+        <Switch
+          id="sendInvoicesByEmail"
           checked={checked}
           disabled={busy}
-          onChange={(event) => toggle(event.target.checked)}
+          onCheckedChange={toggle}
         />
-        {busy ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted" aria-hidden /> : null}
       </div>
     </div>
   );

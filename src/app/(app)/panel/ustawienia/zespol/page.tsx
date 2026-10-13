@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { PlanLock } from "@/components/panel/plan-lock";
 import { TeamInviteForm } from "@/components/panel/settings/team-invite-form";
+import { SettingsColumns } from "@/components/panel/settings/settings-columns";
 import { TeamMembers } from "@/components/panel/settings/team-members";
 import { membershipRole, requireOwnerSession } from "@/lib/auth/session";
 import { organizationAllows } from "@/lib/billing/server";
@@ -28,7 +29,7 @@ export default async function TeamSettingsPage() {
   const t = d.panel.team;
 
   if (!(await organizationAllows(organizationId, "TEAM"))) {
-    return <PlanLock feature="TEAM" title={t.locked.title} lead={t.locked.lead} />;
+    return <PlanLock feature="TEAM" title={t.locked.title} />;
   }
 
   const [team, role] = await Promise.all([
@@ -39,17 +40,13 @@ export default async function TeamSettingsPage() {
   const canManage = role === "OWNER" || role === "ADMIN";
 
   return (
-    <div className="flex flex-col gap-5">
-      <p className="text-sm text-muted">{t.lead}</p>
-
-      {canManage ? <TeamInviteForm /> : null}
-
+    <SettingsColumns aside={canManage ? <TeamInviteForm /> : undefined}>
       <TeamMembers
         members={team.members}
         invitations={team.invitations}
         currentUserId={session.user.id}
         canManage={canManage}
       />
-    </div>
+    </SettingsColumns>
   );
 }

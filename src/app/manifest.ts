@@ -32,8 +32,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     orientation: "portrait",
     // Tło splash screena na iOS i tło okna zanim strona się namaluje.
-    background_color: "#FBF7EF",
-    theme_color: "#FBF7EF",
+    background_color: "#F3F4EF",
+    theme_color: "#F3F4EF",
     lang: "pl",
     dir: "ltr",
     categories: ["business", "productivity", "finance"],

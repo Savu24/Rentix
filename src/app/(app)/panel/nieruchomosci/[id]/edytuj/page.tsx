@@ -1,8 +1,7 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { FormPage } from "@/components/panel/form-page";
 import { PropertyForm } from "@/components/panel/properties/property-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listOwnersForPicker } from "@/lib/owners/service";
@@ -32,21 +31,10 @@ export default async function EditPropertyPage({
   if (!property) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link
-          href={`/panel/nieruchomosci/${property.id}`}
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {property.name}
-        </Link>
-
-        <h1 className="r-display text-[26px] leading-tight text-fg">
-          {dictionary.panel.propertiesPage.editTitle}
-        </h1>
-      </div>
-
+    <FormPage
+      back={{ href: `/panel/nieruchomosci/${property.id}`, label: property.name }}
+      title={dictionary.panel.propertiesPage.editTitle}
+    >
       <PropertyForm
         owners={owners}
         propertyId={property.id}
@@ -92,6 +80,6 @@ export default async function EditPropertyPage({
           publiclyListed: property.publiclyListed,
         }}
       />
-    </div>
+    </FormPage>
   );
 }

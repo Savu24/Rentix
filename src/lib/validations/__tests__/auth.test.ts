@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { getDictionary } from "@/lib/i18n";
-import { loginSchema, passwordSchema, registerSchema } from "@/lib/validations/auth";
+import { loginSchema, passwordChecks, passwordSchema, registerSchema } from "@/lib/validations/auth";
 
 // Komunikaty wchodzą do schematów z zewnątrz — testujemy na polskich.
 const MESSAGES = getDictionary("pl").auth.validation;
@@ -85,5 +85,17 @@ describe("loginSchema", () => {
     // jako „jan@przyklad.pl".
     const result = loginSchema(MESSAGES).parse({ email: " Jan@Przyklad.pl ", password: "x" });
     expect(result.email).toBe("jan@przyklad.pl");
+  });
+});
+
+describe("passwordChecks", () => {
+  it("odhacza spełnione wymagania", () => {
+    expect(passwordChecks("zielony7")).toEqual({ length: false, upper: false, lower: true, digit: true });
+  });
+
+  it("zgadza się z passwordSchema dla hasła, które przechodzi", () => {
+    const checks = passwordChecks("BezpieczneHaslo1");
+    expect(Object.values(checks).every(Boolean)).toBe(true);
+    expect(passwordSchema(MESSAGES).safeParse("BezpieczneHaslo1").success).toBe(true);
   });
 });

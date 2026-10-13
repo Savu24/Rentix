@@ -1,8 +1,10 @@
 import { Users } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { AdminFilters } from "@/components/admin/admin-filters";
 import { UsersList } from "@/components/admin/users-list";
+import { PageHeader } from "@/components/panel/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireAdminSession } from "@/lib/admin/session";
 import { listAdminUsers } from "@/lib/admin/users";
@@ -24,39 +26,29 @@ export default async function AdminUsersPage({
   const users = await listAdminUsers(search);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h1 className="r-display text-[26px] leading-tight text-fg">Użytkownicy</h1>
-        <p className="text-sm text-muted">
-          Wszystkie konta platformy. Stąd nadaje się uprawnienia administratora i odblokowuje
-          konto, do którego nie dotarła wiadomość aktywacyjna — dane konta zmienia jego właściciel.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Użytkownicy" />
 
+      <Suspense fallback={null}>
       <AdminFilters
         placeholder="E-mail albo imię i nazwisko"
         total={users.length}
         totalLabel={users.length === 1 ? "konto" : "kont"}
-        selects={[
-          {
-            key: "role",
-            label: "Rola",
-            allLabel: "Każda rola",
-            options: [
-              { value: "OWNER", label: USER_ROLE_LABELS.OWNER! },
-              { value: "ADMIN", label: USER_ROLE_LABELS.ADMIN! },
-              { value: "TENANT", label: USER_ROLE_LABELS.TENANT! },
-            ],
-          },
-        ]}
+        segmented={{
+          key: "role",
+          label: "Rola",
+          allLabel: "Wszyscy",
+          options: [
+            { value: "OWNER", label: USER_ROLE_LABELS.OWNER! },
+            { value: "ADMIN", label: USER_ROLE_LABELS.ADMIN! },
+            { value: "TENANT", label: USER_ROLE_LABELS.TENANT! },
+          ],
+        }}
       />
+      </Suspense>
 
       {users.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="Nic nie pasuje"
-          description="Żadne konto nie odpowiada tym filtrom."
-        />
+        <EmptyState icon={Users} title="Nic nie pasuje" />
       ) : (
         <UsersList users={users} currentUserId={session.user.id} />
       )}

@@ -1,3 +1,5 @@
+
+import { AlertCircle } from "lucide-react";
 import * as React from "react";
 
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,7 @@ export function FormField({
   error,
   hint,
   className,
+  labelClassName,
   children,
 }: {
   id: string;
@@ -23,6 +26,8 @@ export function FormField({
   error?: string;
   hint?: string;
   className?: string;
+  /** Np. `lg:sr-only` w wierszach tabeli, gdzie etykietę niesie nagłówek kolumny. */
+  labelClassName?: string;
   children: React.ReactNode;
 }) {
   const errorId = `${id}-error`;
@@ -37,19 +42,26 @@ export function FormField({
       plus przycisk kalendarza), więc kolumna rozpychała się ponad szerokość karty
       i cały formularz wyjeżdżał poza ekran telefonu.
     */
-    <div className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <Label htmlFor={id}>{label}</Label>
+    <div className={cn("flex min-w-0 flex-col gap-1", className)}>
+      <Label htmlFor={id} className={labelClassName}>
+        {label}
+      </Label>
 
       {children}
 
       {hint && !error ? (
-        <p id={hintId} className="text-xs text-muted">
+        <p id={hintId} className="mt-1 text-[12.5px] leading-[18px] text-subtle">
           {hint}
         </p>
       ) : null}
 
       {error ? (
-        <p id={errorId} role="alert" className="text-xs font-medium text-bad">
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1 flex items-start gap-1.5 text-[12.5px] leading-[18px] font-medium text-bad"
+        >
+          <AlertCircle className="mt-0.5 size-3.5 shrink-0" strokeWidth={2} aria-hidden />
           {error}
         </p>
       ) : null}

@@ -1,9 +1,11 @@
-import { ArrowLeft } from "lucide-react";
+import { Building2, FileText, UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { LeaseForm } from "@/components/panel/leases/lease-form";
-import { Alert } from "@/components/ui/alert";
+import { PageHeader } from "@/components/panel/page-header";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { listPropertiesForPicker } from "@/lib/leases/service";
 import { fill } from "@/lib/i18n/format";
@@ -49,34 +51,34 @@ export default async function NewLeasePage({
   if (tenants.length === 0) missing.push(t.missingTenant);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link
-          href="/panel/umowy"
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {t.title}
-        </Link>
-        <h1 className="r-display text-[26px] leading-tight text-fg">{t.newTitle}</h1>
-        {/* Wersja, która nie wystawia umowy PDF, mówi o warunkach najmu —
-            obiecywanie dokumentu, którego nie ma, byłoby kłamstwem. */}
-        <p className="text-sm text-muted">{t.newLead || t.newLeadNoDocument}</p>
-      </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader back={{ href: "/panel/umowy", label: t.title }} title={t.newTitle} />
 
       {missing.length > 0 ? (
-        <Alert tone="warning">
-          {fill(t.missingPrefix, { what: missing.join(t.missingJoin) })}{" "}
-          {properties.length === 0 ? (
-            <Link href="/panel/nieruchomosci/nowa" className="font-medium underline">
-              {t.needProperty}
-            </Link>
-          ) : (
-            <Link href="/panel/najemcy/nowy" className="font-medium underline">
-              {t.needTenant}
-            </Link>
-          )}
-        </Alert>
+        <EmptyState
+          icon={FileText}
+          title={fill(t.missingPrefix, { what: missing.join(t.missingJoin) })}
+          action={
+            <>
+              {properties.length === 0 ? (
+                <Button asChild>
+                  <Link href="/panel/nieruchomosci/nowa">
+                    <Building2 className="size-[18px]" aria-hidden />
+                    {t.needProperty}
+                  </Link>
+                </Button>
+              ) : null}
+              {tenants.length === 0 ? (
+                <Button asChild variant={properties.length === 0 ? "secondary" : "primary"}>
+                  <Link href="/panel/najemcy/nowy">
+                    <UserPlus className="size-[18px]" aria-hidden />
+                    {t.needTenant}
+                  </Link>
+                </Button>
+              ) : null}
+            </>
+          }
+        />
       ) : (
         <LeaseForm properties={properties} tenants={tenants} preset={preset} />
       )}

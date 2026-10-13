@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCsv,
+  categoryShares,
   collectionStats,
   monthlyBalance,
   monthlyBreakdown,
   monthlyCost,
   propertyBreakdown,
+  propertyTotals,
   toCsvAmount,
   type CashEntry,
 } from "@/lib/reports/aggregate";
@@ -174,6 +176,37 @@ describe("propertyBreakdown", () => {
   it("nazywa nieruchomość usuniętą zamiast pokazywać identyfikator", () => {
     const rows = propertyBreakdown([entry(1, 100000, "zniknieta")], [], names, labels);
     expect(rows[0]?.name).toBe("nieruchomość usunięta");
+  });
+});
+
+describe("propertyTotals", () => {
+  it("sumuje każdą kolumnę, także koszty ogólne", () => {
+    const rows = propertyBreakdown(
+      [entry(1, 100000, "a"), entry(2, 50000, "b")],
+      [entry(1, 20000, "a"), entry(3, 5000)],
+      new Map([["a", "A"], ["b", "B"]]),
+      labels,
+      { income: [{ propertyId: "a", amountGrosze: 120000 }], expenses: [{ propertyId: null, amountGrosze: 3000 }] },
+    );
+    expect(propertyTotals(rows)).toEqual({
+      incomeGrosze: 150000,
+      expenseGrosze: 25000,
+      profitGrosze: 125000,
+      monthlyIncomeGrosze: 120000,
+      monthlyExpenseGrosze: 3000,
+      monthlyProfitGrosze: 117000,
+    });
+  });
+});
+
+describe("categoryShares", () => {
+  it("liczy udział w sumie kosztów, w pełnych procentach", () => {
+    const shares = categoryShares([{ totalGrosze: 2000 }, { totalGrosze: 1000 }], 3000);
+    expect(shares.map((bucket) => bucket.sharePercent)).toEqual([67, 33]);
+  });
+
+  it("bez kosztów udział jest zerowy, a nie NaN", () => {
+    expect(categoryShares([{ totalGrosze: 0 }], 0)[0]!.sharePercent).toBe(0);
   });
 });
 

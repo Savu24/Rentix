@@ -64,16 +64,16 @@ export function MarkPaid({
       disabled={busy}
       title={error ?? label}
       aria-label={label}
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors disabled:opacity-60 ${
+      className={`flex size-8 shrink-0 items-center justify-center rounded-control border transition-colors disabled:opacity-60 ${
         error
           ? "border-bad text-bad"
-          : "border-border text-muted hover:border-good hover:bg-good-soft hover:text-good"
+          : "border-border-strong bg-surface text-subtle hover:border-good hover:bg-good-soft hover:text-good"
       }`}
     >
       {busy ? (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        <Loader2 className="size-4 animate-spin" aria-hidden />
       ) : (
-        <Check className="h-4 w-4" aria-hidden />
+        <Check className="size-4" strokeWidth={2.2} aria-hidden />
       )}
     </button>
   );

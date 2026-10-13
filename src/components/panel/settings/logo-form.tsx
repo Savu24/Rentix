@@ -1,12 +1,12 @@
 "use client";
 
-import { ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { ImageIcon, ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/panel/section-card";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
@@ -87,70 +87,71 @@ export function LogoForm({ logo }: { logo: string | null }) {
     router.refresh();
   }
 
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept={LOGO_MIME_TYPES.join(",")}
+      className="sr-only"
+      disabled={busy}
+      tabIndex={-1}
+      aria-hidden
+      onChange={(event) => {
+        const file = event.target.files?.[0];
+        // Czyścimy pole od razu: bez tego wybranie tego samego pliku
+        // po nieudanej próbie nie wywołałoby zdarzenia zmiany.
+        event.target.value = "";
+        if (file) void upload(file);
+      }}
+    />
+  );
+
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            {t.lead}
-          </p>
-        </div>
-
+    <SectionCard title={t.title} icon={ImageIcon}>
+      <div className="flex flex-col gap-3">
         {error ? <Alert tone="error">{error}</Alert> : null}
+        {fileInput}
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-20 w-40 items-center justify-center rounded-control border border-border bg-surface-alt p-2">
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- data URI, nie ma czego optymalizować
+        {logo ? (
+          <>
+            <div className="flex h-24 items-center justify-center rounded-alert border border-border bg-surface-alt p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element -- data URI, nie ma czego optymalizować */}
               <img src={logo} alt={t.alt} className="max-h-full max-w-full object-contain" />
-            ) : (
-              <span className="text-xs text-muted">{t.empty}</span>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <input
-              ref={inputRef}
-              type="file"
-              accept={LOGO_MIME_TYPES.join(",")}
-              className="sr-only"
-              disabled={busy}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                // Czyścimy pole od razu: bez tego wybranie tego samego pliku
-                // po nieudanej próbie nie wywołałoby zdarzenia zmiany.
-                event.target.value = "";
-                if (file) void upload(file);
-              }}
-            />
-
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => inputRef.current?.click()}
-            >
-              {busy ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <ImagePlus className="h-4 w-4" aria-hidden />
-              )}
-              {logo ? t.change : t.upload}
-            </Button>
-
-            {logo ? (
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => inputRef.current?.click()}>
+                {busy ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <ImagePlus className="size-4" aria-hidden />
+                )}
+                {t.change}
+              </Button>
               <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => void remove()}>
-                <Trash2 className="h-4 w-4" aria-hidden />
+                <Trash2 className="size-4" aria-hidden />
                 {d.panel.common.delete}
               </Button>
-            ) : null}
-          </div>
-        </div>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => inputRef.current?.click()}
+            aria-label={t.upload}
+            className="flex h-[88px] flex-col items-center justify-center gap-2 rounded-card border border-dashed border-border-strong bg-hover text-[13.5px] font-[550] text-muted transition-colors hover:text-fg"
+          >
+            {busy ? (
+              <Loader2 className="size-[22px] animate-spin" aria-hidden />
+            ) : (
+              <Upload className="size-[22px]" strokeWidth={1.8} aria-hidden />
+            )}
+            {misc.logoHint}
+          </button>
+        )}
 
-        <p className="text-xs text-muted">{fill(misc.logoHint, { max: maxKb })}</p>
-      </CardContent>
-    </Card>
+        <p className="text-center text-[12.5px] text-subtle">{fill(t.maxSize, { kb: maxKb })}</p>
+      </div>
+    </SectionCard>
   );
 }

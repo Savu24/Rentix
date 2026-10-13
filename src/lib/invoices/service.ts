@@ -329,6 +329,84 @@ export async function getInvoice(organizationId: string, invoiceId: string) {
   });
 }
 
+/**
+ * Historia wiadomości o dokumencie, od najnowszej: wysyłka, przypomnienia,
+ * wezwania. Właściciel widzi, czy najemca w ogóle dostał wiadomość, zanim
+ * zacznie dzwonić w sprawie zaległości. `awaitingSend` — dokument zatwierdzony
+ * ze szkicu, którego automat nie wyśle (`autoSend`), a nikt go jeszcze nie
+ * wysłał z panelu.
+ */
+export async function invoiceDeliveryHistory(
+  organizationId: string,
+  invoice: { id: string; status: InvoiceStatus; autoSend: boolean },
+) {
+  const [notifications, sentCount] = await Promise.all([
+    prisma.notification.findMany({
+      where: { invoiceId: invoice.id, organizationId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, type: true, status: true, createdAt: true, toEmail: true, error: true },
+    }),
+    prisma.notification.count({
+      where: { invoiceId: invoice.id, organizationId, type: "INVOICE_ISSUED", status: "SENT" },
+    }),
+  ]);
+
+  const awaitingSend = invoice.status !== "DRAFT" && !invoice.autoSend && sentCount === 0;
+
+  return { notifications, awaitingSend };
+}
+
+/**
+ * Najemcy, którym można wystawić dokument ręcznie, z ich umowami.
+ *
+ * Archiwalni odpadają z listy — z jednym wyjątkiem: najemca, z którego karty
+ * przyszło wystawienie (`includeTenantId`), bo jego karta też ma ten przycisk,
+ * a rozliczenie kaucji po wyprowadzce to właśnie dokument dla byłego najemcy.
+ */
+export async function listManualInvoiceRecipients(organizationId: string, includeTenantId?: string) {
+  const tenants = await prisma.tenant.findMany({
+    where: {
+      organizationId,
+      OR: [{ archivedAt: null }, ...(includeTenantId ? [{ id: includeTenantId }] : [])],
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      leases: {
+        orderBy: { lease: { startDate: "desc" } },
+        select: {
+          lease: {
+            select: {
+              id: true,
+              number: true,
+              rentGrosze: true,
+              property: { select: { name: true } },
+              room: { select: { name: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  });
+
+  return tenants.map((tenant) => ({
+    id: tenant.id,
+    name: `${tenant.firstName} ${tenant.lastName}`,
+    email: tenant.email,
+    leases: tenant.leases.map(({ lease }) => ({
+      id: lease.id,
+      label: [lease.number, `${lease.property.name}${lease.room ? `, ${lease.room.name}` : ""}`]
+        .filter(Boolean)
+        .join(", "),
+      rentGrosze: lease.rentGrosze,
+    })),
+  }));
+}
+
 /** Ile dokumentów wolno pobrać jednym kliknięciem. */
 export const MAX_BATCH_PDF = 100;
 
@@ -391,6 +469,7 @@ export async function financeSummary(organizationId: string, now: Date = new Dat
     prisma.payment.aggregate({
       where: { organizationId, paidAt: { gte: monthStart, lt: nextMonthStart } },
       _sum: { amountGrosze: true },
+      _count: true,
     }),
     // Szkice czekają na właściciela — bez licznika nikt by ich nie zauważył.
     prisma.invoice.count({ where: { organizationId, status: "DRAFT" } }),
@@ -405,6 +484,7 @@ export async function financeSummary(organizationId: string, now: Date = new Dat
     overdueCount: overdue._count,
     overdueGrosze: outstanding(overdue._sum),
     paidThisMonthGrosze: paidThisMonth._sum.amountGrosze ?? 0,
+    paidThisMonthCount: paidThisMonth._count,
     draftCount,
   };
 }

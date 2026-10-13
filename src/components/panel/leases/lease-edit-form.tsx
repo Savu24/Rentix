@@ -1,14 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { CalendarDays, Loader2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { FormSection } from "@/components/panel/form-section";
+import { LeaseSummary } from "@/components/panel/leases/lease-summary";
 import { CheckboxField } from "@/components/ui/checkbox-field";
 import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
@@ -23,7 +24,6 @@ import {
   leaseEditSchema,
   type LeaseEditInput,
   type LeaseEditOutput,
-  utilitiesModeHints,
   utilitiesModeIncomplete,
   utilitiesModeLabels,
 } from "@/lib/validations/lease";
@@ -41,9 +41,12 @@ import { useI18n, useValidationContext } from "@/lib/i18n/client";
 export function LeaseEditForm({
   leaseId,
   defaultValues,
+  subject,
 }: {
   leaseId: string;
   defaultValues: LeaseEditInput;
+  /** Lokal i najemcy — tu tylko do odczytu, zmienia się je nową umową. */
+  subject?: React.ReactNode;
 }) {
   const { d } = useI18n();
   const t = d.panel.leasesPage.form;
@@ -84,13 +87,20 @@ export function LeaseEditForm({
     router.refresh();
   }
 
+  const summaryValues = watch();
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)]">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="order-2 flex flex-col gap-3 lg:order-1">
+      {subject}
+
+      {/* Zmiana warunków nie rusza wystawionych dokumentów — właściciel musi
+          to wiedzieć zanim zapisze, a nie dowiedzieć się z niezgodnej faktury. */}
+      <Alert tone="info">{d.panel.panelMisc.leaseEditNotice}</Alert>
+
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionPeriod}</h2>
+      <FormSection title={t.sectionPeriod} icon={CalendarDays} collapsible={false}>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField id="startDate" label={t.startDate} error={errors.startDate?.message}>
@@ -105,7 +115,6 @@ export function LeaseEditForm({
               id="endDate"
               label={t.endDate}
               error={errors.endDate?.message}
-              hint={t.endDateHint}
             >
               <DateInput
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
@@ -118,7 +127,6 @@ export function LeaseEditForm({
               id="noticePeriodMonths"
               label={t.noticePeriod}
               error={errors.noticePeriodMonths?.message}
-              hint={t.noticePeriodHint}
             >
               <Input
                 {...fieldAria("noticePeriodMonths", {
@@ -137,7 +145,6 @@ export function LeaseEditForm({
                 id="status"
                 label={t.status}
                 error={errors.status?.message}
-                hint={t.statusHint}
               >
                 <Select
                   {...fieldAria("status", { error: errors.status?.message })}
@@ -157,7 +164,6 @@ export function LeaseEditForm({
               id="number"
               label={t.number}
               error={errors.number?.message}
-              hint={t.numberHint}
             >
               <Input
                 {...fieldAria("number", { error: errors.number?.message })}
@@ -166,12 +172,9 @@ export function LeaseEditForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionRent}</h2>
+      <FormSection title={t.sectionRent} icon={Wallet} collapsible={false}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="rentGrosze" label={t.rent} error={errors.rentGrosze?.message}>
@@ -187,7 +190,6 @@ export function LeaseEditForm({
               id="depositGrosze"
               label={t.deposit}
               error={errors.depositGrosze?.message}
-              hint={t.depositHint}
             >
               <Input
                 {...fieldAria("depositGrosze", { error: errors.depositGrosze?.message })}
@@ -201,7 +203,6 @@ export function LeaseEditForm({
               id="utilitiesMode"
               label={t.utilities}
               error={errors.utilitiesMode?.message}
-              hint={utilitiesModeHints(d)[utilitiesMode ?? "FLAT_RATE"]}
             >
               <Select
                 {...fieldAria("utilitiesMode", { error: errors.utilitiesMode?.message })}
@@ -243,7 +244,6 @@ export function LeaseEditForm({
               id="billingDay"
               label={t.billingDay}
               error={errors.billingDay?.message}
-              hint={t.billingDayHint}
             >
               <Input
                 {...fieldAria("billingDay", { error: errors.billingDay?.message })}
@@ -274,7 +274,6 @@ export function LeaseEditForm({
               id="billingStartsAt"
               label={t.billingStart}
               error={errors.billingStartsAt?.message}
-              hint={t.billingStartShortHint}
             >
               <DateInput
                 {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}
@@ -286,7 +285,6 @@ export function LeaseEditForm({
 
           <CheckboxField
             label={t.sendByEmail}
-            hint={t.sendByEmailHint}
             disabled={isSubmitting}
             {...register("sendInvoicesByEmail")}
           />
@@ -298,16 +296,9 @@ export function LeaseEditForm({
               {...register("notes")}
             />
           </FormField>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      {/* Zmiana warunków nie rusza wystawionych dokumentów — właściciel musi
-          to wiedzieć zanim zapisze, a nie dowiedzieć się z niezgodnej faktury. */}
-      <Alert tone="info">
-        {d.panel.panelMisc.leaseEditNotice}
-      </Alert>
-
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-row-reverse flex-wrap justify-start gap-2.5">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -320,7 +311,7 @@ export function LeaseEditForm({
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           disabled={isSubmitting}
           onClick={() => router.push(`/panel/umowy/${leaseId}`)}
         >
@@ -328,5 +319,22 @@ export function LeaseEditForm({
         </Button>
       </div>
     </form>
+
+    <aside className="order-1 lg:sticky lg:top-10 lg:order-2">
+      <LeaseSummary
+        values={{
+          rent: String(summaryValues.rentGrosze ?? ""),
+          deposit: String(summaryValues.depositGrosze ?? ""),
+          utilitiesMode: summaryValues.utilitiesMode ?? "FLAT_RATE",
+          utilitiesAdvance: String(summaryValues.utilitiesAdvanceGrosze ?? ""),
+          startDate: String(summaryValues.startDate ?? ""),
+          endDate: String(summaryValues.endDate ?? ""),
+          billingStartsAt: String(summaryValues.billingStartsAt ?? ""),
+          billingDay: String(summaryValues.billingDay ?? 1),
+          paymentTermDays: String(summaryValues.paymentTermDays ?? 0),
+        }}
+      />
+    </aside>
+    </div>
   );
 }

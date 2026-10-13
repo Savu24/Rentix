@@ -95,7 +95,6 @@ export function OwnerPicker({
       <FormField
         id="ownerId"
         label={t.label}
-        hint={t.hint}
       >
         <Select
           id="ownerId"
@@ -107,7 +106,7 @@ export function OwnerPicker({
           {options.map((owner) => (
             <option key={owner.id} value={owner.id}>
               {owner.name}
-              {owner.city ? ` · ${owner.city}` : ""}
+              {owner.city ? `, ${owner.city}` : ""}
             </option>
           ))}
         </Select>
@@ -127,13 +126,8 @@ export function OwnerPicker({
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-4 rounded-control border border-accent/40 bg-surface-alt p-4">
-          <div>
-            <p className="text-sm font-semibold text-fg">{t.addNew}</p>
-            <p className="mt-0.5 text-xs text-muted">
-              {t.addNewHint}
-            </p>
-          </div>
+        <div className="flex flex-col gap-4 rounded-card border border-border bg-hover p-4">
+          <p className="text-sm font-semibold text-fg">{t.addNew}</p>
 
           {error ? <Alert tone="error">{error}</Alert> : null}
 

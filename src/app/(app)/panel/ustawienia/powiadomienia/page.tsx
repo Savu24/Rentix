@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { NotificationForm } from "@/components/panel/settings/notification-form";
 import { NotificationToggles } from "@/components/panel/settings/notification-toggles";
+import { SettingsColumns } from "@/components/panel/settings/settings-columns";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getNotificationPanelData } from "@/lib/notifications/service";
 import { panelDictionary } from "@/lib/panel/dictionary";
@@ -18,7 +19,7 @@ export default async function SettingsNotificationsPage() {
   if (!data) notFound();
 
   return (
-    <div className="flex flex-col gap-5">
+    <SettingsColumns>
       <NotificationForm
         organizationName={data.organizationName}
         contactEmail={data.contactEmail}
@@ -32,6 +33,6 @@ export default async function SettingsNotificationsPage() {
       <NotificationToggles
         templates={data.templates.map(({ type, enabled }) => ({ type, enabled }))}
       />
-    </div>
+    </SettingsColumns>
   );
 }

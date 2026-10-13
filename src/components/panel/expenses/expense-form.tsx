@@ -1,21 +1,23 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Plus } from "lucide-react";
+import { Check, ChevronDown, Loader2, Plus, Repeat } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { CheckboxField } from "@/components/ui/checkbox-field";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
+import { formatMoneyParts } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import {
   expenseCategoryLabels,
   EXPENSE_CATEGORY_ORDER,
@@ -64,14 +66,17 @@ export function ExpenseForm({
   defaultValues,
   /** Wyjście z edycji — wiersz wraca na swoje miejsce. */
   onClose,
+  /** Wygląd przycisku „Dodaj koszt" — na karcie nieruchomości drugorzędny. */
+  triggerVariant = "primary",
 }: {
   properties?: ExpensePropertyOption[];
   lockedPropertyId?: string | null;
   expenseId?: string;
   defaultValues?: Partial<ExpenseFormInput>;
   onClose?: () => void;
+  triggerVariant?: "primary" | "secondary";
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
   const t = d.panel.financePage.expenseForm;
   const v = useValidationContext();
   const router = useRouter();
@@ -80,6 +85,8 @@ export function ExpenseForm({
   // drugi klik na „pokaż formularz" nie wnosiłby nic.
   const [open, setOpen] = useState(isEdit);
   const [formError, setFormError] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const { currency } = formatMoneyParts(0, locale);
 
   const {
     register,
@@ -88,6 +95,7 @@ export function ExpenseForm({
     reset,
     setError,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormInput, unknown, ExpenseFormOutput>({
     resolver: zodResolver(expenseFormSchema(v)),
@@ -144,213 +152,240 @@ export function ExpenseForm({
       category: getValues("category"),
       propertyId: getValues("propertyId"),
     });
+    setOpen(false);
     router.refresh();
   }
 
-  if (!open && !isEdit) {
-    return (
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" aria-hidden />
-        {t.add}
-      </Button>
-    );
+  function close() {
+    setOpen(false);
+    setFormError(null);
+    onClose?.();
   }
 
-  /*
-    `w-full` po rozwinięciu.
+  // Szczegóły zwinięte, chyba że coś w nich jest albo walidacja wskazała błąd.
+  const detailsFilled = Boolean(
+    defaultValues?.vendor || defaultValues?.documentRef || defaultValues?.notes,
+  );
+  const detailsError = Boolean(errors.vendor || errors.documentRef || errors.notes);
+  const showDetails = detailsOpen || detailsFilled || detailsError;
 
-    Przycisk stoi w wierszu nagłówka, obok tytułu strony, i tam jest na miejscu.
-    Rozwinięty formularz dziedziczył to samo miejsce, czyli wąską prawą kolumnę
-    obok nagłówka — a ma osiem pól. Pełna szerokość wypycha go do własnego
-    wiersza (rodzic ma `flex-wrap`), więc korzysta z całej szerokości strony,
-    tak jak formularz najemcy na osobnej stronie.
-  */
   return (
-    <Card className="w-full border-accent/40">
-      <CardContent className="flex flex-col gap-4 p-4">
-        <p className="text-sm font-semibold text-fg">{isEdit ? t.editTitle : t.newTitle}</p>
+    <>
+      {isEdit ? null : (
+        <Button
+          size={triggerVariant === "primary" ? "md" : "sm"}
+          variant={triggerVariant}
+          onClick={() => setOpen(true)}
+        >
+          <Plus className={triggerVariant === "primary" ? "size-[18px]" : "size-4"} aria-hidden />
+          {t.add}
+        </Button>
+      )}
 
-        {formError ? <Alert tone="error">{formError}</Alert> : null}
+      <Dialog open={open} onClose={close} title={isEdit ? t.editTitle : t.newTitle} closeLabel={t.close}>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <DialogBody>
+            {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id={fieldId("category")} label={t.category} error={errors.category?.message}>
-              <Select
-                {...fieldAria(fieldId("category"), { error: errors.category?.message })}
-                disabled={isSubmitting}
-                {...register("category")}
-              >
-                {EXPENSE_CATEGORY_ORDER.map((value) => (
-                  <option key={value} value={value}>
-                    {expenseCategoryLabels(d)[value]}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <FormField id={fieldId("amount")} label={t.amount} error={errors.amountGrosze?.message}>
-              <Input
-                {...fieldAria(fieldId("amount"), { error: errors.amountGrosze?.message })}
-                inputMode="decimal"
-                disabled={isSubmitting}
-                {...register("amountGrosze")}
-              />
-            </FormField>
-
-            <FormField
-              id={fieldId("paidAt")}
-              label={t.paidAt}
-              error={errors.paidAt?.message}
-            >
-              <DateInput
-                {...fieldAria(fieldId("paidAt"), { error: errors.paidAt?.message })}
-                disabled={isSubmitting}
-                {...register("paidAt")}
-              />
-            </FormField>
-          </div>
-
-          <FormField
-            id={fieldId("description")}
-            label={t.description}
-            error={errors.description?.message}
-            hint={t.descriptionHint}
-          >
-            <Input
-              {...fieldAria(fieldId("description"), { error: errors.description?.message })}
-              disabled={isSubmitting}
-              {...register("description")}
-            />
-          </FormField>
-
-          <div className={`grid gap-4 ${lockedPropertyId ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-            {lockedPropertyId ? (
-              // Pole i tak jedzie w żądaniu — ukryte, żeby nie dało się tu przypiąć
-              // kosztu do innej nieruchomości niż ta otwarta na ekranie.
-              <input type="hidden" {...register("propertyId")} />
-            ) : (
-              <FormField
-                id={fieldId("propertyId")}
-                label={t.property}
-                error={errors.propertyId?.message}
-                hint={t.propertyHint}
-              >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField id={fieldId("category")} label={t.category} error={errors.category?.message}>
                 <Select
-                  {...fieldAria(fieldId("propertyId"), { error: errors.propertyId?.message })}
+                  {...fieldAria(fieldId("category"), { error: errors.category?.message })}
                   disabled={isSubmitting}
-                  {...register("propertyId")}
+                  {...register("category")}
                 >
-                  <option value="">{t.generalCost}</option>
-                  {properties.map((property) => (
-                    <option key={property.id} value={property.id}>
-                      {property.name}
+                  {EXPENSE_CATEGORY_ORDER.map((value) => (
+                    <option key={value} value={value}>
+                      {expenseCategoryLabels(d)[value]}
                     </option>
                   ))}
                 </Select>
               </FormField>
-            )}
 
-            <FormField id={fieldId("vendor")} label={t.vendor} error={errors.vendor?.message}>
-              <Input
-                {...fieldAria(fieldId("vendor"), { error: errors.vendor?.message })}
-                disabled={isSubmitting}
-                {...register("vendor")}
-              />
-            </FormField>
-
-            <FormField
-              id={fieldId("documentRef")}
-              label={t.documentRef}
-              error={errors.documentRef?.message}
-            >
-              <Input
-                {...fieldAria(fieldId("documentRef"), { error: errors.documentRef?.message })}
-                disabled={isSubmitting}
-                {...register("documentRef")}
-              />
-            </FormField>
-          </div>
-
-          {/* Cykliczność pod polami samej pozycji: najpierw „ile i za co”, dopiero
-              potem „czy to wraca”. Pola cyklu pojawiają się po zaznaczeniu, bo dla
-              większości kosztów odpowiedź brzmi „nie”. */}
-          <div className="flex flex-col gap-3 rounded-card border border-border bg-surface-alt p-3.5">
-            <CheckboxField
-              label={t.recurring}
-              hint={t.recurringHint}
-              disabled={isSubmitting}
-              {...register("recurring")}
-            />
-
-            {recurring ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  id={fieldId("recurrence")}
-                  label={t.recurrence}
-                  error={errors.recurrence?.message}
-                >
-                  <Select
-                    {...fieldAria(fieldId("recurrence"), { error: errors.recurrence?.message })}
+              <FormField id={fieldId("amount")} label={t.amount} error={errors.amountGrosze?.message}>
+                <div className="relative">
+                  <Input
+                    {...fieldAria(fieldId("amount"), { error: errors.amountGrosze?.message })}
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    className="pr-10 font-mono"
                     disabled={isSubmitting}
-                    {...register("recurrence")}
+                    {...register("amountGrosze")}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-subtle">
+                    {currency}
+                  </span>
+                </div>
+              </FormField>
+
+              <FormField id={fieldId("paidAt")} label={t.paidAt} error={errors.paidAt?.message}>
+                <DateInput
+                  {...fieldAria(fieldId("paidAt"), { error: errors.paidAt?.message })}
+                  disabled={isSubmitting}
+                  {...register("paidAt")}
+                />
+              </FormField>
+
+              {lockedPropertyId ? (
+                <input type="hidden" {...register("propertyId")} />
+              ) : (
+                <FormField id={fieldId("propertyId")} label={t.property} error={errors.propertyId?.message}>
+                  <Select
+                    {...fieldAria(fieldId("propertyId"), { error: errors.propertyId?.message })}
+                    disabled={isSubmitting}
+                    {...register("propertyId")}
                   >
-                    {EXPENSE_RECURRENCE_ORDER.map((value) => (
-                      <option key={value} value={value}>
-                        {expenseRecurrenceLabels(d)[value]}
+                    <option value="">{t.generalCost}</option>
+                    {properties.map((property) => (
+                      <option key={property.id} value={property.id}>
+                        {property.name}
                       </option>
                     ))}
                   </Select>
                 </FormField>
+              )}
+            </div>
 
-                {recurrence === "CUSTOM" ? (
-                  <FormField
-                    id={fieldId("recurrenceEveryDays")}
-                    label={t.everyDays}
-                    error={errors.recurrenceEveryDays?.message}
-                    hint={t.everyDaysHint}
-                  >
-                    <Input
-                      {...fieldAria(fieldId("recurrenceEveryDays"), {
-                        error: errors.recurrenceEveryDays?.message,
-                      })}
-                      inputMode="numeric"
+            <FormField id={fieldId("description")} label={t.description} error={errors.description?.message}>
+              <Input
+                {...fieldAria(fieldId("description"), { error: errors.description?.message })}
+                disabled={isSubmitting}
+                {...register("description")}
+              />
+            </FormField>
+
+            {/* Cykliczność: przełącznik, a pod nim co ile. Dla większości
+                kosztów odpowiedź brzmi „nie", więc wybór cyklu jest ukryty. */}
+            <div className="flex flex-col gap-4 rounded-xl bg-surface-alt p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2.5 text-[14.5px] font-semibold text-fg">
+                  <Repeat className="size-[18px] text-muted" aria-hidden />
+                  {t.recurring}
+                </span>
+                <Switch
+                  checked={Boolean(recurring)}
+                  onCheckedChange={(next) => setValue("recurring", next, { shouldDirty: true })}
+                  disabled={isSubmitting}
+                  label={t.recurring}
+                />
+              </div>
+
+              {recurring ? (
+                <>
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="sr-only">{t.recurrence}</legend>
+                    <div className="flex flex-wrap gap-1 rounded-control bg-surface p-1 shadow-btn">
+                      {EXPENSE_RECURRENCE_ORDER.map((value) => (
+                        <label
+                          key={value}
+                          className={cn(
+                            "flex h-8 flex-1 cursor-pointer items-center justify-center rounded-[6px] px-3 text-[13.5px] whitespace-nowrap transition-colors",
+                            "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-accent",
+                            recurrence === value
+                              ? "bg-accent-soft font-semibold text-accent"
+                              : "font-medium text-muted hover:text-fg",
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            value={value}
+                            className="sr-only"
+                            disabled={isSubmitting}
+                            {...register("recurrence")}
+                          />
+                          {expenseRecurrenceLabels(d)[value]}
+                        </label>
+                      ))}
+                    </div>
+                    {errors.recurrence?.message ? (
+                      <p className="text-[13px] text-bad">{errors.recurrence.message}</p>
+                    ) : null}
+                  </fieldset>
+
+                  {recurrence === "CUSTOM" ? (
+                    <FormField
+                      id={fieldId("recurrenceEveryDays")}
+                      label={t.everyDays}
+                      error={errors.recurrenceEveryDays?.message}
+                    >
+                      <Input
+                        {...fieldAria(fieldId("recurrenceEveryDays"), {
+                          error: errors.recurrenceEveryDays?.message,
+                        })}
+                        inputMode="numeric"
+                        className="font-mono sm:w-40"
+                        disabled={isSubmitting}
+                        {...register("recurrenceEveryDays")}
+                      />
+                    </FormField>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <button
+                type="button"
+                onClick={() => setDetailsOpen((current) => !current)}
+                aria-expanded={showDetails}
+                className="flex items-center gap-1.5 self-start rounded-btn text-[13.5px] font-[550] text-accent"
+              >
+                <ChevronDown
+                  className={cn("size-4 transition-transform motion-reduce:transition-none", showDetails && "rotate-180")}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+                {t.moreDetails}
+              </button>
+
+              {showDetails ? (
+                <>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FormField id={fieldId("vendor")} label={t.vendor} error={errors.vendor?.message}>
+                      <Input
+                        {...fieldAria(fieldId("vendor"), { error: errors.vendor?.message })}
+                        disabled={isSubmitting}
+                        {...register("vendor")}
+                      />
+                    </FormField>
+
+                    <FormField id={fieldId("documentRef")} label={t.documentRef} error={errors.documentRef?.message}>
+                      <Input
+                        {...fieldAria(fieldId("documentRef"), { error: errors.documentRef?.message })}
+                        className="font-mono"
+                        disabled={isSubmitting}
+                        {...register("documentRef")}
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormField id={fieldId("notes")} label={t.notes} error={errors.notes?.message}>
+                    <Textarea
+                      {...fieldAria(fieldId("notes"), { error: errors.notes?.message })}
                       disabled={isSubmitting}
-                      {...register("recurrenceEveryDays")}
+                      {...register("notes")}
                     />
                   </FormField>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+                </>
+              ) : null}
+            </div>
+          </DialogBody>
 
-          <FormField id={fieldId("notes")} label={t.notes} error={errors.notes?.message}>
-            <Textarea
-              {...fieldAria(fieldId("notes"), { error: errors.notes?.message })}
-              disabled={isSubmitting}
-              {...register("notes")}
-            />
-          </FormField>
-
-          <div className="flex flex-wrap gap-2.5">
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={close} disabled={isSubmitting}>
+              {d.panel.common.cancel}
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="size-[18px] animate-spin" aria-hidden />
+              ) : (
+                <Check className="size-[18px]" aria-hidden />
+              )}
               {isEdit ? d.panel.common.saveChanges : t.save}
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setOpen(false);
-                onClose?.();
-              }}
-              disabled={isSubmitting}
-            >
-              {isEdit ? d.panel.common.cancel : t.close}
-            </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </CardContent>
-    </Card>
+      </Dialog>
+    </>
   );
 }

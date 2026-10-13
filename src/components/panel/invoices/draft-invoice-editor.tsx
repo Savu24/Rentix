@@ -1,36 +1,46 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle2, Loader2, Pencil, Plus, RefreshCw, X } from "lucide-react";
+import { Check, Loader2, NotebookPen, RefreshCw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  useWatch,
+  type FieldErrors,
+  type UseFieldArrayAppend,
+  type UseFormRegister,
+} from "react-hook-form";
 
+import { CancelInvoiceDialog, type InvoiceSummary } from "@/components/panel/invoices/invoice-menu";
+import { InvoiceLinesFields, type LinesForm } from "@/components/panel/invoices/invoice-lines-fields";
+import { FormSection } from "@/components/panel/form-section";
+import { PageHeader } from "@/components/panel/page-header";
+import { InvoiceStatusBadge } from "@/components/panel/status-badges";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/date-input";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { VatRate } from "@/generated/prisma/enums";
+import type { InvoiceKind, VatRate } from "@/generated/prisma/enums";
 import { api } from "@/lib/api/client";
-import { calculateInvoiceTotals } from "@/lib/invoices/totals";
-import { VAT_PERCENT, vatLabels } from "@/lib/invoices/vat";
 import { useI18n, useValidationContext } from "@/lib/i18n/client";
-import { fill } from "@/lib/i18n/format";
-import { formatAmount, formatMoney, parseMoney } from "@/lib/money";
+import { formatAmount } from "@/lib/money";
 import {
   invoiceDraftSchema,
   type InvoiceDraftInput,
   type InvoiceDraftOutput,
 } from "@/lib/validations/invoice";
 
-const VAT_OPTIONS = Object.keys(VAT_PERCENT) as Array<keyof typeof VAT_PERCENT>;
-
 export type DraftInvoiceData = {
   id: string;
+  kind: InvoiceKind;
+  buyerName: string;
+  /** Kwota szkicu sformatowana na stronie — do okna usunięcia. */
+  amount: string;
   /** Daty w zapisie „2026-10-01" — tak, jak je trzyma pole daty. */
   issueDate: string;
   saleDate: string;
@@ -50,26 +60,35 @@ export type DraftInvoiceData = {
 };
 
 /**
- * Szkic czynszu za niepełny miesiąc — poprawki i zatwierdzenie.
+ * Szkic czynszu za niepełny miesiąc — poprawki i zatwierdzenie
+ * (redesign/14-dokument-szkic.svg).
  *
- * Formularz jest pełnym dokumentem, jak przy wystawianiu ręcznym: właściciel
- * poprawia proporcję, dopisuje pozycje (sprzątanie, rozliczenie mediów) albo
- * przesuwa termin. Zatwierdzenie idzie osobnym żądaniem, bo to ono nadaje
- * numer z rejestru — zapis poprawek numeru nie rusza.
+ * Szkic jest od razu formularzem: właściciel poprawia proporcję, dopisuje
+ * pozycje (sprzątanie, rozliczenie mediów) albo przesuwa termin i zatwierdza.
+ * „Zatwierdź i wystaw" najpierw zapisuje poprawki, potem idzie osobnym
+ * żądaniem, bo to ono nadaje numer z rejestru — zapis poprawek numeru nie rusza.
  *
  * „Przelicz z umowy" liczy szkic od nowa, gdy umowę zmieniono już po
  * naliczeniu — patrz `refreshDraftFromLease`.
  *
  * `suggestedNumber` — numer, który nadałby licznik. Podany tylko kontom, które
- * mogą wpisać własny (`renumber.ts`); wtedy nad przyciskami stoi pole na numer,
- * a wpisany idzie razem z zatwierdzeniem zamiast numeru z licznika.
+ * mogą wpisać własny (`renumber.ts`); wtedy obok okresu stoi pole na numer
+ * z tym numerem jako podpowiedzią, a wpisany idzie razem z zatwierdzeniem.
  */
 export function DraftInvoiceEditor({
   invoice,
   suggestedNumber = null,
+  back,
+  meta,
+  alerts,
 }: {
   invoice: DraftInvoiceData;
   suggestedNumber?: string | null;
+  back: { href: string; label: string };
+  /** Wiersz pod tytułem: nabywca i lokal. */
+  meta: string;
+  /** Ostrzeżenia strony (niepełne dane wystawcy) — pod nagłówkiem. */
+  alerts?: React.ReactNode;
 }) {
   const { d, locale } = useI18n();
   const t = d.panel.financePage.detail.draft;
@@ -77,10 +96,9 @@ export function DraftInvoiceEditor({
   const v = useValidationContext();
   const router = useRouter();
 
-  const [editing, setEditing] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [confirmingRefresh, setConfirmingRefresh] = useState(false);
+  const [dialog, setDialog] = useState<"refresh" | "remove" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [number, setNumber] = useState("");
@@ -108,8 +126,7 @@ export function DraftInvoiceEditor({
     handleSubmit,
     getValues,
     setError,
-    reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<InvoiceDraftInput, unknown, InvoiceDraftOutput>({
     resolver: zodResolver(invoiceDraftSchema(v)),
     // `values`, a nie `defaultValues`: po przeliczeniu z umowy strona przychodzi
@@ -119,22 +136,16 @@ export function DraftInvoiceEditor({
 
   const { fields, append, remove } = useFieldArray({ control, name: "lines" });
   const watchedLines = useWatch({ control, name: "lines" });
-
-  const preview = calculateInvoiceTotals(
-    (watchedLines ?? [])
-      .map((line) => ({
-        description: line?.description ?? "",
-        quantityMilli: Math.round(Number(String(line?.quantityMilli ?? "0").replace(",", ".")) * 1000),
-        unit: line?.unit ?? d.panel.invoices.defaultUnit,
-        unitPriceNetGrosze: parseMoney(String(line?.unitPriceNetGrosze ?? ""), locale) ?? 0,
-        vatRate: (line?.vatRate ?? "ZW") as keyof typeof VAT_PERCENT,
-      }))
-      .filter((line) => line.unitPriceNetGrosze > 0 && line.quantityMilli > 0),
-  );
+  const watchedNotes = useWatch({ control, name: "notes" });
 
   const busy = isSubmitting || issuing || refreshing;
 
-  const numberHint = suggestedNumber ? fill(t.numberHint, { number: suggestedNumber }) : undefined;
+  const summary: InvoiceSummary = {
+    id: invoice.id,
+    number: d.panel.invoices.draftNumber,
+    amount: invoice.amount,
+    buyerName: invoice.buyerName,
+  };
 
   /** Zapis poprawek. Zwraca, czy się udał — zatwierdzenie idzie tylko po udanym. */
   async function save(): Promise<boolean> {
@@ -183,19 +194,17 @@ export function DraftInvoiceEditor({
     const result = await api.post<{ id: string }>(`/api/invoices/${invoice.id}/refresh`, {});
 
     setRefreshing(false);
-    setConfirmingRefresh(false);
+    setDialog(null);
     if (!result.ok) {
       setFormError(result.message);
       return;
     }
-    setEditing(false);
     setNotice(t.refreshed);
     router.refresh();
   }
 
   async function onSave() {
     if (!(await save())) return;
-    setEditing(false);
     setNotice(t.saved);
     router.refresh();
   }
@@ -206,334 +215,179 @@ export function DraftInvoiceEditor({
   }
 
   return (
-    <Card className="border-warn/50">
-      <CardContent className="flex flex-col gap-4 p-4">
-        <div>
-          <p className="text-sm font-semibold text-fg">{t.title}</p>
-          <p className="mt-0.5 text-xs text-muted">{t.lead}</p>
-        </div>
-
-        {formError ? <Alert tone="error">{formError}</Alert> : null}
-        {notice ? <Alert tone="success">{notice}</Alert> : null}
-
-        {suggestedNumber !== null ? (
-          <FormField
-            id="di-number"
-            label={t.number}
-            error={numberError ?? undefined}
-            hint={numberHint}
-            className="sm:max-w-xs"
-          >
-            <Input
-              {...fieldAria("di-number", { error: numberError ?? undefined, hint: numberHint })}
-              value={number}
-              placeholder={suggestedNumber}
-              onChange={(event) => setNumber(event.target.value)}
-              disabled={busy}
-            />
-          </FormField>
-        ) : null}
-
-        {!editing ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2.5">
-              <Button size="sm" onClick={issue} disabled={busy}>
-                {issuing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" aria-hidden />
-                )}
-                {t.issue}
+    <>
+      <form onSubmit={handleSubmit(onSave)} noValidate className="flex flex-col gap-6">
+        <PageHeader
+          back={back}
+          title={t.kindTitle[invoice.kind]}
+          badges={<InvoiceStatusBadge status="DRAFT" d={d} />}
+          meta={<span>{meta}</span>}
+          actions={
+            <>
+              <Button type="button" variant="ghost" onClick={() => setDialog("remove")} disabled={busy}>
+                <Trash2 className="size-[18px]" aria-hidden />
+                {t.remove}
               </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setNotice(null);
-                  setEditing(true);
-                }}
-                disabled={busy}
-              >
-                <Pencil className="h-4 w-4" aria-hidden />
-                {t.edit}
-              </Button>
-              {invoice.hasLease && !confirmingRefresh ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setNotice(null);
-                    setConfirmingRefresh(true);
-                  }}
-                  disabled={busy}
-                >
-                  <RefreshCw className="h-4 w-4" aria-hidden />
+              {invoice.hasLease ? (
+                <Button type="button" variant="secondary" onClick={() => setDialog("refresh")} disabled={busy}>
+                  <RefreshCw className="size-[18px]" aria-hidden />
                   {t.refresh}
                 </Button>
               ) : null}
-            </div>
-            <p className="text-xs text-muted">{t.issueHint}</p>
-            {invoice.hasLease ? (
-              confirmingRefresh ? (
-                <div className="flex flex-col gap-2 rounded-control bg-surface-alt px-3.5 py-3">
-                  <p className="text-xs text-fg">{t.refreshConfirm}</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    <Button size="sm" onClick={refreshFromLease} disabled={busy}>
-                      {refreshing ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" aria-hidden />
-                      )}
-                      {t.refresh}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setConfirmingRefresh(false)}
-                      disabled={busy}
-                    >
-                      {t.refreshKeep}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-muted">{t.refreshHint}</p>
-              )
-            ) : null}
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit(onSave)} noValidate className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField id="di-issueDate" label={m.issueDate} error={errors.issueDate?.message}>
-                <DateInput
-                  {...fieldAria("di-issueDate", { error: errors.issueDate?.message })}
-                  disabled={busy}
-                  {...register("issueDate")}
-                />
-              </FormField>
-
-              <FormField
-                id="di-saleDate"
-                label={m.saleDate}
-                error={errors.saleDate?.message}
-                hint={m.saleDateHint}
+              <Button
+                type="button"
+                onClick={handleSubmit(onSaveAndIssue)}
+                disabled={busy}
+                className="order-first h-12 w-full text-[15px] lg:order-none lg:h-10 lg:w-auto lg:text-sm"
               >
-                <DateInput
-                  {...fieldAria("di-saleDate", { error: errors.saleDate?.message })}
+                {issuing ? (
+                  <Loader2 className="size-[18px] animate-spin" aria-hidden />
+                ) : (
+                  <Check className="size-[18px]" aria-hidden />
+                )}
+                {t.issue}
+              </Button>
+            </>
+          }
+        />
+
+        {alerts}
+        {formError ? <Alert tone="error">{formError}</Alert> : null}
+        {notice ? <Alert tone="success">{notice}</Alert> : null}
+
+        <div className="flex w-full max-w-[840px] flex-col gap-6">
+          <section className="grid grid-cols-1 gap-4 rounded-tile border border-border bg-surface p-5 sm:grid-cols-3 lg:p-7">
+            <FormField id="di-periodStart" label={t.periodStart}>
+              <DateInput id="di-periodStart" value={invoice.periodStart ?? ""} readOnly disabled />
+            </FormField>
+
+            <FormField id="di-periodEnd" label={t.periodEnd} error={errors.periodEnd?.message}>
+              <DateInput
+                {...fieldAria("di-periodEnd", { error: errors.periodEnd?.message })}
+                disabled={busy}
+                {...register("periodEnd")}
+              />
+            </FormField>
+
+            {suggestedNumber !== null ? (
+              <FormField id="di-number" label={t.number} error={numberError ?? undefined}>
+                <Input
+                  {...fieldAria("di-number", { error: numberError ?? undefined })}
+                  className="font-mono"
+                  value={number}
+                  placeholder={suggestedNumber}
+                  onChange={(event) => setNumber(event.target.value)}
                   disabled={busy}
-                  {...register("saleDate")}
                 />
               </FormField>
+            ) : (
+              <div className="hidden sm:block" aria-hidden />
+            )}
 
-              <FormField id="di-dueDate" label={m.dueDate} error={errors.dueDate?.message}>
-                <DateInput
-                  {...fieldAria("di-dueDate", { error: errors.dueDate?.message })}
-                  disabled={busy}
-                  {...register("dueDate")}
-                />
-              </FormField>
+            <FormField id="di-issueDate" label={m.issueDate} error={errors.issueDate?.message}>
+              <DateInput
+                {...fieldAria("di-issueDate", { error: errors.issueDate?.message })}
+                disabled={busy}
+                {...register("issueDate")}
+              />
+            </FormField>
+
+            <FormField id="di-saleDate" label={m.saleDate} error={errors.saleDate?.message}>
+              <DateInput
+                {...fieldAria("di-saleDate", { error: errors.saleDate?.message })}
+                disabled={busy}
+                {...register("saleDate")}
+              />
+            </FormField>
+
+            <FormField id="di-dueDate" label={m.dueDate} error={errors.dueDate?.message}>
+              <DateInput
+                {...fieldAria("di-dueDate", { error: errors.dueDate?.message })}
+                disabled={busy}
+                {...register("dueDate")}
+              />
+            </FormField>
+          </section>
+
+          <section className="flex flex-col rounded-tile border border-border bg-surface">
+            <h2 className="sr-only">{t.lines}</h2>
+            <div className="pt-5 lg:pt-6">
+              <InvoiceLinesFields
+                idPrefix="di"
+                register={register as unknown as UseFormRegister<LinesForm>}
+                errors={errors as FieldErrors<LinesForm>}
+                fieldArray={{
+                  fields,
+                  append: append as unknown as UseFieldArrayAppend<LinesForm, "lines">,
+                  remove,
+                }}
+                lines={watchedLines}
+                busy={busy}
+                defaultVat={invoice.lines[0]?.vatRate ?? "ZW"}
+              />
             </div>
+          </section>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <FormField
-                id="di-periodStart"
-                label={t.periodStart}
-                hint={invoice.hasLease ? t.periodStartHint : undefined}
-              >
-                <DateInput
-                  {...fieldAria("di-periodStart", {
-                    hint: invoice.hasLease ? t.periodStartHint : undefined,
-                  })}
-                  value={invoice.periodStart ?? ""}
-                  readOnly
-                  disabled
-                />
-              </FormField>
-
-              <FormField id="di-periodEnd" label={t.periodEnd} error={errors.periodEnd?.message}>
-                <DateInput
-                  {...fieldAria("di-periodEnd", { error: errors.periodEnd?.message })}
-                  disabled={busy}
-                  {...register("periodEnd")}
-                />
-              </FormField>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    append({
-                      description: "",
-                      quantityMilli: "1",
-                      unit: d.panel.invoices.defaultUnit,
-                      unitPriceNetGrosze: "",
-                      vatRate: invoice.lines[0]?.vatRate ?? "ZW",
-                    })
-                  }
-                  disabled={busy || fields.length >= 50}
-                >
-                  <Plus className="h-4 w-4" aria-hidden />
-                  {m.addLine}
-                </Button>
-              </div>
-
-              {typeof errors.lines?.message === "string" ? (
-                <Alert tone="error">{errors.lines.message}</Alert>
-              ) : null}
-
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="grid gap-3 rounded-control border border-border p-3 sm:grid-cols-12"
-                >
-                  <FormField
-                    id={`di-line-${index}-description`}
-                    label={m.description}
-                    error={errors.lines?.[index]?.description?.message}
-                    className="sm:col-span-12"
-                  >
-                    <Input
-                      {...fieldAria(`di-line-${index}-description`, {
-                        error: errors.lines?.[index]?.description?.message,
-                      })}
-                      disabled={busy}
-                      {...register(`lines.${index}.description`)}
-                    />
-                  </FormField>
-
-                  <FormField
-                    id={`di-line-${index}-qty`}
-                    label={m.quantity}
-                    error={errors.lines?.[index]?.quantityMilli?.message}
-                    className="sm:col-span-2"
-                  >
-                    <Input
-                      {...fieldAria(`di-line-${index}-qty`, {
-                        error: errors.lines?.[index]?.quantityMilli?.message,
-                      })}
-                      inputMode="decimal"
-                      disabled={busy}
-                      {...register(`lines.${index}.quantityMilli`)}
-                    />
-                  </FormField>
-
-                  <FormField
-                    id={`di-line-${index}-unit`}
-                    label={m.unit}
-                    error={errors.lines?.[index]?.unit?.message}
-                    className="sm:col-span-2"
-                  >
-                    <Input
-                      {...fieldAria(`di-line-${index}-unit`, {
-                        error: errors.lines?.[index]?.unit?.message,
-                      })}
-                      disabled={busy}
-                      {...register(`lines.${index}.unit`)}
-                    />
-                  </FormField>
-
-                  <FormField
-                    id={`di-line-${index}-price`}
-                    label={m.unitPrice}
-                    error={errors.lines?.[index]?.unitPriceNetGrosze?.message}
-                    className="sm:col-span-4"
-                  >
-                    <Input
-                      {...fieldAria(`di-line-${index}-price`, {
-                        error: errors.lines?.[index]?.unitPriceNetGrosze?.message,
-                      })}
-                      inputMode="decimal"
-                      disabled={busy}
-                      {...register(`lines.${index}.unitPriceNetGrosze`)}
-                    />
-                  </FormField>
-
-                  <FormField
-                    id={`di-line-${index}-vat`}
-                    label={m.vat}
-                    error={errors.lines?.[index]?.vatRate?.message}
-                    className="sm:col-span-3"
-                  >
-                    <Select
-                      {...fieldAria(`di-line-${index}-vat`, {
-                        error: errors.lines?.[index]?.vatRate?.message,
-                      })}
-                      disabled={busy}
-                      {...register(`lines.${index}.vatRate`)}
-                    >
-                      {VAT_OPTIONS.map((rate) => (
-                        <option key={rate} value={rate}>
-                          {vatLabels(d)[rate]}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-
-                  <div className="flex items-end sm:col-span-1">
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={fill(d.panel.panelMisc.removeLine, { index: index + 1 })}
-                      onClick={() => remove(index)}
-                      disabled={busy || fields.length === 1}
-                    >
-                      <X className="h-4 w-4" aria-hidden />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <FormField id="di-notes" label={m.notes} error={errors.notes?.message}>
+          <FormSection
+            title={m.notes}
+            icon={NotebookPen}
+            summary={watchedNotes?.split("\n")[0] || null}
+            defaultOpen={Boolean(invoice.notes)}
+          >
+            <FormField id="di-notes" label={m.notes} labelClassName="sr-only" error={errors.notes?.message}>
               <Textarea
                 {...fieldAria("di-notes", { error: errors.notes?.message })}
                 disabled={busy}
                 {...register("notes")}
               />
             </FormField>
+          </FormSection>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-control bg-surface-alt px-3.5 py-3">
-              <span className="text-sm text-muted">{m.total}</span>
-              <span className="tabular font-mono text-[17px] font-semibold text-fg">
-                {formatMoney(preview.totalGrossGrosze, locale)}
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2.5">
-              <Button type="button" size="sm" onClick={handleSubmit(onSaveAndIssue)} disabled={busy}>
-                {busy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" aria-hidden />
-                )}
-                {t.issue}
-              </Button>
-              <Button type="submit" size="sm" variant="secondary" disabled={busy}>
+          {/* Zapis bez wystawiania — dopiero gdy jest co zapisać. */}
+          {isDirty ? (
+            <div className="flex justify-end">
+              <Button type="submit" variant="secondary" disabled={busy}>
+                {isSubmitting && !issuing ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
                 {t.save}
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setEditing(false);
-                  setFormError(null);
-                  reset(defaultValues);
-                }}
-                disabled={busy}
-              >
-                {t.close}
-              </Button>
             </div>
-            <p className="text-xs text-muted">{t.issueHint}</p>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+          ) : null}
+        </div>
+      </form>
+
+      <CancelInvoiceDialog
+        invoice={summary}
+        open={dialog === "remove"}
+        onClose={() => setDialog(null)}
+        title={t.removeTitle}
+        confirmLabel={t.remove}
+        numberStays={false}
+      />
+
+      <Dialog
+        open={dialog === "refresh"}
+        onClose={() => setDialog(null)}
+        title={t.refreshTitle}
+        closeLabel={d.panel.common.close}
+        className="sm:max-w-[460px]"
+      >
+        <DialogBody>
+          <p className="text-sm text-muted">{t.refreshConfirm}</p>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setDialog(null)} disabled={refreshing}>
+            {t.refreshKeep}
+          </Button>
+          <Button onClick={refreshFromLease} disabled={refreshing}>
+            {refreshing ? (
+              <Loader2 className="size-[18px] animate-spin" aria-hidden />
+            ) : (
+              <RefreshCw className="size-[18px]" aria-hidden />
+            )}
+            {t.refresh}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }

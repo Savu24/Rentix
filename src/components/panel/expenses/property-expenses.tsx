@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { ExpenseForm } from "@/components/panel/expenses/expense-form";
 import { ExpenseRow } from "@/components/panel/expenses/expense-row";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/panel/section-card";
 import type { ExpenseListItem } from "@/lib/expenses/service";
 import { formatMoney } from "@/lib/money";
 import { useI18n } from "@/lib/i18n/client";
@@ -31,58 +31,47 @@ export function PropertyExpenses({
   count: number;
 }) {
   const { d, locale } = useI18n();
+  const misc = d.panel.panelMisc;
+
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex flex-wrap items-baseline gap-2 text-[15px] font-semibold text-fg">
-          <span className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-muted" aria-hidden />
-            {d.panel.financePage.expensesTitle}
-          </span>
-          {count > 0 ? (
-            <span className="text-sm font-normal text-muted">
-              {fill(d.panel.panelMisc.expensesTotal, {
-                amount: formatMoney(totalGrosze, locale),
-              })}
-            </span>
-          ) : null}
-        </h2>
-
-        <ExpenseForm lockedPropertyId={propertyId} />
-      </div>
-
-      {expenses.length === 0 ? (
-        <Card className="bg-surface-alt">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted">
-              {d.panel.panelMisc.propertyExpensesEmpty}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col p-0">
-            {expenses.map((expense, index) => (
-              <div key={expense.id} className={index > 0 ? "border-t border-border" : ""}>
-                <ExpenseRow expense={expense} showProperty={false} lockedPropertyId={propertyId} />
-              </div>
-            ))}
-
+    <SectionCard
+      title={d.panel.financePage.expensesTitle}
+      icon={Wallet}
+      actions={<ExpenseForm lockedPropertyId={propertyId} triggerVariant="secondary" />}
+      bodyClassName="px-0 pt-2 pb-0 lg:px-0 lg:pb-0"
+      footer={
+        count > 0 ? (
+          <>
             {/* Karta nieruchomości pokazuje wycinek — pełna historia z filtrami
                 i podziałem na lata stoi w finansach. */}
             {count > expenses.length ? (
-              <div className="border-t border-border px-4 py-2.5">
-                <Link
-                  href={`/panel/finanse/koszty?propertyId=${propertyId}`}
-                  className="text-xs font-medium text-accent hover:underline"
-                >
-                  Zobacz wszystkie ({count})
-                </Link>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+              <Link
+                href={`/panel/finanse/koszty?propertyId=${propertyId}`}
+                className="text-sm font-[550] text-accent hover:underline"
+              >
+                {fill(misc.seeAll, { count })}
+              </Link>
+            ) : (
+              <span className="text-sm font-[550] text-muted">{misc.roomsSum}</span>
+            )}
+            <span className="font-mono text-[15px] font-[650] text-fg">
+              {formatMoney(totalGrosze, locale)}
+            </span>
+          </>
+        ) : undefined
+      }
+    >
+      {expenses.length === 0 ? (
+        <p className="px-4 pb-4 text-sm text-muted lg:px-6">{misc.propertyExpensesEmpty}</p>
+      ) : (
+        <div className="flex flex-col">
+          {expenses.map((expense) => (
+            <div key={expense.id} className="border-t border-border first:border-t-0">
+              <ExpenseRow expense={expense} showProperty={false} lockedPropertyId={propertyId} />
+            </div>
+          ))}
+        </div>
       )}
-    </section>
+    </SectionCard>
   );
 }

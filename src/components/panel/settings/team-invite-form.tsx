@@ -1,15 +1,16 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, Send, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/panel/section-card";
 import { fieldAria, FormField } from "@/components/ui/form-field";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
@@ -47,7 +48,6 @@ export function TeamInviteForm() {
     getValues,
     reset,
     setError,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<InviteMemberInput, unknown, InviteMemberOutput>({
     resolver: zodResolver(inviteMemberSchema(v)),
@@ -56,7 +56,6 @@ export function TeamInviteForm() {
 
   const roleLabels = membershipRoleLabels(d);
   const roleHints = membershipRoleHints(d);
-  const selectedRole = watch("role");
 
   async function onSubmit() {
     setFormError(null);
@@ -90,61 +89,60 @@ export function TeamInviteForm() {
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
-          <p className="mt-0.5 text-sm text-muted">{t.lead}</p>
-        </div>
-
+    <SectionCard
+      title={t.title}
+      icon={UserPlus}
+      actions={
+        <InfoTip label={t.info} align="end">
+          <span className="flex flex-col gap-1.5">
+            <span>{t.lead}</span>
+            {ASSIGNABLE_ROLES.map((role) => (
+              <span key={role}>
+                <strong>{roleLabels[role]}:</strong> {roleHints[role as keyof typeof roleHints]}
+              </span>
+            ))}
+          </span>
+        </InfoTip>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         {formError ? <Alert tone="error">{formError}</Alert> : null}
         {notice ? <Alert tone={notice.tone}>{notice.text}</Alert> : null}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="invite-email" label={t.email} error={errors.email?.message}>
-              <Input
-                {...fieldAria("invite-email", { error: errors.email?.message })}
-                type="email"
-                inputMode="email"
-                autoComplete="off"
-                disabled={isSubmitting}
-                {...register("email")}
-              />
-            </FormField>
+        <FormField id="invite-email" label={t.email} error={errors.email?.message}>
+          <Input
+            {...fieldAria("invite-email", { error: errors.email?.message })}
+            type="email"
+            inputMode="email"
+            autoComplete="off"
+            disabled={isSubmitting}
+            {...register("email")}
+          />
+        </FormField>
 
-            <FormField
-              id="invite-role"
-              label={t.role}
-              error={errors.role?.message}
-              hint={roleHints[selectedRole as keyof typeof roleHints] ?? undefined}
-            >
-              <Select
-                {...fieldAria("invite-role", { error: errors.role?.message })}
-                disabled={isSubmitting}
-                {...register("role")}
-              >
-                {ASSIGNABLE_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {roleLabels[role]}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-          </div>
+        <FormField id="invite-role" label={t.role} error={errors.role?.message}>
+          <Select
+            {...fieldAria("invite-role", { error: errors.role?.message })}
+            disabled={isSubmitting}
+            {...register("role")}
+          >
+            {ASSIGNABLE_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {roleLabels[role]}
+              </option>
+            ))}
+          </Select>
+        </FormField>
 
-          <div>
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <UserPlus className="h-4 w-4" aria-hidden />
-              )}
-              {isSubmitting ? t.submitting : t.submit}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <Button type="submit" block disabled={isSubmitting}>
+          {isSubmitting ? (
+            <Loader2 className="size-[18px] animate-spin" aria-hidden />
+          ) : (
+            <Send className="size-[18px]" aria-hidden />
+          )}
+          {isSubmitting ? t.submitting : t.submit}
+        </Button>
+      </form>
+    </SectionCard>
   );
 }

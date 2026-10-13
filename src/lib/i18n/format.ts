@@ -6,11 +6,28 @@ import { DEFAULT_LOCALE, LOCALE_META, type Locale } from "./config";
  * arytmetyka i zaokrąglanie.
  */
 
-type DateStyle = "long" | "short" | "numeric" | "monthYear" | "dateTime";
+type DateStyle =
+  | "long"
+  | "weekdayLong"
+  | "short"
+  | "numeric"
+  | "monthYear"
+  | "day"
+  | "monthShort"
+  | "dayMonth"
+  | "dateTime";
 
 const DATE_OPTIONS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   /** „5 września 2026" / „5 September 2026" */
   long: { day: "numeric", month: "long", year: "numeric" },
+  /** „sobota, 5 września 2026" / „Saturday 5 September 2026" — data pod powitaniem. */
+  weekdayLong: { weekday: "long", day: "numeric", month: "long", year: "numeric" },
+  /** „5" — dzień w „kalendarzyku" terminu. */
+  day: { day: "numeric" },
+  /** „wrz" / „Sept" — miesiąc pod dniem w „kalendarzyku". */
+  monthShort: { month: "short" },
+  /** „5 wrz" / „5 Sept" — data na osi zdarzeń, gdzie rok widać z kontekstu. */
+  dayMonth: { day: "numeric", month: "short" },
   /** „5 wrz 2026" / „5 Sep 2026" */
   short: { day: "numeric", month: "short", year: "numeric" },
   /** „05.09.2026" / „05/09/2026" — obie wersje mają dzień przed miesiącem. */
@@ -48,6 +65,21 @@ export function formatDateIn(
 ): string {
   const value = typeof date === "string" ? new Date(date) : date;
   return dateFormatter(locale, style).format(value);
+}
+
+const areaFormatters = new Map<Locale, Intl.NumberFormat>();
+
+/**
+ * „52,3 m²" / „52.3 m²" — metraż z bazy (Decimal jako tekst „52.30" albo
+ * liczba) w zapisie kraju, bez zbędnych zer po przecinku.
+ */
+export function formatArea(value: string | number, locale: Locale = DEFAULT_LOCALE): string {
+  let formatter = areaFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE_META[locale].intl, { maximumFractionDigits: 2 });
+    areaFormatters.set(locale, formatter);
+  }
+  return `${formatter.format(Number(value))} m²`;
 }
 
 /**
@@ -129,10 +161,17 @@ export function formatDayRangeIn(
     dayRangeFormatters.set(locale, formatter);
   }
 
-  return formatter.formatRange(
-    typeof start === "string" ? new Date(start) : start,
-    typeof end === "string" ? new Date(end) : end,
-  );
+  // Intl łączy zakres półpauzą („12–18 paź"); w interfejsie zakresy piszemy
+  // zwykłym łącznikiem („12-18 paź", „26 paź - 1 lis").
+  return formatter
+    .formatRange(
+      typeof start === "string" ? new Date(start) : start,
+      typeof end === "string" ? new Date(end) : end,
+    )
+    .replace(/\s*[–—]\s*/, (_, offset: number, text: string) =>
+      // Spacje tylko między pełnymi datami („26 paź - 1 lis"), nie w „12-18 paź".
+      text.slice(0, offset).trim().includes(" ") ? " - " : "-",
+    );
 }
 
 const monthNameCache = new Map<string, readonly string[]>();

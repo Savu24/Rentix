@@ -53,7 +53,7 @@ export const subscriptionUpdateSchema = z
       value.leaseLimit !== undefined ||
       value.billingExempt !== undefined ||
       value.status !== undefined,
-    { message: "Nie ma czego zapisać — nic nie zostało zmienione." },
+    { message: "Nie ma czego zapisać, nic nie zostało zmienione." },
   );
 
 export type SubscriptionUpdateInput = z.input<typeof subscriptionUpdateSchema>;

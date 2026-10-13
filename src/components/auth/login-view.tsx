@@ -39,19 +39,7 @@ export function LoginView({
   return (
     <AuthShell locale={locale}>
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1.5">
-          <h1 className="r-display text-[30px] leading-tight text-fg">{t.heading}</h1>
-          <p className="text-sm text-muted">
-            {t.noAccount}{" "}
-            <Link
-              href={routes.register}
-              className="font-medium text-accent underline-offset-4 hover:underline"
-            >
-              {t.registerLink}
-            </Link>
-            .
-          </p>
-        </div>
+        <h1 className="r-display text-[34px] leading-10 tracking-[-0.6px] text-fg">{t.heading}</h1>
 
         {googleEnabled ? (
           <>
@@ -61,6 +49,13 @@ export function LoginView({
         ) : null}
 
         <LoginForm returnTo={returnTo} initialErrorCode={error} />
+
+        <p className="text-center text-sm text-muted">
+          {t.noAccount}{" "}
+          <Link href={routes.register} className="font-semibold text-accent underline-offset-4 hover:underline">
+            {t.registerLink}
+          </Link>
+        </p>
       </div>
     </AuthShell>
   );

@@ -4,8 +4,10 @@ import { Archive, Loader2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ActionMenu } from "@/components/panel/action-menu";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
@@ -69,11 +71,11 @@ export function ArchiveAction({
     return (
       <div className="flex flex-col gap-2">
         {error ? <Alert tone="error">{error}</Alert> : null}
-        <Button size="sm" variant="secondary" onClick={() => run("restore")} disabled={busy}>
+        <Button variant="secondary" onClick={() => run("restore")} disabled={busy}>
           {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <Loader2 className="size-[18px] animate-spin" aria-hidden />
           ) : (
-            <RotateCcw className="h-4 w-4" aria-hidden />
+            <RotateCcw className="size-[18px]" aria-hidden />
           )}
           {t.restore}
         </Button>
@@ -82,33 +84,45 @@ export function ArchiveAction({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {error ? <Alert tone="error">{error}</Alert> : null}
+    <>
+      {/* Archiwizacja jest rzadka i odwracalna, ale nie codzienna — siedzi
+          w menu „⋯", a potwierdzenie w oknie mówi, co się stanie. */}
+      <ActionMenu
+        size="md"
+        label={d.panel.common.more}
+        items={[
+          {
+            label: t.archive,
+            icon: Archive,
+            danger: true,
+            onSelect: () => {
+              setError(null);
+              setConfirming(true);
+            },
+          },
+        ]}
+      />
 
-      {confirming ? (
-        <>
-          <p className="text-xs text-muted">{hint}</p>
-          <div className="flex flex-wrap gap-2.5">
-            <Button size="sm" variant="danger" onClick={() => run("archive")} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {fill(t.archiveWithLabel, { label })}
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setConfirming(false)}
-              disabled={busy}
-            >
-              {d.panel.common.cancel}
-            </Button>
-          </div>
-        </>
-      ) : (
-        <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
-          <Archive className="h-4 w-4" aria-hidden />
-          {t.archive}
-        </Button>
-      )}
-    </div>
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={fill(t.archiveWithLabel, { label })}
+        closeLabel={d.panel.common.close}
+      >
+        <DialogBody>
+          <p className="text-sm text-fg">{hint}</p>
+          {error ? <Alert tone="error">{error}</Alert> : null}
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setConfirming(false)} disabled={busy}>
+            {d.panel.common.cancel}
+          </Button>
+          <Button variant="danger" onClick={() => run("archive")} disabled={busy}>
+            {busy ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
+            {t.archive}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }

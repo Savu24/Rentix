@@ -13,7 +13,7 @@ export function Label({
     <LabelPrimitive.Root
       data-slot="label"
       className={cn(
-        "text-[13px] font-medium text-fg select-none",
+        "text-[13px] leading-[18px] font-[550] text-fg select-none",
         "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         className,
       )}

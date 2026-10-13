@@ -35,6 +35,14 @@ function renderForm() {
 const registered = (label: string) => screen.getAllByLabelText(label)[0];
 const billing = (label: string) => screen.getAllByLabelText(label)[1];
 
+/**
+ * Sekcje poza danymi podstawowymi są zwinięte — przycisk kopiowania widać
+ * dopiero po rozwinięciu „Danych do faktury", tak jak w przeglądarce.
+ */
+async function openBillingSection() {
+  await userEvent.click(screen.getByRole("button", { name: /Dane do faktury/ }));
+}
+
 describe("TenantForm — dane do faktury", () => {
   it("przepisuje adres zameldowania do danych nabywcy", async () => {
     renderForm();
@@ -43,6 +51,7 @@ describe("TenantForm — dane do faktury", () => {
     await userEvent.type(registered("Kod pocztowy"), "03133");
     await userEvent.type(registered("Miejscowość"), "Warszawa");
 
+    await openBillingSection();
     await userEvent.click(screen.getByRole("button", { name: "Skopiuj adres zameldowania" }));
 
     expect(billing("Ulica i numer")).toHaveValue("Kwiatowa 4/2");
@@ -50,8 +59,9 @@ describe("TenantForm — dane do faktury", () => {
     expect(billing("Miejscowość")).toHaveValue("Warszawa");
   });
 
-  it("bez adresu zameldowania nie ma czego kopiować", () => {
+  it("bez adresu zameldowania nie ma czego kopiować", async () => {
     renderForm();
+    await openBillingSection();
     expect(screen.getByRole("button", { name: "Skopiuj adres zameldowania" })).toBeDisabled();
   });
 });

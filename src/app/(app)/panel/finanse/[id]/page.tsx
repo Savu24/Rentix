@@ -1,31 +1,39 @@
-import { ArrowLeft, Download, Mail } from "lucide-react";
+import { Banknote, CalendarDays, Clock, Download, FileText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { CancelInvoice } from "@/components/panel/invoices/cancel-invoice";
+import { PageHeader } from "@/components/panel/page-header";
+import { SectionCard } from "@/components/panel/section-card";
+import { InvoiceStatusBadge } from "@/components/panel/status-badges";
 import { CancelledInvoiceActions } from "@/components/panel/invoices/cancelled-invoice-actions";
 import { DraftInvoiceEditor } from "@/components/panel/invoices/draft-invoice-editor";
-import { EditInvoiceNumber } from "@/components/panel/invoices/edit-invoice-number";
+import { InvoiceMenu, type InvoiceSummary } from "@/components/panel/invoices/invoice-menu";
 import { DeletePayment, RecordPayment } from "@/components/panel/invoices/record-payment";
 import { SendInvoice } from "@/components/panel/invoices/send-invoice";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { MoneyDisplay } from "@/components/ui/money-display";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { getInvoice, mayRenumberInvoices, suggestedDraftNumber } from "@/lib/invoices/service";
+import {
+  getInvoice,
+  invoiceDeliveryHistory,
+  mayRenumberInvoices,
+  suggestedDraftNumber,
+} from "@/lib/invoices/service";
 import { invoiceNumberEditable } from "@/lib/invoices/renumber";
 import { hasRegisterNumber } from "@/lib/invoices/draft";
-import { INVOICE_STATUS_TONE, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
+import { invoicePdfFilename } from "@/lib/invoices/pdf-data";
+import { paidPercent, remainingGrosze, resolveInvoiceStatus } from "@/lib/invoices/status";
 import { vatLabels } from "@/lib/invoices/vat";
-import { fill, formatDateIn } from "@/lib/i18n/format";
-import { formatMoney } from "@/lib/money";
+import { fill, formatDateIn, formatDayRangeIn, formatNumber } from "@/lib/i18n/format";
+import { formatAmount, formatMoney } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
 import { isSellerComplete } from "@/lib/organizations/service";
-import { prisma } from "@/lib/prisma";
 import { invoiceKindLabels, paymentMethodLabels } from "@/lib/validations/invoice";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+import { cn } from "@/lib/utils";
+
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -40,111 +48,102 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-
+/**
+ * Karta dokumentu (redesign/14-dokument-karta-desktop.svg i -mobile.svg).
+ *
+ * Po lewej „kartka" — to, co jest na wydruku: nabywca, czego dotyczy,
+ * pozycje i suma. Po prawej stan rozliczenia: ile zostało, pasek spłaty,
+ * wpłaty i historia wiadomości. Na telefonie rozliczenie idzie pierwsze,
+ * bo po to się tu zagląda.
+ */
 export default async function InvoiceDetailPage({ params }: Params) {
   const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
   const t = d.panel.financePage.detail;
   const session = await requireOwnerSession();
+  const organizationId = session.user.organizationId;
   const { id } = await params;
 
-  const invoice = await getInvoice(session.user.organizationId, id);
+  const invoice = await getInvoice(organizationId, id);
   if (!invoice) notFound();
 
   const now = new Date();
   const status = resolveInvoiceStatus(invoice, now);
-  const tone = INVOICE_STATUS_TONE[status];
   const remaining = remainingGrosze(invoice);
 
   const property = invoice.lease?.property;
   const isDraft = invoice.status === "DRAFT";
+  const isCancelled = invoice.status === "CANCELLED";
+  const numbered = hasRegisterNumber(invoice.number);
+  const displayNumber = numbered ? invoice.number : d.panel.invoices.draftNumber;
+  const kindLabel = invoiceKindLabels(d)[invoice.kind];
 
   /*
     Własny numer — wyjątek dla kont, które numerację prowadzą też gdzie indziej.
     Patrz `lib/invoices/renumber.ts`; ten sam warunek pilnuje endpoint, bo ukryty
     przycisk nie jest bramką. Szkic dostaje pole na numer w swoim edytorze,
-    wystawiony — przycisk poprawki pod nagłówkiem.
+    wystawiony — pozycję w menu „⋯".
   */
-  const mayRenumber =
-    invoiceNumberEditable(invoice) && (await mayRenumberInvoices(session.user.organizationId));
+  const mayRenumber = invoiceNumberEditable(invoice) && (await mayRenumberInvoices(organizationId));
   const canEditNumber = !isDraft && mayRenumber;
   const suggestedNumber =
-    isDraft && mayRenumber
-      ? await suggestedDraftNumber(session.user.organizationId, invoice)
-      : null;
+    isDraft && mayRenumber ? await suggestedDraftNumber(organizationId, invoice) : null;
 
-  // Ostatnie powiadomienie o tym dokumencie — właściciel widzi, czy najemca
-  // w ogóle dostał wiadomość, zanim zacznie dzwonić w sprawie zaległości.
-  const lastNotification = await getLastNotification(invoice.id);
+  const { notifications, awaitingSend } = await invoiceDeliveryHistory(organizationId, invoice);
 
-  // Zatwierdzony szkic czeka na wysyłkę z panelu — automat go nie wyśle.
-  const awaitingSend =
-    !isDraft &&
-    !invoice.autoSend &&
-    (await prisma.notification.count({
-      where: { invoiceId: invoice.id, type: "INVOICE_ISSUED", status: "SENT" },
-    })) === 0;
+  const summary: InvoiceSummary = {
+    id: invoice.id,
+    number: displayNumber,
+    amount: formatMoney(invoice.totalGrossGrosze, locale),
+    buyerName: invoice.buyerName,
+  };
+  const firstTenant = invoice.lease?.tenants[0]?.tenant ?? null;
 
-  return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/panel/finanse"
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {d.panel.financePage.title}
+  const pdfButton = (
+    <Button asChild variant="secondary" className="flex-1 lg:flex-none">
+      {/* target="_blank": PDF otwiera się w podglądzie, a widok dokumentu zostaje. */}
+      <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener noreferrer">
+        <Download className="size-[18px]" aria-hidden />
+        {t.pdf}
+      </a>
+    </Button>
+  );
+
+  const period = invoice.periodStart
+    ? invoice.periodEnd
+      ? formatDayRangeIn(invoice.periodStart, invoice.periodEnd, locale)
+      : formatDateIn(invoice.periodStart, locale, "short")
+    : null;
+
+  // Ostrzeżenie stoi tutaj, a nie tylko w ustawieniach: to jest moment,
+  // w którym za chwilę pobierzesz PDF i wyślesz go najemcy.
+  const sellerAlert = !isSellerComplete(invoice.organization) ? (
+    <Alert
+      tone="warning"
+      action={
+        <Link href="/panel/ustawienia" className="hover:underline">
+          {t.completeInSettings}
         </Link>
+      }
+    >
+      {t.sellerIncomplete}
+    </Alert>
+  ) : null;
 
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="r-display text-[26px] leading-tight text-fg">
-                {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
-              </h1>
-              <Badge tone={tone}>{d.panel.invoices.status[status]}</Badge>
-              <Badge>{invoiceKindLabels(d)[invoice.kind]}</Badge>
-            </div>
-
-            <p className="text-sm text-muted">
-              {fill(t.issuedOn, {
-                issued: formatDateIn(invoice.issueDate, locale, "long"),
-                due: formatDateIn(invoice.dueDate, locale, "long"),
-              })}
-            </p>
-
-            {canEditNumber ? (
-              <div className="mt-1 flex w-full flex-col items-start">
-                <EditInvoiceNumber invoiceId={invoice.id} number={invoice.number} />
-              </div>
-            ) : null}
-          </div>
-
-          <Button asChild size="sm" variant="secondary">
-            {/* target="_blank": PDF otwiera się w podglądzie, a widok dokumentu zostaje. */}
-            <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener noreferrer">
-              <Download className="h-4 w-4" aria-hidden />
-              {t.downloadPdf}
-            </a>
-          </Button>
-        </div>
-      </div>
-
-      {/* Ostrzeżenie stoi tutaj, a nie tylko w ustawieniach: to jest moment,
-          w którym za chwilę pobierzesz PDF i wyślesz go najemcy. */}
-      {!isSellerComplete(invoice.organization) ? (
-        <Alert tone="warning">
-          {t.sellerIncomplete}{" "}
-          <Link href="/panel/ustawienia" className="font-medium underline">
-            {t.completeInSettings}
-          </Link>
-          .
-        </Alert>
-      ) : null}
-
-      {isDraft ? (
+  // Szkic to formularz z własnym nagłówkiem i akcjami (redesign/14-dokument-szkic.svg).
+  if (isDraft) {
+    return (
+      <div className="mx-auto flex w-full max-w-[1096px] flex-col">
         <DraftInvoiceEditor
+          back={{ href: "/panel/finanse", label: d.panel.financePage.title }}
+          meta={[invoice.buyerName, property ? `${property.name}${invoice.lease?.room ? `, ${invoice.lease.room.name}` : ""}` : null]
+            .filter(Boolean)
+            .join(", ")}
+          alerts={sellerAlert}
           invoice={{
             id: invoice.id,
+            kind: invoice.kind,
+            buyerName: invoice.buyerName,
+            amount: formatMoney(invoice.totalGrossGrosze, locale),
             issueDate: dateField(invoice.issueDate),
             saleDate: dateField(invoice.saleDate),
             dueDate: dateField(invoice.dueDate),
@@ -162,216 +161,307 @@ export default async function InvoiceDetailPage({ params }: Params) {
           }}
           suggestedNumber={suggestedNumber}
         />
-      ) : null}
+      </div>
+    );
+  }
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Card>
-          <CardContent className="flex flex-col gap-1 p-4">
-            <p className="text-[13px] font-semibold text-fg">{t.buyer}</p>
-            <p className="text-sm text-fg">{invoice.buyerName}</p>
-            {invoice.buyerStreet ? (
-              <p className="text-xs text-muted">{invoice.buyerStreet}</p>
-            ) : null}
-            {invoice.buyerPostalCode || invoice.buyerCity ? (
-              <p className="text-xs text-muted">
-                {[invoice.buyerPostalCode, invoice.buyerCity].filter(Boolean).join(" ")}
-              </p>
-            ) : null}
-            {invoice.buyerTaxId ? (
-              <p className="text-xs text-muted">NIP: {invoice.buyerTaxId}</p>
-            ) : null}
-            <p className="mt-1 text-xs text-muted">
-              {t.snapshotNote}
-            </p>
-          </CardContent>
-        </Card>
+  // Kwota „Pozostaje" w kolorze stanu: czerwień po terminie, zieleń po spłacie.
+  const remainingTone =
+    remaining === 0 ? "text-good" : status === "OVERDUE" ? "text-bad" : "text-fg";
 
-        <Card>
-          <CardContent className="flex flex-col gap-1 p-4">
-            <p className="text-[13px] font-semibold text-fg">{t.subject}</p>
-            {property ? (
-              <Link
-                href={`/panel/nieruchomosci/${property.id}`}
-                className="text-sm font-medium text-accent hover:underline"
-              >
-                {property.name}
-                {invoice.lease?.room ? ` · ${invoice.lease.room.name}` : ""}
-              </Link>
-            ) : (
-              <p className="text-sm text-muted">{t.oneOff}</p>
-            )}
-
-            {invoice.periodStart ? (
-              <p className="text-xs text-muted">
-                {fill(t.period, {
-                  from: formatDateIn(invoice.periodStart, locale, "short"),
-                  to: invoice.periodEnd
-                    ? ` – ${formatDateIn(invoice.periodEnd, locale, "short")}`
-                    : "",
-                })}
-              </p>
-            ) : null}
-
+  return (
+    <div className="mx-auto flex w-full max-w-[1096px] flex-col gap-6">
+      <PageHeader
+        back={{ href: "/panel/finanse", label: d.panel.financePage.title }}
+        title={`${kindLabel} ${displayNumber}`}
+        badges={<InvoiceStatusBadge status={status} d={d} due={{ date: invoice.dueDate, now, locale }} />}
+        meta={
+          <>
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="size-4 text-subtle" aria-hidden />
+              {fill(t.issued, { date: formatDateIn(invoice.issueDate, locale, "short") })}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="size-4 text-subtle" aria-hidden />
+              {fill(t.due, { date: formatDateIn(invoice.dueDate, locale, "short") })}
+            </span>
             {invoice.lease ? (
               <Link
                 href={`/panel/umowy/${invoice.lease.id}`}
-                className="mt-1 w-fit text-xs text-accent hover:underline"
+                className="flex items-center gap-1.5 font-[550] text-accent hover:underline"
               >
-                {t.viewLease}
+                <FileText className="size-4 text-subtle" aria-hidden />
+                {invoice.lease.number ? fill(t.lease, { number: invoice.lease.number }) : t.viewLease}
               </Link>
             ) : null}
-          </CardContent>
-        </Card>
-      </div>
+          </>
+        }
+        actions={
+          isCancelled ? (
+            <>
+              {pdfButton}
+              <CancelledInvoiceActions invoice={summary} isDraft={!numbered} />
+            </>
+          ) : (
+            <>
+              <InvoiceMenu invoice={summary} canEditNumber={canEditNumber} />
+              {pdfButton}
+              <SendInvoice
+                invoiceId={invoice.id}
+                tenant={
+                  firstTenant
+                    ? {
+                        id: firstTenant.id,
+                        name: `${firstTenant.firstName} ${firstTenant.lastName}`,
+                        email: firstTenant.email,
+                      }
+                    : null
+                }
+                hasLease={Boolean(firstTenant)}
+                attachmentName={invoicePdfFilename(invoice)}
+                className="flex-1 lg:flex-none"
+              />
+              {remaining > 0 ? (
+                <RecordPayment
+                  invoiceId={invoice.id}
+                  remainingGrosze={remaining}
+                  description={`${displayNumber}, ${invoice.buyerName}`}
+                  className="order-first h-12 w-full text-[15px] lg:order-none lg:h-10 lg:w-auto lg:text-sm"
+                />
+              ) : null}
+            </>
+          )
+        }
+      />
 
-      <Card>
-        <CardContent className="flex flex-col p-0">
-          <div className="flex items-center gap-3 border-b border-border px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-            <span className="flex-1">{t.lineHeader}</span>
-            <span className="w-20 text-right">{t.quantity}</span>
-            <span className="w-14 text-right">{t.vat}</span>
-            <span className="w-24 text-right">{t.net}</span>
-            <span className="w-24 text-right">{t.gross}</span>
-          </div>
+      {sellerAlert}
 
-          {invoice.lines.map((line) => (
-            <div
-              key={line.id}
-              className="flex items-center gap-3 border-b border-border px-4 py-3 text-sm last:border-b-0"
+      {/* Zatwierdzony szkic czeka na wysyłkę z panelu — automat go nie wyśle. */}
+      {awaitingSend && !isCancelled ? <Alert tone="info">{d.panel.financePage.send.awaiting}</Alert> : null}
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,352px)] lg:grid-rows-[auto_1fr]">
+        {/* Rozliczenie: na telefonie pierwsze, na desktopie w prawej kolumnie. */}
+        {!isCancelled ? (
+          <section className="flex flex-col rounded-tile border border-border bg-surface p-5 lg:col-start-2 lg:row-start-1 lg:p-6">
+            <h2 className="text-sm font-[550] text-muted">{t.remaining}</h2>
+            <MoneyDisplay
+              grosze={remaining}
+              locale={locale}
+              className={cn("mt-2 text-[34px] leading-10 tracking-[-0.8px]", remainingTone)}
+            />
+            <span
+              className="mt-4 block h-2 overflow-hidden rounded-full bg-surface-alt"
+              role="progressbar"
+              aria-label={t.paid}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={paidPercent(invoice)}
             >
-              <span className="min-w-0 flex-1 text-fg">{line.description}</span>
-              <span className="tabular w-20 text-right font-mono text-xs text-muted">
-                {locale === "pl"
-                  ? Number(line.quantity).toString().replace(".", ",")
-                  : Number(line.quantity).toString()}{" "}
-                {line.unit}
-              </span>
-              <span className="w-14 text-right text-xs text-muted">{vatLabels(d)[line.vatRate]}</span>
-              <span className="tabular w-24 text-right font-mono text-xs text-muted">
-                {formatMoney(line.netGrosze)}
-              </span>
-              <span className="tabular w-24 text-right font-mono text-fg">
-                {formatMoney(line.grossGrosze)}
+              <span
+                className="block h-full rounded-full bg-good"
+                style={{ width: `${paidPercent(invoice)}%` }}
+              />
+            </span>
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <span className="text-[13px] text-muted">{t.paid}</span>
+              <span className="font-mono text-sm font-semibold whitespace-nowrap text-fg">
+                {formatMoney(invoice.paidGrosze, locale)}
               </span>
             </div>
-          ))}
 
-          <div className="flex flex-col gap-1 border-t border-border bg-surface-alt px-4 py-3">
-            <SummaryRow label={t.totalNet} value={formatMoney(invoice.totalNetGrosze, locale)} />
-            <SummaryRow label={t.totalVat} value={formatMoney(invoice.totalVatGrosze, locale)} />
-            <SummaryRow
-              label={t.totalDue}
-              value={formatMoney(invoice.totalGrossGrosze, locale)}
-              strong
-            />
-            {invoice.paidGrosze > 0 ? (
-              <>
-                <SummaryRow label={t.paid} value={formatMoney(invoice.paidGrosze, locale)} />
-                <SummaryRow label={t.remaining} value={formatMoney(remaining, locale)} strong />
-              </>
-            ) : null}
-            {t.inWords ? (
-              <p className="mt-1 text-xs text-muted">
-                {t.inWords}
-                {groszeToPolishWords(invoice.totalGrossGrosze)}
-              </p>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
-
-      <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-semibold text-fg">
-          {t.payments}{" "}
-          <span className="font-normal text-muted">({invoice.payments.length})</span>
-        </h2>
-
-        {invoice.payments.length === 0 ? (
-          <Card>
-            <CardContent className="p-4 text-sm text-muted">
-              {t.noPayments}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col p-0">
-              {invoice.payments.map((payment, index) => (
-                <div
-                  key={payment.id}
-                  className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 ${
-                    index > 0 ? "border-t border-border" : ""
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-fg">
-                      {formatDateIn(payment.paidAt, locale, "short")} ·{" "}
-                      {paymentMethodLabels(d)[payment.method]}
-                    </p>
-                    {payment.reference ? (
-                      <p className="text-xs text-muted">{payment.reference}</p>
-                    ) : null}
-                  </div>
-                  <p className="tabular font-mono text-sm text-fg">
-                    {formatMoney(payment.amountGrosze, locale)}
-                  </p>
-                  <DeletePayment paymentId={payment.id} />
+            <div className="mt-4 border-t border-border pt-2">
+              {invoice.payments.length === 0 ? (
+                <div className="flex min-h-11 items-center gap-2.5">
+                  <Banknote className="size-[18px] shrink-0 text-subtle" aria-hidden />
+                  <span className="flex-1 text-sm text-muted">{d.panel.financePage.payment.none}</span>
+                  {remaining > 0 ? (
+                    <RecordPayment
+                      invoiceId={invoice.id}
+                      remainingGrosze={remaining}
+                      description={`${displayNumber}, ${invoice.buyerName}`}
+                      trigger="link"
+                    />
+                  ) : null}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
-      {lastNotification ? (
-        <Card className="bg-surface-alt">
-          <CardContent className="flex items-start gap-2.5 p-4">
-            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
-            <div className="min-w-0 text-xs">
-              <p className="font-medium text-fg">
-                {fill(lastNotification.status === "SENT" ? t.reminderSent : t.reminderFailed, {
-                  date: formatDateIn(lastNotification.createdAt, locale, "short"),
-                })}
-              </p>
-              <p className="text-muted">
-                {lastNotification.toEmail}
-                {lastNotification.error ? `: ${lastNotification.error}` : ""}
-              </p>
+              ) : (
+                <>
+                  <h3 className="sr-only">{t.payments}</h3>
+                  <ul className="flex flex-col">
+                    {invoice.payments.map((payment) => (
+                      <li key={payment.id} className="flex min-h-12 items-center gap-3 py-1.5">
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="text-sm font-[550] text-fg">
+                            {formatDateIn(payment.paidAt, locale, "short")}
+                            <span className="font-normal text-muted">
+                              {" · "}
+                              {paymentMethodLabels(d)[payment.method]}
+                            </span>
+                          </span>
+                          {payment.reference ? (
+                            <span className="truncate text-[12.5px] text-muted">{payment.reference}</span>
+                          ) : null}
+                        </span>
+                        <span className="font-mono text-sm font-semibold whitespace-nowrap text-fg">
+                          {formatMoney(payment.amountGrosze, locale)}
+                        </span>
+                        <DeletePayment paymentId={payment.id} />
+                      </li>
+                    ))}
+                  </ul>
+                  {remaining > 0 ? (
+                    <div className="flex justify-end pt-1">
+                      <RecordPayment
+                        invoiceId={invoice.id}
+                        remainingGrosze={remaining}
+                        description={`${displayNumber}, ${invoice.buyerName}`}
+                        trigger="link"
+                      />
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      ) : null}
+          </section>
+        ) : null}
 
-      {invoice.status !== "CANCELLED" ? (
-        <div className="flex flex-col gap-3">
-          {/* Szkic nie idzie do najemcy i nie przyjmuje wpłat — najpierw akceptacja. */}
-          {!isDraft ? (
-            <SendInvoice
-              invoiceId={invoice.id}
-              tenantEmail={invoice.lease?.tenants[0]?.tenant.email ?? null}
-              hasLease={Boolean(invoice.lease?.tenants[0])}
-              awaiting={awaitingSend}
-            />
+        {/* „Kartka" dokumentu i uwagi. */}
+        <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+          <article className="flex flex-col rounded-tile border border-border bg-surface">
+            <div className="grid grid-cols-1 gap-5 px-5 py-5 sm:grid-cols-2 lg:px-7 lg:py-7">
+              <div className="flex min-w-0 flex-col gap-1">
+                <h2 className="mb-1 text-[12.5px] font-medium text-subtle">{t.buyer}</h2>
+                <p className="text-sm font-semibold text-fg">{invoice.buyerName}</p>
+                {invoice.buyerStreet ? <p className="text-sm text-muted">{invoice.buyerStreet}</p> : null}
+                {invoice.buyerPostalCode || invoice.buyerCity ? (
+                  <p className="text-sm text-muted">
+                    {[invoice.buyerPostalCode, invoice.buyerCity].filter(Boolean).join(" ")}
+                  </p>
+                ) : null}
+                {invoice.buyerTaxId ? (
+                  <p className="font-mono text-sm text-muted">NIP {invoice.buyerTaxId}</p>
+                ) : null}
+              </div>
+
+              <div className="flex min-w-0 flex-col gap-1">
+                <h2 className="mb-1 text-[12.5px] font-medium text-subtle">{t.subject}</h2>
+                {property ? (
+                  <Link
+                    href={`/panel/nieruchomosci/${property.id}`}
+                    className="w-fit text-sm font-semibold text-fg hover:text-accent hover:underline"
+                  >
+                    {property.name}
+                    {invoice.lease?.room ? `, ${invoice.lease.room.name}` : ""}
+                  </Link>
+                ) : (
+                  <p className="text-sm font-semibold text-fg">{t.oneOff}</p>
+                )}
+                {period ? <p className="text-sm text-muted">{fill(t.period, { period })}</p> : null}
+              </div>
+            </div>
+
+            <div className="border-t border-border px-5 lg:px-7">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[12.5px] font-[550] text-muted">
+                    <th scope="col" className="py-3.5 font-[550]">{t.lineHeader}</th>
+                    <th scope="col" className="hidden py-3.5 pl-4 text-right font-[550] sm:table-cell">{t.quantity}</th>
+                    <th scope="col" className="hidden py-3.5 pl-4 text-right font-[550] sm:table-cell">{t.net}</th>
+                    <th scope="col" className="hidden py-3.5 pl-4 text-right font-[550] sm:table-cell">{t.vat}</th>
+                    <th scope="col" className="py-3.5 pl-4 text-right font-[550]">{t.gross}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoice.lines.map((line) => (
+                    <tr key={line.id} className="border-t border-border">
+                      <td className="py-4 text-fg">{line.description}</td>
+                      <td className="hidden py-4 pl-4 text-right font-mono whitespace-nowrap text-muted sm:table-cell">
+                        {formatNumber(Number(line.quantity), locale)} {line.unit}
+                      </td>
+                      <td className="hidden py-4 pl-4 text-right font-mono whitespace-nowrap text-muted sm:table-cell">
+                        {formatAmount(line.netGrosze, locale)}
+                      </td>
+                      <td className="hidden py-4 pl-4 text-right whitespace-nowrap text-muted sm:table-cell">
+                        {vatLabels(d)[line.vatRate]}
+                      </td>
+                      <td className="py-4 pl-4 text-right font-mono font-semibold whitespace-nowrap text-fg">
+                        {formatMoney(line.grossGrosze, locale)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <dl className="flex flex-col gap-1.5 border-t border-border py-5">
+                <TotalRow label={t.totalNet} value={formatMoney(invoice.totalNetGrosze, locale)} />
+                <TotalRow label={t.totalVat} value={formatMoney(invoice.totalVatGrosze, locale)} />
+                <div className="mt-3 flex items-baseline justify-between gap-4 sm:justify-end sm:gap-12">
+                  <dt className="text-[15px] font-semibold text-fg">{t.totalDue}</dt>
+                  <dd className="font-mono text-xl font-[650] tracking-[-0.4px] whitespace-nowrap text-fg sm:text-2xl">
+                    {formatMoney(invoice.totalGrossGrosze, locale)}
+                  </dd>
+                </div>
+              </dl>
+
+              {t.inWords ? (
+                <p className="pb-5 text-[13px] text-subtle">
+                  {t.inWords}
+                  {groszeToPolishWords(invoice.totalGrossGrosze)}
+                </p>
+              ) : null}
+            </div>
+          </article>
+
+          {invoice.notes ? (
+            <SectionCard title={t.notes}>
+              <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{invoice.notes}</p>
+            </SectionCard>
           ) : null}
-          {!isDraft && remaining > 0 ? (
-            <RecordPayment invoiceId={invoice.id} remainingGrosze={remaining} />
-          ) : null}
-          <CancelInvoice invoiceId={invoice.id} />
         </div>
-      ) : (
-        <CancelledInvoiceActions
-          invoiceId={invoice.id}
-          isDraft={!hasRegisterNumber(invoice.number)}
-        />
-      )}
 
-      {invoice.notes ? (
-        <Card className="bg-surface-alt">
-          <CardContent className="flex flex-col gap-1.5 p-4">
-            <p className="text-[13px] font-semibold text-fg">{t.notes}</p>
-            <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{invoice.notes}</p>
-          </CardContent>
-        </Card>
-      ) : null}
+        {/* Historia wiadomości o dokumencie: wysyłka, przypomnienia, wezwania. */}
+        {notifications.length > 0 ? (
+          <SectionCard title={t.history} className="lg:col-start-2 lg:row-start-2">
+            <ol className="flex flex-col">
+              {notifications.map((notification, index) => {
+                const failed = notification.status === "FAILED";
+                return (
+                  <li key={notification.id} className="relative flex gap-3.5 pb-4 last:pb-0">
+                    {index < notifications.length - 1 ? (
+                      <span className="absolute top-5 bottom-0 left-[4.5px] w-px bg-border-strong" aria-hidden />
+                    ) : null}
+                    <span
+                      className={cn(
+                        "mt-1.5 size-2.5 shrink-0 rounded-full",
+                        failed ? "bg-bad" : notification.status === "SENT" ? "bg-good" : "bg-subtle",
+                      )}
+                      aria-hidden
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span className="text-sm font-[550] text-fg">
+                          {d.panel.tenantsPage.detail.notificationTypes[notification.type]}
+                        </span>
+                        <span className="shrink-0 font-mono text-[13px] text-muted">
+                          {formatDateIn(notification.createdAt, locale, "dayMonth")}
+                        </span>
+                      </div>
+                      {failed ? (
+                        <span className="text-[12.5px] font-[550] text-bad">
+                          {d.panel.tenantsPage.detail.sendFailed}
+                          {notification.error ? `: ${notification.error}` : ""}
+                        </span>
+                      ) : null}
+                      {notification.toEmail ? (
+                        <span className="truncate text-[12.5px] text-muted">{notification.toEmail}</span>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </SectionCard>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -381,21 +471,11 @@ function dateField(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function TotalRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className={strong ? "font-semibold text-fg" : "text-muted"}>{label}</span>
-      <span className={`tabular font-mono ${strong ? "font-semibold text-fg" : "text-muted"}`}>
-        {value}
-      </span>
+    <div className="flex items-baseline justify-between gap-4 sm:justify-end sm:gap-12">
+      <dt className="text-[13.5px] text-muted">{label}</dt>
+      <dd className="font-mono text-sm whitespace-nowrap text-fg sm:min-w-32 sm:text-right">{value}</dd>
     </div>
   );
-}
-
-async function getLastNotification(invoiceId: string) {
-  return prisma.notification.findFirst({
-    where: { invoiceId },
-    orderBy: { createdAt: "desc" },
-    select: { status: true, createdAt: true, toEmail: true, error: true },
-  });
 }

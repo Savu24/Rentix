@@ -11,6 +11,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { loginErrorMessage } from "@/lib/auth/errors";
 import { ROUTES } from "@/lib/auth/routes";
 import { useI18n } from "@/lib/i18n/client";
@@ -80,9 +81,8 @@ export function LoginForm({
       </FormField>
 
       <FormField id="password" label={t.password} error={errors.password?.message}>
-        <Input
+        <PasswordInput
           {...fieldAria("password", { error: errors.password?.message })}
-          type="password"
           autoComplete="current-password"
           disabled={isSubmitting}
           {...register("password")}
@@ -92,7 +92,7 @@ export function LoginForm({
       <Button type="submit" size="lg" block disabled={isSubmitting} className="mt-1">
         {isSubmitting ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <Loader2 className="size-[18px] animate-spin" aria-hidden />
             {t.submitting}
           </>
         ) : (

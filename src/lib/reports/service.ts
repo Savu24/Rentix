@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 
 import type { Locale } from "@/lib/i18n/config";
 import {
+  categoryShares,
   collectionStats,
   monthlyBreakdown,
   monthlyBalance,
   monthlyCost,
   propertyBreakdown,
+  propertyTotals,
   type CashEntry,
   type CollectionStats,
   type MonthlyBalance,
@@ -23,7 +25,9 @@ export type AnnualReport = {
   year: number;
   months: MonthlyRow[];
   properties: PropertyRow[];
-  expensesByCategory: Array<{ category: ExpenseCategory; totalGrosze: number }>;
+  /** Suma kolumn tabeli nieruchomości. */
+  propertyTotals: ReturnType<typeof propertyTotals>;
+  expensesByCategory: Array<{ category: ExpenseCategory; totalGrosze: number; sharePercent: number }>;
   totals: {
     incomeGrosze: number;
     expenseGrosze: number;
@@ -122,10 +126,7 @@ export async function annualReport(
   const incomeGrosze = incomeEntries.reduce((total, entry) => total + entry.amountGrosze, 0);
   const expenseGrosze = expenseEntries.reduce((total, entry) => total + entry.amountGrosze, 0);
 
-  return {
-    year,
-    months,
-    properties: propertyBreakdown(incomeEntries, expenseEntries, names, labels, {
+  const propertyRows = propertyBreakdown(incomeEntries, expenseEntries, names, labels, {
       // Zaliczka na media wchodzi do przychodu, bo przychód roczny też ją
       // zawiera — najemca płaci jedną fakturą czynsz razem z zaliczką.
       income: activeLeases.map((lease) => ({
@@ -136,10 +137,19 @@ export async function annualReport(
         propertyId: expense.propertyId,
         amountGrosze: monthlyCost(expense.amountGrosze, expense.recurrence!, expense.recurrenceEveryDays),
       })),
-    }),
-    expensesByCategory: [...byCategory.entries()]
-      .map(([category, totalGrosze]) => ({ category, totalGrosze }))
-      .sort((a, b) => b.totalGrosze - a.totalGrosze),
+  });
+
+  return {
+    year,
+    months,
+    properties: propertyRows,
+    propertyTotals: propertyTotals(propertyRows),
+    expensesByCategory: categoryShares(
+      [...byCategory.entries()]
+        .map(([category, totalGrosze]) => ({ category, totalGrosze }))
+        .sort((a, b) => b.totalGrosze - a.totalGrosze),
+      expenseGrosze,
+    ),
     totals: {
       incomeGrosze,
       expenseGrosze,

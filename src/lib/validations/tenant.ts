@@ -20,10 +20,6 @@ const tenantStatuses = Object.values(TenantStatus) as [TenantStatus, ...TenantSt
 const legalForms = Object.values(TenantLegalForm) as [TenantLegalForm, ...TenantLegalForm[]];
 const documentKinds = Object.values(InvoiceKind) as [InvoiceKind, ...InvoiceKind[]];
 
-export function tenantDocumentKindHints(d: Pick<Dictionary, "panel">): Partial<Record<InvoiceKind, string>> {
-  return d.panel.tenants.documentKindHint;
-}
-
 export function tenantStatusLabels(d: Pick<Dictionary, "panel">): Record<TenantStatus, string> {
   return d.panel.tenants.status;
 }

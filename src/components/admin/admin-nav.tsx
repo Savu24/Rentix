@@ -7,17 +7,42 @@ import { ADMIN_NAV, isAdminNavItemActive } from "@/lib/admin/nav";
 import { cn } from "@/lib/utils";
 
 /**
- * Pasek sekcji panelu administratora.
+ * Pozycje panelu administratora (redesign/24-admin-*.svg).
  *
- * Poziomo, a nie w kolumnie jak w panelu klienta: sekcji jest pięć i żadna
- * nie urośnie, a każda strona pod spodem to szeroka tabela, której boczna
- * kolumna zabierałaby miejsce potrzebne na kolumny danych.
+ * `variant="side"` — pionowa lista w ciemnozielonym pasku bocznym, tak samo
+ * jak w panelu klienta (bursztynowy znacznik aktywnej pozycji).
+ * `variant="top"` — przewijany rząd na telefonie, gdzie paska bocznego nie ma.
  */
-export function AdminNav() {
+export function AdminNav({ variant = "side" }: { variant?: "side" | "top" }) {
   const pathname = usePathname();
 
+  if (variant === "top") {
+    return (
+      <nav aria-label="Sekcje panelu administratora" className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
+        {ADMIN_NAV.map((item) => {
+          const active = isAdminNavItemActive(item, pathname);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex h-[34px] shrink-0 items-center gap-2 rounded-full px-3.5 text-[13.5px] font-[550] transition-colors",
+                active ? "bg-side-active text-side-active-ink" : "text-side-ink hover:bg-side-active/50",
+              )}
+            >
+              <Icon className={cn("size-4", active ? "text-highlight" : "text-side-ink-2")} aria-hidden />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
   return (
-    <nav aria-label="Sekcje panelu administratora" className="flex gap-1 overflow-x-auto">
+    <nav aria-label="Sekcje panelu administratora" className="flex flex-col gap-1">
       {ADMIN_NAV.map((item) => {
         const active = isAdminNavItemActive(item, pathname);
         const Icon = item.icon;
@@ -28,11 +53,21 @@ export function AdminNav() {
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-control px-3 py-2 text-sm font-medium transition-colors",
-              active ? "bg-accent2-soft text-accent2" : "text-muted hover:bg-surface-alt hover:text-fg",
+              "relative flex h-10 shrink-0 items-center gap-3 rounded-control px-3.5 text-sm transition-colors",
+              "focus-visible:outline-side-on",
+              active
+                ? "bg-side-active font-semibold text-side-active-ink"
+                : "font-medium text-side-ink hover:bg-side-active/50 hover:text-side-active-ink",
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            {active ? (
+              <span className="absolute top-2.5 left-0 h-5 w-[3px] rounded-full bg-highlight" aria-hidden />
+            ) : null}
+            <Icon
+              className={cn("size-[18px] shrink-0", active ? "text-highlight" : "text-side-ink-2")}
+              strokeWidth={1.7}
+              aria-hidden
+            />
             {item.label}
           </Link>
         );

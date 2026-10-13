@@ -188,12 +188,12 @@ export function DateInput({
         disabled={disabled}
         aria-label={d.panel.dateInput.openCalendar}
         className={cn(
-          "absolute right-1 flex h-9 w-9 items-center justify-center rounded-control text-muted",
+          "absolute right-1 flex size-8 items-center justify-center rounded-[6px] text-subtle",
           "transition-colors hover:text-fg focus-visible:outline-none",
-          "focus-visible:ring-2 focus-visible:ring-accent/25 disabled:opacity-50",
+          "focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50",
         )}
       >
-        <CalendarDays className="h-4 w-4" aria-hidden />
+        <CalendarDays className="size-[18px]" aria-hidden />
       </button>
 
       {/*

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 
 import { PlanLock } from "@/components/panel/plan-lock";
 import { TemplateEditor } from "@/components/panel/settings/template-editor";
-import { Alert } from "@/components/ui/alert";
+import { TemplateTabs } from "@/components/panel/settings/template-tabs";
+import { InfoTip } from "@/components/ui/info-tip";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { organizationAllows } from "@/lib/billing/server";
 import { getNotificationPanelData } from "@/lib/notifications/service";
@@ -29,7 +30,6 @@ export default async function SettingsMessagesPage() {
       <PlanLock
         feature="MESSAGE_TEMPLATES"
         title={t.messagesLocked.title}
-        lead={t.messagesLocked.lead}
       />
     );
   }
@@ -41,9 +41,10 @@ export default async function SettingsMessagesPage() {
   const landlordName = data.senderName.trim() || data.organizationName;
 
   return (
-    <div className="flex flex-col gap-5">
-      <Alert tone="info">{t.messagesLead}</Alert>
-
+    <TemplateTabs
+      types={data.templates.map((template) => template.type)}
+      aside={<InfoTip label={t.messagesInfo}>{t.messagesLead}</InfoTip>}
+    >
       {data.templates.map((template) => (
         <TemplateEditor
           key={template.type}
@@ -57,6 +58,6 @@ export default async function SettingsMessagesPage() {
           }}
         />
       ))}
-    </div>
+    </TemplateTabs>
   );
 }

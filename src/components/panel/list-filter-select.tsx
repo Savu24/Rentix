@@ -49,7 +49,7 @@ export function ListFilterSelect({
       value={options.some((option) => option.value === current) ? current : ""}
       onChange={(event) => setValue(event.target.value)}
       disabled={isPending}
-      className="sm:w-60"
+      className="lg:w-60"
     >
       <option value="">{allLabel}</option>
       {options.map((option) => (

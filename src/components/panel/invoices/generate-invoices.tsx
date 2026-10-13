@@ -6,19 +6,23 @@ import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/form-field";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 import { LOCALE_META } from "@/lib/i18n/config";
-import { fill, pluralize } from "@/lib/i18n/format";
 
 /**
  * Numery miesięcy, nie nazwy — te bierze `Intl` w języku konta. Lista nazw
  * w kodzie byłaby czwartym miejscem, w którym trzymamy polski kalendarz.
  */
 const MONTHS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+/** Intl podaje polskie miesiące małą literą — na liście wyboru stoją same. */
+function capitalize(value: string): string {
+  return value.charAt(0).toLocaleUpperCase() + value.slice(1);
+}
 
 type GenerateResponse = {
   created: Array<{ leaseId: string; invoiceId: string; number: string; draft: boolean }>;
@@ -36,6 +40,7 @@ export function GenerateInvoices({
   leaseId,
   tenantId,
   label,
+  variant = "secondary",
 }: {
   /** Ustawione = naliczamy tylko tę umowę. */
   leaseId?: string;
@@ -43,6 +48,8 @@ export function GenerateInvoices({
   tenantId?: string;
   /** Bez obu = wszystkie aktywne umowy organizacji. */
   label?: string;
+  /** Główna akcja ekranu Finanse — w karcie najemcy drugorzędna. */
+  variant?: "primary" | "secondary";
 }) {
   const router = useRouter();
   const now = new Date();
@@ -79,122 +86,117 @@ export function GenerateInvoices({
     router.refresh();
   }
 
-  if (!open) {
-    return (
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-        <Receipt className="h-4 w-4" aria-hidden />
-        {label ?? t.button}
-      </Button>
-    );
-  }
-
   const issued = result?.created.filter((invoice) => !invoice.draft) ?? [];
   const drafts = result?.created.filter((invoice) => invoice.draft) ?? [];
 
-  // Rok bieżący i dwa wstecz — starsze okresy nalicza się wyjątkowo, a długa
-  // lista lat tylko utrudnia trafienie w ten właściwy.
   const years = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
 
+  function close() {
+    setOpen(false);
+    setResult(null);
+    setError(null);
+  }
+
   return (
-    <Card className="border-accent/40">
-      <CardContent className="flex flex-col gap-4 p-4">
-        <div>
-          <p className="text-sm font-semibold text-fg">{t.title}</p>
-          <p className="mt-0.5 text-xs text-muted">
-            {leaseId || tenantId ? t.leadTenant : t.leadAll} {t.alsoSkipped}
-          </p>
-        </div>
+    <>
+      <Button size={variant === "primary" ? "md" : "sm"} variant={variant} onClick={() => setOpen(true)}>
+        <Receipt className={variant === "primary" ? "size-[18px]" : "size-4"} aria-hidden />
+        {label ?? t.button}
+      </Button>
 
-        {error ? <Alert tone="error">{error}</Alert> : null}
+      <Dialog open={open} onClose={close} title={t.title} closeLabel={t.close} className="sm:max-w-[460px]">
+        <DialogBody>
+          {error ? <Alert tone="error">{error}</Alert> : null}
 
-        {result ? (
-          <Alert tone={result.created.length > 0 ? "success" : "info"}>
-            {issued.length > 0
-              ? fill(t.issued, {
-                  count: issued.length,
-                  noun: pluralize(locale, issued.length, d.panel.financePage.documentNoun),
-                  numbers: issued.map((invoice) => invoice.number).join(", "),
-                })
-              : null}
-            {/* Szkice nie mają numeru — liczba wystarczy, reszta czeka na liście. */}
-            {drafts.length > 0 ? (
-              <span className={issued.length > 0 ? "mt-1 block" : undefined}>
-                {fill(t.drafted, { count: drafts.length })}
-              </span>
-            ) : null}
-            {result.created.length === 0 ? t.nothingIssued : null}
-            {result.skipped.length > 0 ? (
-              <span className="mt-1 block text-muted">
-                {fill(t.skipped, {
-                  count: result.skipped.length,
-                  noun: pluralize(locale, result.skipped.length, d.panel.leasesPage.noun),
-                  reasons: [
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField id="generate-month" label={t.month}>
+              <Select
+                id="generate-month"
+                value={month}
+                onChange={(event) => setMonth(Number(event.target.value))}
+                disabled={busy}
+              >
+                {MONTHS.map((index) => (
+                  <option key={index} value={index + 1}>
+                    {capitalize(
+                      new Intl.DateTimeFormat(LOCALE_META[locale].intl, { month: "long" }).format(
+                        new Date(Date.UTC(2026, index, 1)),
+                      ),
+                    )}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+
+            <FormField id="generate-year" label={t.year}>
+              <Select
+                id="generate-year"
+                value={year}
+                onChange={(event) => setYear(Number(event.target.value))}
+                disabled={busy}
+              >
+                {years.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </Select>
+            </FormField>
+          </div>
+
+          {/* Wynik naliczenia jako trzy liczby zamiast zdania
+              (redesign/15-nalicz-czynsz-modal.svg). */}
+          {result ? (
+            <div className="flex flex-col gap-3">
+              <dl className="grid grid-cols-3 overflow-hidden rounded-xl border border-border">
+                {[
+                  { label: t.resultIssued, count: issued.length, tone: "text-good" },
+                  { label: t.resultDrafts, count: drafts.length, tone: "text-info" },
+                  { label: t.resultSkipped, count: result.skipped.length, tone: "text-muted" },
+                ].map((cell, index) => (
+                  <div
+                    key={cell.label}
+                    className={`flex flex-col gap-1 px-4 py-3 ${index > 0 ? "border-l border-border" : ""}`}
+                  >
+                    <dt className="text-[12.5px] font-medium text-subtle">{cell.label}</dt>
+                    <dd className={`font-mono text-2xl font-[650] ${cell.tone}`}>{cell.count}</dd>
+                  </div>
+                ))}
+              </dl>
+              {issued.length > 0 ? (
+                <p className="font-mono text-[13px] text-muted">
+                  {issued.map((invoice) => invoice.number).join(", ")}
+                </p>
+              ) : null}
+              {result.skipped.length > 0 ? (
+                <p className="text-[13px] text-muted">
+                  {[
                     ...new Set(
                       result.skipped.map(
-                        (entry) =>
-                          t.skipReason[entry.reason as keyof typeof t.skipReason] ?? entry.reason,
+                        (entry) => t.skipReason[entry.reason as keyof typeof t.skipReason] ?? entry.reason,
                       ),
                     ),
-                  ].join("; "),
-                })}
-              </span>
-            ) : null}
-          </Alert>
-        ) : null}
+                  ].join("; ")}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </DialogBody>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="generate-month" label={t.month}>
-            <Select
-              id="generate-month"
-              value={month}
-              onChange={(event) => setMonth(Number(event.target.value))}
-              disabled={busy}
-            >
-              {MONTHS.map((index) => (
-                <option key={index} value={index + 1}>
-                  {new Intl.DateTimeFormat(LOCALE_META[locale].intl, { month: "long" }).format(
-                    new Date(Date.UTC(2026, index, 1)),
-                  )}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-
-          <FormField id="generate-year" label={t.year}>
-            <Select
-              id="generate-year"
-              value={year}
-              onChange={(event) => setYear(Number(event.target.value))}
-              disabled={busy}
-            >
-              {years.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </Select>
-          </FormField>
-        </div>
-
-        <div className="flex flex-wrap gap-2.5">
-          <Button size="sm" onClick={submit} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            {t.run}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              setOpen(false);
-              setResult(null);
-              setError(null);
-            }}
-            disabled={busy}
-          >
+        <DialogFooter>
+          <Button variant="ghost" onClick={close} disabled={busy}>
             {t.close}
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? (
+              <Loader2 className="size-[18px] animate-spin" aria-hidden />
+            ) : (
+              <Receipt className="size-[18px]" aria-hidden />
+            )}
+            {t.run}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }

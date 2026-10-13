@@ -1,14 +1,26 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Copy, Loader2 } from "lucide-react";
+import {
+  Banknote,
+  Briefcase,
+  Copy,
+  Home,
+  IdCard,
+  LifeBuoy,
+  Loader2,
+  NotebookPen,
+  Receipt,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { FormSection } from "@/components/panel/form-section";
 import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -21,7 +33,6 @@ import {
   selectableTenantDocumentKinds,
 } from "@/lib/validations/invoice";
 import {
-  tenantDocumentKindHints,
   tenantLegalFormLabels,
   tenantStatusLabels,
   tenantFormSchema,
@@ -93,6 +104,8 @@ export function TenantForm({
   });
 
   const documentKind = watch("documentKind");
+  // Zwinięta sekcja mówi jednym słowem, jaki dokument dostanie najemca.
+  const billingSummary = documentKind ? invoiceKindLabels(d)[documentKind] : null;
 
   const registered = watch(["registeredStreet", "registeredPostalCode", "registeredCity"]);
   const hasRegisteredAddress = registered.some((value) => (value ?? "").trim() !== "");
@@ -142,12 +155,10 @@ export function TenantForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-3">
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionBasics}</h2>
+      <FormSection title={t.sectionBasics} icon={UserRound} collapsible={false}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="firstName" label={t.firstName} error={errors.firstName?.message}>
@@ -174,7 +185,6 @@ export function TenantForm({
               id="email"
               label={t.email}
               error={errors.email?.message}
-              hint={t.emailHint}
             >
               <Input
                 {...fieldAria("email", { error: errors.email?.message })}
@@ -213,7 +223,6 @@ export function TenantForm({
               id="legalForm"
               label={t.legalForm}
               error={errors.legalForm?.message}
-              hint={t.legalFormHint}
             >
               <Select
                 {...fieldAria("legalForm", {
@@ -230,15 +239,9 @@ export function TenantForm({
               </Select>
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionIdentity}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionIdentityHint}
-          </p>
+      <FormSection title={t.sectionIdentity} icon={IdCard}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -298,7 +301,6 @@ export function TenantForm({
               id="dateOfBirth"
               label={t.dateOfBirth}
               error={errors.dateOfBirth?.message}
-              hint={t.dateOfBirthHint}
             >
               <DateInput
                 {...fieldAria("dateOfBirth", {
@@ -310,17 +312,9 @@ export function TenantForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">
-            {t.sectionEmergency}
-          </h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionEmergencyHint}
-          </p>
+      <FormSection title={t.sectionEmergency} icon={LifeBuoy}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -381,15 +375,9 @@ export function TenantForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionRegistered}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionRegisteredHint}
-          </p>
+      <FormSection title={t.sectionRegistered} icon={Home}>
 
           <div className="grid gap-4 sm:grid-cols-6">
             <FormField
@@ -441,7 +429,6 @@ export function TenantForm({
               id="registeredUntil"
               label={t.registeredUntil}
               error={errors.registeredUntil?.message}
-              hint={t.registeredUntilHint}
               className="sm:col-span-2"
             >
               <DateInput
@@ -454,15 +441,9 @@ export function TenantForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{d.panel.panelMisc.sectionPayments}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionBillingContactHint}
-          </p>
+      <FormSection title={d.panel.panelMisc.sectionPayments} icon={Banknote}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -499,7 +480,6 @@ export function TenantForm({
               id="depositRefundAccount"
               label={t.depositAccount}
               error={errors.depositRefundAccount?.message}
-              hint={t.depositAccountHint}
               className="sm:col-span-2"
             >
               <Input
@@ -512,15 +492,9 @@ export function TenantForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionWork}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionWorkHint}
-          </p>
+      <FormSection title={t.sectionWork} icon={Briefcase}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -541,7 +515,6 @@ export function TenantForm({
               id="employmentUntil"
               label={t.until}
               error={errors.employmentUntil?.message}
-              hint={t.untilHint}
             >
               <DateInput
                 {...fieldAria("employmentUntil", {
@@ -553,15 +526,9 @@ export function TenantForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionInsurance}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionInsuranceHint}
-          </p>
+      <FormSection title={t.sectionInsurance} icon={ShieldCheck}>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField id="insurerName" label={t.insurer} error={errors.insurerName?.message}>
@@ -603,18 +570,10 @@ export function TenantForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-[15px] font-semibold text-fg">{t.sectionBilling}</h2>
-              <p className="mt-1 text-xs text-muted">
-                {t.sectionBillingHint}
-              </p>
-            </div>
+      <FormSection title={t.sectionBilling} icon={Receipt} summary={billingSummary}>
+          <div className="flex justify-end">
 
             <Button
               type="button"
@@ -674,7 +633,6 @@ export function TenantForm({
               id="taxId"
               label={t.taxId}
               error={errors.taxId?.message}
-              hint={t.taxIdHint}
               className="sm:col-span-2"
             >
               <Input
@@ -692,7 +650,6 @@ export function TenantForm({
               id="documentKind"
               label={t.documentKind}
               error={errors.documentKind?.message}
-              hint={tenantDocumentKindHints(d)[documentKind ?? "BILL"]}
               className="sm:col-span-2"
             >
               <Select
@@ -711,11 +668,13 @@ export function TenantForm({
             </FormField>
           </div>
 
+        </FormSection>
+
+      <FormSection title={t.notes} icon={NotebookPen}>
           <FormField
             id="notes"
             label={t.notes}
             error={errors.notes?.message}
-            hint={t.notesHint}
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
@@ -723,10 +682,9 @@ export function TenantForm({
               {...register("notes")}
             />
           </FormField>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-row-reverse flex-wrap justify-start gap-2.5">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -741,11 +699,11 @@ export function TenantForm({
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           disabled={isSubmitting}
           onClick={() => router.back()}
         >
-          Anuluj
+          {d.panel.common.cancel}
         </Button>
       </div>
     </form>

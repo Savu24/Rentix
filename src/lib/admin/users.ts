@@ -113,7 +113,7 @@ export async function runAdminUserAction(
       return {
         ok: false,
         code: "FORBIDDEN",
-        message: "Własnej roli nie zmienisz stąd — użyj skryptu admin:grant --revoke.",
+        message: "Własnej roli nie zmienisz stąd, użyj skryptu admin:grant --revoke.",
       };
     }
 
@@ -126,7 +126,7 @@ export async function runAdminUserAction(
       return {
         ok: false,
         code: "FORBIDDEN",
-        message: "Konto najemcy ma własny portal — zmiana roli odcięłaby je od niego.",
+        message: "Konto najemcy ma własny portal, zmiana roli odcięłaby je od niego.",
       };
     }
 

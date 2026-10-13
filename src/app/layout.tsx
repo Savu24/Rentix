@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Inter, Roboto_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist } from "next/font/google";
 import { cookies } from "next/headers";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -13,21 +13,18 @@ import "./globals.css";
 
 // `latin-ext` jest konieczny dla polskich znaków (ą, ć, ę, ł, ń, ó, ś, ź, ż) —
 // bez niego nagłówki wypadałyby do fontu systemowego w połowie wyrazu.
-const inter = Inter({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-inter",
+// Geist niesie też cyrylicę dla wersji `/uk`; kwoty dostają z niego cyfry
+// tabelaryczne (`font-mono` i `.tabular` w globals.css), więc osobny krój mono
+// nie jest potrzebny.
+const geist = Geist({
+  subsets: ["latin", "latin-ext", "cyrillic"],
+  variable: "--font-geist",
   display: "swap",
 });
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin", "latin-ext"],
   variable: "--font-bricolage",
-  display: "swap",
-});
-
-const robotoMono = Roboto_Mono({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-roboto-mono",
   display: "swap",
 });
 
@@ -86,8 +83,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FBF7EF" },
-    { media: "(prefers-color-scheme: dark)", color: "#10201A" },
+    { media: "(prefers-color-scheme: light)", color: "#F3F4EF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B1510" },
   ],
 };
 
@@ -117,7 +114,7 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
-        className={`${inter.variable} ${bricolage.variable} ${robotoMono.variable} font-sans antialiased`}
+        className={`${geist.variable} ${bricolage.variable} font-sans antialiased`}
       >
         <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
           <ThemeProvider initialTheme={theme}>{children}</ThemeProvider>

@@ -1,27 +1,39 @@
 "use client";
 
-import { Loader2, Ban } from "lucide-react";
+import { ArrowRight, Building2, DoorOpen, History, Loader2, Users, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { DateInput } from "@/components/ui/date-input";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 
 /**
- * Wypowiedzenie umowy.
+ * Zakończenie umowy (redesign/11-umowa-zakonczenie-modal.svg).
  *
- * Za potwierdzeniem, bo operacja jest nieodwracalna z poziomu interfejsu:
- * zwalnia jednostkę i przestawia najemców na „byłych".
+ * Skutek pokazany strukturą, a nie zdaniem: lokal przechodzi na „Wolna",
+ * najemcy na „Były najemca". Tak samo zrobi to serwer po zapisie — okno
+ * tylko zapowiada, co się zmieni, zanim ktoś kliknie.
  */
-export function TerminateLease({ leaseId }: { leaseId: string }) {
+export function TerminateLease({
+  leaseId,
+  unitLabel,
+  tenantCount,
+}: {
+  leaseId: string;
+  /** „Ogrodowa 3, Pokój 2" — lokal, który wróci do puli wolnych. */
+  unitLabel: string;
+  tenantCount: number;
+}) {
   const router = useRouter();
-  const { d } = useI18n();
+  const { d, plural } = useI18n();
   const t = d.panel.leasesPage.terminate;
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -49,29 +61,18 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
     router.refresh();
   }
 
-  if (!open) {
-    return (
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-        <Ban className="h-4 w-4" aria-hidden />
+  return (
+    <>
+      <Button variant="danger-soft" onClick={() => setOpen(true)}>
+        <XCircle className="size-[18px]" aria-hidden />
         {t.button}
       </Button>
-    );
-  }
 
-  return (
-    <Card className="border-bad/40">
-      <CardContent className="flex flex-col gap-4 p-4">
-        <div>
-          <p className="text-sm font-semibold text-fg">{d.panel.panelMisc.terminateTitle}</p>
-          <p className="mt-0.5 text-xs text-muted">
-            {t.lead}
-          </p>
-        </div>
+      <Dialog open={open} onClose={() => setOpen(false)} title={t.button} closeLabel={d.panel.common.close}>
+        <DialogBody>
+          {error ? <Alert tone="error">{error}</Alert> : null}
 
-        {error ? <Alert tone="error">{error}</Alert> : null}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="terminatedAt" label={t.endDate}>
+          <FormField id="terminatedAt" label={t.endDate} className="sm:max-w-60">
             <DateInput
               id="terminatedAt"
               value={terminatedAt}
@@ -79,27 +80,51 @@ export function TerminateLease({ leaseId }: { leaseId: string }) {
               disabled={busy}
             />
           </FormField>
-        </div>
 
-        <FormField id="terminationNote" label={t.note} hint={t.noteHint}>
-          <Textarea
-            id="terminationNote"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            disabled={busy}
-          />
-        </FormField>
+          <FormField id="terminationNote" label={t.note}>
+            <Textarea
+              id="terminationNote"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              disabled={busy}
+              className="min-h-[72px]"
+            />
+          </FormField>
 
-        <div className="flex flex-wrap gap-2.5">
-          <Button size="sm" variant="danger" onClick={submit} disabled={busy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            {t.button}
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
+          <div className="flex flex-col gap-3 rounded-xl bg-surface-alt p-4">
+            <div className="flex items-center gap-3">
+              <Building2 className="size-[18px] shrink-0 text-subtle" aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-sm font-[550] text-fg">{unitLabel}</span>
+              <ArrowRight className="size-4 shrink-0 text-subtle" aria-hidden />
+              <Badge tone="info" icon={DoorOpen}>
+                {d.panel.propertiesPage.badge.vacant}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-3">
+              <Users className="size-[18px] shrink-0 text-subtle" aria-hidden />
+              <span className="min-w-0 flex-1 truncate text-sm font-[550] text-fg">
+                {fill(plural(tenantCount, d.panel.tenantsPage.count), { count: tenantCount })}
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-subtle" aria-hidden />
+              <Badge icon={History}>{d.panel.tenants.status.FORMER}</Badge>
+            </div>
+          </div>
+        </DialogBody>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
             {d.panel.common.cancel}
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <Button variant="danger" onClick={submit} disabled={busy || !terminatedAt}>
+            {busy ? (
+              <Loader2 className="size-[18px] animate-spin" aria-hidden />
+            ) : (
+              <XCircle className="size-[18px]" aria-hidden />
+            )}
+            {t.button}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }

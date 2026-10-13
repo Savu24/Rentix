@@ -1,13 +1,14 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { Check, Hash, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/panel/section-card";
 import { fieldAria, FormField } from "@/components/ui/form-field";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import type { InvoiceKind } from "@/generated/prisma/enums";
 import { api } from "@/lib/api/client";
@@ -22,6 +23,7 @@ import {
 } from "@/lib/invoices/number-format";
 import { numberingSettingsSchema } from "@/lib/validations/settings";
 import { invoiceKindLabels, selectableInvoiceKinds } from "@/lib/validations/invoice";
+import { cn } from "@/lib/utils";
 
 /**
  * Wzór numeru dokumentu.
@@ -65,8 +67,8 @@ export function NumberingForm({
 
   const previewable = template !== "" && numberFormatProblem(template) === null;
 
-  function example(kind: InvoiceKind): string {
-    const core = renderNumberFormat(template, 3, today);
+  function example(kind: InvoiceKind, format: string = template): string {
+    const core = renderNumberFormat(format, 3, today);
     const prefix = prefixes[kind];
     return prefix === "" ? core : `${prefix} ${core}`;
   }
@@ -102,98 +104,99 @@ export function NumberingForm({
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
-          <p className="mt-0.5 text-sm text-muted">{t.lead}</p>
-        </div>
-
+    <SectionCard
+      title={t.title}
+      icon={Hash}
+      actions={
+        <InfoTip label={t.customInfo} align="end">
+          {t.customHint}
+        </InfoTip>
+      }
+    >
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         {formError ? <Alert tone="error">{formError}</Alert> : null}
         {saved ? <Alert tone="success">{t.saved}</Alert> : null}
 
-        <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
-          <fieldset className="flex flex-col gap-2.5" disabled={submitting}>
-            <legend className="sr-only">{t.title}</legend>
+        <fieldset className="flex flex-col gap-2" disabled={submitting}>
+          <legend className="sr-only">{t.title}</legend>
 
-            {NUMBER_FORMAT_PRESETS.map((preset) => (
-              <FormatOption
-                key={preset}
-                name="numbering"
-                value={preset}
-                checked={choice === preset}
-                onChange={() => setChoice(preset)}
-                label={t.presets[preset]}
-                hint={renderNumberFormat(preset, 3, today)}
-              />
-            ))}
-
+          {NUMBER_FORMAT_PRESETS.map((preset) => (
             <FormatOption
+              key={preset}
               name="numbering"
-              value="custom"
-              checked={choice === "custom"}
-              onChange={() => setChoice("custom")}
-              label={t.custom}
+              value={preset}
+              checked={choice === preset}
+              onChange={() => setChoice(preset)}
+              label={preset}
+              description={t.presets[preset]}
+              example={example(kinds[0]!, preset)}
             />
-          </fieldset>
+          ))}
 
-          {choice === "custom" ? (
-            <FormField
-              id="numbering-custom"
-              label={t.customLabel}
-              error={customError ?? undefined}
-              hint={t.customHint}
-            >
-              <Input
-                {...fieldAria("numbering-custom", { error: customError ?? undefined })}
-                value={custom}
-                onChange={(event) => {
-                  setCustom(event.target.value);
-                  setCustomError(null);
-                }}
-                placeholder="{m}/{y}/A/{n}"
-                autoComplete="off"
-                spellCheck={false}
-                disabled={submitting}
-                className="font-mono"
-              />
-            </FormField>
-          ) : null}
+          <FormatOption
+            name="numbering"
+            value="custom"
+            checked={choice === "custom"}
+            onChange={() => setChoice("custom")}
+            label={t.custom}
+          />
+        </fieldset>
 
+        {choice === "custom" ? (
+          <FormField id="numbering-custom" label={t.customLabel} error={customError ?? undefined}>
+            <Input
+              {...fieldAria("numbering-custom", { error: customError ?? undefined })}
+              value={custom}
+              onChange={(event) => {
+                setCustom(event.target.value);
+                setCustomError(null);
+              }}
+              placeholder="{m}/{y}/A/{n}"
+              autoComplete="off"
+              spellCheck={false}
+              disabled={submitting}
+              className="font-mono"
+            />
+          </FormField>
+        ) : null}
+
+        <div className="flex flex-wrap items-end justify-between gap-4">
           {previewable ? (
-            <div className="rounded-control border border-border bg-surface-alt px-3.5 py-3 text-sm">
-              <p className="text-xs font-medium text-muted">{t.preview}</p>
-              <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-                {kinds.map((kind) => (
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1 text-sm">
+                {kinds.map((kind, index) => (
                   <div key={kind} className="contents">
-                    <dt className="text-muted">{kindLabels[kind]}</dt>
-                    <dd className="font-mono text-fg">{example(kind)}</dd>
+                    <dt className="text-[13px] text-muted">{index === 0 ? t.preview : kindLabels[kind]}</dt>
+                    <dd className={cn("font-mono", index === 0 ? "font-[650] text-fg" : "text-muted")}>
+                      {example(kind)}
+                    </dd>
                   </div>
                 ))}
               </dl>
-              <p className="mt-2 text-xs text-muted">{t.period[numberingPeriod(template)]}</p>
+              <p className="text-[12.5px] text-subtle">{t.period[numberingPeriod(template)]}</p>
             </div>
-          ) : null}
+          ) : (
+            <span />
+          )}
 
-          <div>
-            <Button type="submit" size="sm" disabled={submitting}>
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : saved ? (
-                <Check className="h-4 w-4" aria-hidden />
-              ) : null}
-              {t.save}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? (
+              <Loader2 className="size-[18px] animate-spin" aria-hidden />
+            ) : saved ? (
+              <Check className="size-[18px]" aria-hidden />
+            ) : null}
+            {t.save}
+          </Button>
+        </div>
+      </form>
+    </SectionCard>
   );
 }
 
 /**
- * Jedna pozycja listy — natywne radio z tego samego powodu, co checkbox
- * w `checkbox-field.tsx`: klawiatura i czytnik ekranu działają bez ARIA.
+ * Jedna pozycja listy jako karta wyboru (redesign: `radio` w obramowaniu).
+ * Natywne radio z tego samego powodu, co checkbox w `checkbox-field.tsx`:
+ * klawiatura i czytnik ekranu działają bez ARIA, a cała karta jest etykietą.
  */
 function FormatOption({
   name,
@@ -201,32 +204,42 @@ function FormatOption({
   checked,
   onChange,
   label,
-  hint,
+  description,
+  example,
 }: {
   name: string;
   value: string;
   checked: boolean;
   onChange: () => void;
   label: string;
-  hint?: string;
+  description?: string;
+  example?: string;
 }) {
-  const id = `${name}-${value}`;
-
   return (
-    <div className="flex items-start gap-2.5">
+    <label
+      className={cn(
+        "flex min-h-11 cursor-pointer items-center gap-3 rounded-alert border px-4 py-2.5 transition-colors select-none",
+        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent",
+        checked ? "border-accent bg-accent-soft ring-1 ring-accent" : "border-border-strong bg-surface hover:bg-hover",
+      )}
+    >
       <input
-        id={id}
         type="radio"
         name={name}
         value={value}
         checked={checked}
         onChange={onChange}
-        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[var(--accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="size-[18px] shrink-0 cursor-pointer accent-[var(--primary)]"
       />
-      <label htmlFor={id} className="flex cursor-pointer select-none flex-wrap items-baseline gap-x-3">
-        <span className="text-[13px] font-medium text-fg">{label}</span>
-        {hint ? <span className="font-mono text-xs text-muted">{hint}</span> : null}
-      </label>
-    </div>
+      <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
+        <span className={cn("text-sm font-[550] text-fg", value !== "custom" && "font-mono")}>{label}</span>
+        {description ? <span className="text-[12.5px] text-muted">{description}</span> : null}
+      </span>
+      {example ? (
+        <span className={cn("shrink-0 font-mono text-sm whitespace-nowrap", checked ? "font-semibold text-accent" : "text-muted")}>
+          {example}
+        </span>
+      ) : null}
+    </label>
   );
 }

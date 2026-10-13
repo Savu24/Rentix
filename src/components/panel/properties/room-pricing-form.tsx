@@ -1,17 +1,16 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
-import { formatMoney, parseMoney } from "@/lib/money";
+import { formatMoney, formatMoneyParts, parseMoney, sumGrosze } from "@/lib/money";
 
 export type PricedRoom = {
   id: string;
@@ -34,9 +33,10 @@ export function RoomPricingForm({
   propertyId: string;
   initialRooms: PricedRoom[];
 }) {
-  const { d, locale, plural } = useI18n();
+  const { d, locale } = useI18n();
   const t = d.panel.propertiesPage.roomsPanel;
   const misc = d.panel.panelMisc;
+  const { currency } = formatMoneyParts(0, locale);
   const router = useRouter();
   const [rooms, setRooms] = useState(initialRooms);
   const [busy, setBusy] = useState(false);
@@ -50,7 +50,7 @@ export function RoomPricingForm({
   }
 
   /** Podgląd sumy — ile przyniesie miesięcznie komplet wynajętych pokoi. */
-  const total = rooms.reduce((sum, room) => sum + (parseMoney(room.rent, locale) ?? 0), 0);
+  const total = sumGrosze(rooms.map((room) => parseMoney(room.rent, locale) ?? 0));
 
   async function save() {
     setError(null);
@@ -92,93 +92,87 @@ export function RoomPricingForm({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-semibold text-fg">
-              {rooms.length} {plural(rooms.length, misc.roomsCount)}
-            </h2>
-            {total > 0 ? (
-              /* Kwota ma zostać w monospace także po przetłumaczeniu, więc
-                 zdanie rozcinamy na dziurze po kwocie zamiast wstawiać ją
-                 gotowym tekstem. */
-              <p className="text-sm text-muted">
-                {misc.roomsTotal.split("{amount}")[0]}
-                <span className="tabular font-mono font-medium text-fg">
-                  {formatMoney(total, locale)}
-                </span>
-                {misc.roomsTotal.split("{amount}")[1]}
-              </p>
-            ) : null}
-          </div>
+      <section className="rounded-tile border border-border bg-surface lg:rounded-card">
+        <div className="hidden grid-cols-[minmax(0,1fr)_240px] gap-4 px-7 pt-5 text-[13px] font-[550] text-muted sm:grid">
+          <span>{t.pricingName}</span>
+          <span>{t.pricingRent}</span>
+        </div>
 
-          <div className="flex flex-col gap-3">
-            {rooms.map((room, index) => (
-              <div key={room.id} className="flex flex-col gap-1.5">
-                <div className="grid gap-2.5 sm:grid-cols-[1fr_180px]">
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor={`room-name-${room.id}`} className="sm:sr-only">
-                      {t.pricingName}
-                    </Label>
-                    <Input
-                      id={`room-name-${room.id}`}
-                      value={room.name}
-                      onChange={(event) => update(index, { name: event.target.value })}
-                      aria-invalid={fieldErrors[index] ? true : undefined}
-                      disabled={busy}
-                    />
-                  </div>
+        <div className="flex flex-col gap-4 px-4 py-5 sm:gap-3 sm:px-7 sm:pt-3">
+          {rooms.map((room, index) => (
+            <div key={room.id} className="flex flex-col gap-1.5">
+              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_240px] sm:gap-4">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`room-name-${room.id}`} className="sm:sr-only">
+                    {t.pricingName}
+                  </Label>
+                  <Input
+                    id={`room-name-${room.id}`}
+                    value={room.name}
+                    onChange={(event) => update(index, { name: event.target.value })}
+                    aria-invalid={fieldErrors[index] ? true : undefined}
+                    disabled={busy}
+                  />
+                </div>
 
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor={`room-rent-${room.id}`} className="sm:sr-only">
-                      {t.pricingRent}
-                    </Label>
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor={`room-rent-${room.id}`} className="sm:sr-only">
+                    {t.pricingRent}
+                  </Label>
+                  <div className="relative">
                     <Input
                       id={`room-rent-${room.id}`}
                       value={room.rent}
                       onChange={(event) => update(index, { rent: event.target.value })}
                       aria-invalid={fieldErrors[index] ? true : undefined}
                       inputMode="decimal"
+                      placeholder="0,00"
+                      className="pr-10 font-mono"
                       disabled={busy}
                     />
+                    <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-subtle">
+                      {currency}
+                    </span>
                   </div>
                 </div>
-
-                {fieldErrors[index] ? (
-                  <p role="alert" className="text-xs font-medium text-bad">
-                    {fieldErrors[index]}
-                  </p>
-                ) : null}
               </div>
-            ))}
-          </div>
 
-          <p className="text-xs text-muted">
-            {t.pricingLead}
-          </p>
-        </CardContent>
-      </Card>
+              {fieldErrors[index] ? (
+                <p role="alert" className="flex items-center gap-1.5 text-[12.5px] font-medium text-bad">
+                  <AlertCircle className="size-3.5 shrink-0" aria-hidden />
+                  {fieldErrors[index]}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
 
-      <div className="flex flex-wrap gap-2.5">
+        <div className="flex min-h-[60px] items-center justify-between gap-3 border-t border-border px-4 sm:px-7">
+          <span className="text-sm font-[550] text-muted">{misc.roomsSum}</span>
+          <span className="font-mono text-base font-[650] text-fg">{formatMoney(total, locale)}</span>
+        </div>
+      </section>
+
+      <div className="flex flex-row-reverse flex-wrap justify-start gap-2.5">
         <Button onClick={save} disabled={busy}>
           {busy ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <Loader2 className="size-[18px] animate-spin" aria-hidden />
               {t.saving}
             </>
           ) : (
             <>
-              <Check className="h-4 w-4" aria-hidden />
+              <Check className="size-[18px]" aria-hidden />
               {t.saveAndFinish}
             </>
           )}
         </Button>
 
         <Button
-          variant="secondary"
+          variant="ghost"
           disabled={busy}
           onClick={() => router.push(`/panel/nieruchomosci/${propertyId}`)}
         >

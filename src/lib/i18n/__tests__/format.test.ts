@@ -38,18 +38,20 @@ describe("formatDateIn", () => {
 
 describe("formatDayRangeIn", () => {
   it("zwija powtórzony miesiąc do jednego zapisu", () => {
-    expect(formatDayRangeIn("2026-09-01", "2026-09-06", "pl")).toBe("1–6 wrz");
-    // Brytyjski zapis otacza myślnik cienkimi spacjami (U+2009) i skraca
-    // wrzesień do „Sept" — obie różnice pochodzą z danych ICU, nie z nas.
-    expect(formatDayRangeIn("2026-09-01", "2026-09-06", "uk")).toBe(
-      "1 – 6 Sept",
-    );
+    expect(formatDayRangeIn("2026-09-01", "2026-09-06", "pl")).toBe("1-6 wrz");
+    // Brytyjski zapis ICU otacza myślnik cienkimi spacjami (U+2009) i skraca
+    // wrzesień do „Sept"; półpauzę z odstępami zamieniamy na zwykły łącznik.
+    expect(formatDayRangeIn("2026-09-01", "2026-09-06", "uk")).toBe("1-6 Sept");
+  });
+
+  it("zakres przez dwa miesiące pisze łącznikiem ze spacjami, bez półpauzy", () => {
+    expect(formatDayRangeIn("2026-10-26", "2026-11-01", "pl")).toBe("26 paź - 1 lis");
   });
 
   it("czyta dni jako kalendarzowe, nie jako momenty w lokalnej strefie", () => {
     // Dni zapisujemy jako północ UTC; bez wymuszonej strefy zakres potrafiłby
     // wyjść o dzień za wcześnie.
-    expect(formatDayRangeIn("2026-09-28", "2026-09-30", "pl")).toBe("28–30 wrz");
+    expect(formatDayRangeIn("2026-09-28", "2026-09-30", "pl")).toBe("28-30 wrz");
   });
 });
 

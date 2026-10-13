@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { ListSort } from "@/components/panel/list-sort";
+import { SegmentedFilter } from "@/components/panel/segmented-filter";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
 import { FormField } from "@/components/ui/form-field";
@@ -26,7 +28,7 @@ import { fill, pluralize } from "@/lib/i18n/format";
  * przefiltrowaną.
  */
 /** Kolejność pozycji w filtrze; napisy przychodzą ze słownika. */
-const STATUS_VALUES = ["all", "UNPAID", "OVERDUE", "PAID", "CANCELLED"] as const;
+const STATUS_VALUES = ["all", "UNPAID", "OVERDUE", "PAID", "DRAFT", "CANCELLED"] as const;
 
 /** Filtry szczegółowe — pola, które mają własny wiersz w rozwijanym panelu. */
 const DETAILED_KEYS = [
@@ -100,10 +102,19 @@ export function InvoiceFilters({ total }: { total: number }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2.5 sm:flex-row">
-        <div className="relative flex-1">
+      <SegmentedFilter
+        param="status"
+        ariaLabel={t.statusLabel}
+        options={STATUS_VALUES.map((value) => ({
+          value,
+          label: d.panel.panelMisc.invoiceStatusFilter[value],
+        }))}
+      />
+
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative sm:w-72">
           <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+            className="pointer-events-none absolute top-1/2 left-3 size-[18px] -translate-y-1/2 text-subtle"
             aria-hidden
           />
           <Input
@@ -116,47 +127,59 @@ export function InvoiceFilters({ total }: { total: number }) {
           />
         </div>
 
-        <Select
-          aria-label={t.statusLabel}
-          value={searchParams.get("status") ?? "all"}
-          onChange={(event) => setParam("status", event.target.value)}
-          className="sm:w-48"
-        >
-          {STATUS_VALUES.map((value) => (
-            <option key={value} value={value}>
-              {d.panel.panelMisc.invoiceStatusFilter[value]}
-            </option>
-          ))}
-        </Select>
-      </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setDetailed((current) => !current)}
+            aria-expanded={detailed}
+          >
+            <SlidersHorizontal className="size-[18px]" aria-hidden />
+            {d.panel.panelMisc.detailedFilters}
+            {activeDetailed > 0 ? (
+              <Badge size="sm" tone="accent">
+                {activeDetailed}
+              </Badge>
+            ) : null}
+          </Button>
 
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <Button
-          type="button"
-          size="sm"
-          variant={detailed ? "secondary" : "ghost"}
-          onClick={() => setDetailed((current) => !current)}
-          aria-expanded={detailed}
-        >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden />
-          {d.panel.panelMisc.detailedFilters}
-          {activeDetailed > 0 ? (
-            <span className="ml-1 rounded-full bg-accent px-1.5 text-[11px] text-accent-contrast">
-              {activeDetailed}
-            </span>
+          <ListSort
+            options={INVOICE_SORT_OPTIONS}
+            labels={invoiceSortLabels(d)}
+            defaultValue="newest"
+            ariaLabel={d.panel.financePage.sortAria}
+          />
+        </div>
+
+        <div className="flex items-center gap-3 text-[13.5px] text-muted sm:ml-auto">
+          {hasFilters ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                const next = new URLSearchParams();
+                const sort = searchParams.get("sort");
+                if (sort) next.set("sort", sort);
+                apply(next);
+              }}
+              className="inline-flex items-center gap-1 rounded-btn font-[550] text-accent hover:underline"
+            >
+              <X className="size-3.5" aria-hidden />
+              {t.clear}
+            </button>
           ) : null}
-        </Button>
-
-        <ListSort
-          options={INVOICE_SORT_OPTIONS}
-          labels={invoiceSortLabels(d)}
-          defaultValue="newest"
-          ariaLabel={d.panel.financePage.sortAria}
-        />
+          <span aria-live="polite" className="whitespace-nowrap">
+            {isPending
+              ? t.filtering
+              : // Sam rzeczownik, bez liczby — ten sam wpis słownika służy też
+                // w pasku pobierania.
+                `${total} ${pluralize(locale, total, d.panel.financePage.documentNoun)}`}
+          </span>
+        </div>
       </div>
 
       {detailed ? (
-        <div className="grid gap-4 rounded-control border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 rounded-card border border-border bg-surface p-4 sm:grid-cols-2 lg:grid-cols-4 lg:p-5">
           <FormField id="f-kind" label={t.kind}>
             <Select
               id="f-kind"
@@ -224,34 +247,6 @@ export function InvoiceFilters({ total }: { total: number }) {
         </div>
       ) : null}
 
-      <div className="flex min-h-5 items-center gap-3 text-xs text-muted">
-        <span aria-live="polite">
-          {isPending
-            ? t.filtering
-            : // Sam rzeczownik, bez liczby — ten sam wpis słownika służy też
-              // do „Pobierz 3 dokumenty", więc liczbę dokładamy tutaj.
-              `${total} ${pluralize(locale, total, d.panel.financePage.documentNoun)}`}
-        </span>
-
-        {hasFilters ? (
-          <button
-            type="button"
-            onClick={() => {
-              setQuery("");
-              // Porządek to nie filtr — czyszczenie zawęża z powrotem do
-              // wszystkich dokumentów, ale ułożonych tak, jak wybrano.
-              const next = new URLSearchParams();
-              const sort = searchParams.get("sort");
-              if (sort) next.set("sort", sort);
-              apply(next);
-            }}
-            className="inline-flex items-center gap-1 rounded-btn font-medium text-accent hover:underline"
-          >
-            <X className="h-3 w-3" aria-hidden />
-            {t.clear}
-          </button>
-        ) : null}
-      </div>
     </div>
   );
 }

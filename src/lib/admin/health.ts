@@ -38,7 +38,7 @@ export function integrations(): Integration[] {
           state: smtpSet > 0 ? "partial" : "off",
           detail:
             smtpSet > 0
-              ? "Niepełna konfiguracja SMTP — brakuje hosta, użytkownika albo hasła."
+              ? "Niepełna konfiguracja SMTP, brakuje hosta, użytkownika albo hasła."
               : "Brak RESEND_API_KEY i danych SMTP. Powiadomienia nie wyjdą.",
         };
 
@@ -48,7 +48,7 @@ export function integrations(): Integration[] {
     detail:
       env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET
         ? "Przycisk „Zaloguj przez Google” jest widoczny."
-        : "Brak AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET — zostaje logowanie hasłem.",
+        : "Brak AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET, zostaje logowanie hasłem.",
   };
 
   const redis: Integration = {
@@ -56,7 +56,7 @@ export function integrations(): Integration[] {
     state: env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN ? "on" : "off",
     detail:
       env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
-        ? "Upstash Redis — licznik wspólny dla wszystkich instancji."
+        ? "Upstash Redis, licznik wspólny dla wszystkich instancji."
         : "Licznik w pamięci procesu. Na serverless startuje od zera przy każdej instancji.",
   };
 
@@ -65,7 +65,7 @@ export function integrations(): Integration[] {
     state: env.CRON_SECRET ? "on" : "off",
     detail: env.CRON_SECRET
       ? "Endpoint /api/cron/billing przyjmuje wywołania z sekretem."
-      : "Brak CRON_SECRET — endpoint odmawia, faktury nie naliczą się same.",
+      : "Brak CRON_SECRET, endpoint odmawia, faktury nie naliczą się same.",
   };
 
   const payments: Integration = {

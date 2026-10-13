@@ -3,13 +3,13 @@
 import { Eye } from "lucide-react";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardRows } from "@/components/panel/section-card";
+import { InvoiceStatusBadge } from "@/components/panel/status-badges";
 import { MarkPaid } from "@/components/panel/invoices/mark-paid";
 import { useI18n } from "@/lib/i18n/client";
 import { fill, formatDateIn } from "@/lib/i18n/format";
 import { hasRegisterNumber } from "@/lib/invoices/draft";
-import { INVOICE_STATUS_TONE, type DisplayInvoiceStatus } from "@/lib/invoices/status";
+import type { DisplayInvoiceStatus } from "@/lib/invoices/status";
 import { formatMoney } from "@/lib/money";
 
 export type TenantInvoiceRow = {
@@ -36,63 +36,57 @@ export function TenantInvoiceList({ invoices }: { invoices: TenantInvoiceRow[] }
   const misc = d.panel.panelMisc;
 
   return (
-    <Card>
-      <CardContent className="flex flex-col p-0">
-        {invoices.map((invoice, index) => (
-          <div
-            key={invoice.id}
-            className={`flex items-center gap-x-3 px-4 py-3 ${
-              index > 0 ? "border-t border-border" : ""
-            }`}
+    <CardRows>
+      {invoices.map((invoice) => (
+        <li key={invoice.id} className="flex items-center gap-3 py-3">
+          <Link
+            href={`/panel/finanse/${invoice.id}`}
+            className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1.5 rounded-btn transition-opacity hover:opacity-80 sm:flex-nowrap"
           >
-            <Link
-              href={`/panel/finanse/${invoice.id}`}
-              className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1 rounded-btn transition-opacity hover:opacity-80"
+            <span className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
+              <span className="block font-mono text-sm font-semibold break-all text-fg sm:truncate">
+                {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
+              </span>
+              <span className="block text-[13px] text-muted">
+                {fill(misc.dueOn, { date: formatDateIn(invoice.dueDate, locale, "short") })}
+              </span>
+            </span>
+            <InvoiceStatusBadge status={invoice.displayStatus} d={d} />
+            <span
+              className={`ml-auto shrink-0 text-right font-mono text-sm font-semibold whitespace-nowrap sm:ml-0 sm:w-28 ${
+                invoice.displayStatus === "OVERDUE" ? "text-bad" : "text-fg"
+              }`}
             >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-fg">
-                  {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
-                </p>
-                <p className="text-xs text-muted">
-                  {fill(misc.dueOn, { date: formatDateIn(invoice.dueDate, locale, "short") })}
-                </p>
-              </div>
-              <Badge tone={INVOICE_STATUS_TONE[invoice.displayStatus]}>
-                {d.panel.invoices.status[invoice.displayStatus]}
-              </Badge>
-              <p className="tabular w-24 text-right font-mono text-sm text-fg">
-                {formatMoney(invoice.totalGrossGrosze, locale)}
-              </p>
-            </Link>
+              {formatMoney(invoice.totalGrossGrosze, locale)}
+            </span>
+          </Link>
 
-            {/* Poza odnośnikiem: przycisk w środku `<a>` byłby nieprawidłowym
-                zagnieżdżeniem, a klik w niego wchodziłby na kartę dokumentu. */}
-            <div className="flex shrink-0 items-center gap-1.5">
-              {/* PDF otwiera się w nowej karcie — wracanie „wstecz" z widoku
-                  dokumentu gubiłoby miejsce w kartotece. */}
-              <a
-                href={`/api/invoices/${invoice.id}/pdf`}
-                target="_blank"
-                rel="noreferrer"
-                title={fill(t.previewInvoiceAria, { number: invoice.number })}
-                aria-label={fill(t.previewInvoiceAria, { number: invoice.number })}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-muted hover:text-fg"
-              >
-                <Eye className="h-4 w-4" aria-hidden />
-              </a>
+          {/* Poza odnośnikiem: przycisk w środku `<a>` byłby nieprawidłowym
+              zagnieżdżeniem, a klik w niego wchodziłby na kartę dokumentu. */}
+          <span className="flex shrink-0 items-center gap-1">
+            {/* PDF otwiera się w nowej karcie — wracanie „wstecz" z widoku
+                dokumentu gubiłoby miejsce w kartotece. */}
+            <a
+              href={`/api/invoices/${invoice.id}/pdf`}
+              target="_blank"
+              rel="noreferrer"
+              title={fill(t.previewInvoiceAria, { number: invoice.number })}
+              aria-label={fill(t.previewInvoiceAria, { number: invoice.number })}
+              className="flex size-8 items-center justify-center rounded-btn text-subtle transition-colors hover:bg-surface-alt hover:text-fg"
+            >
+              <Eye className="size-[18px]" aria-hidden />
+            </a>
 
-              {isPayable(invoice) ? (
-                <MarkPaid invoiceId={invoice.id} remainingGrosze={invoice.remainingGrosze} />
-              ) : null}
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+            {isPayable(invoice) ? (
+              <MarkPaid invoiceId={invoice.id} remainingGrosze={invoice.remainingGrosze} />
+            ) : null}
+          </span>
+        </li>
+      ))}
+    </CardRows>
   );
 }
 
-/** Czy dokument czeka jeszcze na pieniądze — tylko wtedy odhaczanie ma sens. */
 function isPayable(invoice: TenantInvoiceRow): boolean {
   return (
     invoice.remainingGrosze > 0 &&

@@ -1,9 +1,8 @@
-import { LogOut, ShieldOff } from "lucide-react";
+import { Lock, LogOut } from "lucide-react";
 
 import { signOutAction } from "@/app/(app)/actions";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { getDictionary } from "@/lib/i18n";
 import { requestLocale } from "@/lib/i18n/server";
 
@@ -24,30 +23,24 @@ export async function AccessRevoked() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
-      <header className="border-b border-border px-4 py-3 sm:px-6">
-        <Logo size="sm" />
+      <header className="px-6 py-6 sm:px-12 sm:py-10">
+        <Logo />
       </header>
 
-      <main className="mx-auto flex w-full max-w-lg flex-1 items-center px-4 py-10 sm:px-6">
-        <Card className="w-full">
-          <CardContent className="flex flex-col items-start gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-alt">
-              <ShieldOff className="h-4.5 w-4.5 text-muted" aria-hidden />
-            </span>
-
-            <h1 className="r-display text-[22px] leading-tight text-fg">
-              {d.panel.team.accessRevokedTitle}
-            </h1>
-            <p className="text-sm text-muted">{d.panel.api.accessRevoked}</p>
-
-            <form action={signOutAction}>
-              <Button type="submit" size="sm" variant="secondary">
-                <LogOut className="h-4 w-4" aria-hidden />
-                {d.panel.shell.signOut}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      <main className="flex flex-1 items-start justify-center px-5 pt-[12vh] pb-16 sm:items-center sm:pt-0">
+        <div className="flex max-w-md flex-col items-center gap-4 text-center">
+          <span className="flex size-[72px] items-center justify-center rounded-[18px] bg-bad-soft" aria-hidden>
+            <Lock className="size-8 text-bad" strokeWidth={1.7} />
+          </span>
+          <h1 className="r-display text-[30px] leading-9 tracking-[-0.6px] text-fg">{d.panel.team.accessRevokedTitle}</h1>
+          <p className="text-[15px] text-muted">{d.panel.api.accessRevoked}</p>
+          <form action={signOutAction} className="mt-2">
+            <Button type="submit" variant="secondary">
+              <LogOut className="size-[18px]" aria-hidden />
+              {d.panel.shell.signOut}
+            </Button>
+          </form>
+        </div>
       </main>
     </div>
   );

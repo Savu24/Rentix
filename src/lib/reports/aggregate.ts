@@ -197,6 +197,34 @@ export function propertyBreakdown(
   });
 }
 
+/** Suma kolumn tabeli „Wynik wg nieruchomości" — wiersz pod tabelą. */
+export function propertyTotals(rows: readonly PropertyRow[]): Omit<PropertyRow, "propertyId" | "name"> {
+  const total = (pick: (row: PropertyRow) => number) => rows.reduce((sum, row) => sum + pick(row), 0);
+  return {
+    incomeGrosze: total((row) => row.incomeGrosze),
+    expenseGrosze: total((row) => row.expenseGrosze),
+    profitGrosze: total((row) => row.profitGrosze),
+    monthlyIncomeGrosze: total((row) => row.monthlyIncomeGrosze),
+    monthlyExpenseGrosze: total((row) => row.monthlyExpenseGrosze),
+    monthlyProfitGrosze: total((row) => row.monthlyProfitGrosze),
+  };
+}
+
+/**
+ * Udział każdej kategorii w kosztach roku, w pełnych procentach.
+ *
+ * Od sumy kosztów, nie od przychodu — pasek ma pokazywać strukturę wydatków.
+ */
+export function categoryShares<T extends { totalGrosze: number }>(
+  buckets: readonly T[],
+  expenseGrosze: number,
+): Array<T & { sharePercent: number }> {
+  return buckets.map((bucket) => ({
+    ...bucket,
+    sharePercent: expenseGrosze === 0 ? 0 : Math.round((bucket.totalGrosze / expenseGrosze) * 100),
+  }));
+}
+
 export type CollectionInput = {
   dueDate: Date;
   totalGrossGrosze: number;

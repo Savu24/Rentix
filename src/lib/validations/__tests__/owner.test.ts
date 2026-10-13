@@ -133,7 +133,7 @@ describe("formatContractPeriod", () => {
   const end = new Date("2027-08-31T00:00:00.000Z");
 
   it("składa zakres z obu dat", () => {
-    expect(formatContractPeriod(start, end, C)).toBe("1 wrz 2026 – 31 sie 2027");
+    expect(formatContractPeriod(start, end, C)).toBe("1 wrz 2026 - 31 sie 2027");
   });
 
   it("sam początek opisuje jako czas nieokreślony", () => {

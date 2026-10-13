@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils";
  * Znak Rentiksa: litera R w bursztynowym kwadracie, ten sam rysunek co ikona
  * na ekranie głównym telefonu.
  *
- * Kształt wchodzi maską CSS, a nie zwykłym obrazkiem. Kolory znaku odwracają się
- * między motywami (jasny: ciemna zieleń na bursztynie, ciemny: bursztyn na
- * przygaszonym brązie), więc wklejona bitmapa miałaby w jednym z nich za mały
- * kontrast. Maska bierze kolor z tokenu, czyli idzie za motywem sama.
+ * Kształt wchodzi maską CSS, a nie zwykłym obrazkiem. Kolory znaku biorą się
+ * z tokenów `highlight` i `highlight-text` (ciemna zieleń na bursztynie w obu
+ * motywach), więc zmiana marki w globals.css nie wymaga podmiany bitmapy.
  */
 const MASK = {
   maskImage: "url(/logo-mark.png)",
@@ -40,9 +39,12 @@ export function LogoMark({ className }: { className?: string }) {
 export function Logo({
   className,
   size = "md",
+  onDark = false,
 }: {
   className?: string;
   size?: "sm" | "md";
+  /** Na ciemnozielonym pasku bocznym: biały napis i jasna zieleń „ON". */
+  onDark?: boolean;
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
@@ -54,11 +56,12 @@ export function Logo({
           przeczytał jedną nazwę, a nie „Rentix O N". */}
       <span
         className={cn(
-          "font-semibold tracking-[-0.005em] text-fg",
-          size === "sm" ? "text-[15px]" : "text-[18px]",
+          "font-semibold tracking-[-0.005em]",
+          onDark ? "font-display text-side-active-ink" : "text-fg",
+          onDark ? "text-[17px]" : size === "sm" ? "text-[15px]" : "text-[18px]",
         )}
       >
-        Rentix<span className="text-good">ON</span>
+        Rentix<span className={onDark ? "text-side-on" : "text-good"}>ON</span>
       </span>
     </span>
   );

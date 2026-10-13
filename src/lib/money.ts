@@ -73,6 +73,38 @@ export function formatMoney(grosze: number, locale: Locale = DEFAULT_LOCALE): st
   return currencyFormatter(locale).format(grosze / 100);
 }
 
+export type MoneyParts = {
+  /** Liczba ze znakiem i separatorami: „3 105,00", „-205,00", „2,400.00". */
+  amount: string;
+  /** Symbol waluty: „zł", „£". */
+  currency: string;
+  /** Czy symbol stoi przed liczbą (funt) czy po niej (złoty). */
+  currencyFirst: boolean;
+};
+
+/**
+ * Ta sama kwota co `formatMoney`, rozbita na liczbę i walutę.
+ *
+ * Do dużych kwot w kaflach, gdzie symbol waluty jest mniejszy od liczby
+ * („3 105,00" + „zł"). Rozbija formatter, a nie string, więc kolejność,
+ * znak minus i separatory zostają takie, jakie daje kraj konta.
+ */
+export function formatMoneyParts(grosze: number, locale: Locale = DEFAULT_LOCALE): MoneyParts {
+  const parts = currencyFormatter(locale).formatToParts(grosze / 100);
+  const currencyIndex = parts.findIndex((part) => part.type === "currency");
+  const integerIndex = parts.findIndex((part) => part.type === "integer");
+
+  return {
+    amount: parts
+      .filter((part) => part.type !== "currency")
+      .map((part) => part.value)
+      .join("")
+      .trim(),
+    currency: parts[currencyIndex]?.value ?? "",
+    currencyFirst: currencyIndex !== -1 && currencyIndex < integerIndex,
+  };
+}
+
 /**
  * 250000 → „2 500 zł" / „£2,500" — kwota okrągła, bez końcówki groszowej.
  *

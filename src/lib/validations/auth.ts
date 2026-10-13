@@ -16,14 +16,35 @@ import type { Dictionary } from "@/lib/i18n/types";
  */
 type Messages = Dictionary["auth"]["validation"];
 
+const PASSWORD_MIN = 10;
+const LOWER = /[a-ząćęłńóśźż]/;
+const UPPER = /[A-ZĄĆĘŁŃÓŚŹŻ]/;
+const DIGIT = /[0-9]/;
+
 export function passwordSchema(t: Messages) {
   return z
     .string()
-    .min(10, t.passwordTooShort)
+    .min(PASSWORD_MIN, t.passwordTooShort)
     .max(128, t.passwordTooLong)
-    .regex(/[a-ząćęłńóśźż]/, t.passwordNeedsLower)
-    .regex(/[A-ZĄĆĘŁŃÓŚŹŻ]/, t.passwordNeedsUpper)
-    .regex(/[0-9]/, t.passwordNeedsDigit);
+    .regex(LOWER, t.passwordNeedsLower)
+    .regex(UPPER, t.passwordNeedsUpper)
+    .regex(DIGIT, t.passwordNeedsDigit);
+}
+
+export type PasswordRule = "length" | "upper" | "lower" | "digit";
+
+/**
+ * Które wymagania hasło już spełnia — do listy z ptaszkami pod polem.
+ * Te same warunki, co w `passwordSchema`, więc lista nie może obiecać
+ * hasła, które serwer potem odrzuci.
+ */
+export function passwordChecks(value: string): Record<PasswordRule, boolean> {
+  return {
+    length: value.length >= PASSWORD_MIN,
+    upper: UPPER.test(value),
+    lower: LOWER.test(value),
+    digit: DIGIT.test(value),
+  };
 }
 
 /**

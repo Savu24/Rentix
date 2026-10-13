@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   daysOverdue,
+  paidPercent,
   remainingGrosze,
   resolveInvoiceStatus,
   type InvoiceLike,
@@ -90,6 +91,21 @@ describe("resolveInvoiceStatus", () => {
 
   it("faktura o zerowej kwocie jest od razu opłacona", () => {
     expect(resolveInvoiceStatus(invoice({ totalGrossGrosze: 0, paidGrosze: 0 }), NOW)).toBe("PAID");
+  });
+});
+
+describe("paidPercent", () => {
+  it("zaokrągla udział wpłat do pełnego procentu", () => {
+    expect(paidPercent(invoice({ paidGrosze: 80000 }))).toBe(33);
+  });
+
+  it("nie wychodzi poza 0-100 przy nadpłacie", () => {
+    expect(paidPercent(invoice({ paidGrosze: 0 }))).toBe(0);
+    expect(paidPercent(invoice({ paidGrosze: 999999 }))).toBe(100);
+  });
+
+  it("dokument na zero złotych jest spłacony", () => {
+    expect(paidPercent(invoice({ totalGrossGrosze: 0 }))).toBe(100);
   });
 });
 

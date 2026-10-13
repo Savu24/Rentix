@@ -31,12 +31,14 @@ export function leaseStatusLabels(d: Pick<Dictionary, "panel">): Record<LeaseSta
   return d.panel.leases.status;
 }
 
-export const LEASE_STATUS_TONE: Record<LeaseStatus, "neutral" | "good" | "warning" | "critical"> = {
+export const LEASE_STATUS_TONE: Record<LeaseStatus, "neutral" | "good" | "info"> = {
   DRAFT: "neutral",
-  RESERVED: "warning",
+  // Rezerwacja to umowa, która dopiero się zacznie — nadchodząca, nie ostrzeżenie.
+  RESERVED: "info",
   ACTIVE: "good",
-  TERMINATED: "critical",
-  EXPIRED: "warning",
+  // Zakończona umowa nie jest alarmem: to stan rzeczy, a nie zaległość.
+  TERMINATED: "neutral",
+  EXPIRED: "neutral",
 };
 
 /**

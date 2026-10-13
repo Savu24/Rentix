@@ -42,7 +42,6 @@ export function OwnerFields({
           id={id("name")}
           label={t.owner}
           error={errors.name?.message}
-          hint={t.ownerHint}
           className="sm:col-span-4"
         >
           <Input
@@ -56,7 +55,6 @@ export function OwnerFields({
           id={id("taxId")}
           label={t.taxId}
           error={errors.taxId?.message}
-          hint={t.taxIdHint}
           className="sm:col-span-2"
         >
           <Input
@@ -138,7 +136,6 @@ export function OwnerFields({
           id={id("bankAccount")}
           label={t.bankAccount}
           error={errors.bankAccount?.message}
-          hint={t.bankAccountHint}
           className="sm:col-span-6"
         >
           <Input
@@ -152,7 +149,6 @@ export function OwnerFields({
           id={id("contractStartDate")}
           label={t.contractFrom}
           error={errors.contractStartDate?.message}
-          hint={t.contractFromHint}
           className="sm:col-span-3"
         >
           <DateInput
@@ -166,7 +162,6 @@ export function OwnerFields({
           id={id("contractEndDate")}
           label={t.contractTo}
           error={errors.contractEndDate?.message}
-          hint={t.contractToHint}
           className="sm:col-span-3"
         >
           <DateInput
@@ -181,7 +176,6 @@ export function OwnerFields({
         id={id("notes")}
         label={t.notes}
         error={errors.notes?.message}
-        hint={t.notesHint}
       >
         <Textarea
           {...fieldAria(id("notes"), { error: errors.notes?.message })}

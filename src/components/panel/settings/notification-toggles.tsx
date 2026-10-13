@@ -1,15 +1,24 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Clock, FileText, Loader2, Zap, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Alert } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/panel/section-card";
+import { InfoTip } from "@/components/ui/info-tip";
+import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
 import type { EditableNotificationType } from "@/lib/notifications/types";
+import { cn } from "@/lib/utils";
+
+const TYPE_ICON: Record<EditableNotificationType, LucideIcon> = {
+  INVOICE_ISSUED: FileText,
+  PAYMENT_REMINDER: Clock,
+  PAYMENT_OVERDUE: AlertCircle,
+};
 
 /**
  * Które powiadomienia wychodzą automatycznie.
@@ -55,48 +64,49 @@ export function NotificationToggles({
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">{t.togglesTitle}</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            {t.togglesLead}
-          </p>
-        </div>
+    <SectionCard
+      title={t.togglesTitle}
+      icon={Zap}
+      actions={
+        <InfoTip label={t.togglesInfo} align="end">
+          {t.togglesLead}
+        </InfoTip>
+      }
+      bodyClassName="pt-1"
+    >
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
-        {error ? <Alert tone="error">{error}</Alert> : null}
+      <ul className="flex flex-col divide-y divide-border">
+        {templates.map((template) => {
+          const on = state[template.type] ?? true;
+          const Icon = TYPE_ICON[template.type];
+          const label = types[template.type].label;
 
-        <ul className="flex flex-col divide-y divide-border">
-          {templates.map((template) => (
-            <li key={template.type} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-fg">
-                  {types[template.type].label}
-                </p>
-                <p className="mt-0.5 text-xs text-muted">
-                  {types[template.type].hint}
-                </p>
-              </div>
-
-              <label className="flex shrink-0 items-center gap-2 text-sm text-muted">
-                {saving === template.type || pending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                ) : null}
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-accent"
-                  checked={state[template.type] ?? true}
-                  disabled={saving !== null}
-                  onChange={(event) => toggle(template.type, event.target.checked)}
-                />
-                <span className="sr-only">
-                  {fill(t.autoSend, { type: types[template.type].label })}
-                </span>
-              </label>
+          return (
+            <li key={template.type} className="flex min-h-16 items-center gap-4 py-3">
+              <span
+                className={cn(
+                  "flex size-9 shrink-0 items-center justify-center rounded-alert",
+                  on ? "bg-accent-soft text-accent" : "bg-surface-alt text-subtle",
+                )}
+                aria-hidden
+              >
+                <Icon className="size-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1 text-[14.5px] font-[550] text-fg">{label}</span>
+              {saving === template.type || pending ? (
+                <Loader2 className="size-4 animate-spin text-subtle" aria-hidden />
+              ) : null}
+              <Switch
+                checked={on}
+                disabled={saving !== null}
+                onCheckedChange={(next) => void toggle(template.type, next)}
+                label={fill(t.autoSend, { type: label })}
+              />
             </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+          );
+        })}
+      </ul>
+    </SectionCard>
   );
 }

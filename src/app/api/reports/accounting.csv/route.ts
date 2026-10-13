@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     unassigned: t.csv.unassigned,
   });
 
-  const period = `${formatDateIn(range.from, auth.locale, "short")} – ${formatDateIn(
+  const period = `${formatDateIn(range.from, auth.locale, "short")} - ${formatDateIn(
     range.to,
     auth.locale,
     "short",

@@ -8,8 +8,9 @@ import { useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { fieldAria, FormField } from "@/components/ui/form-field";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api/client";
@@ -171,162 +172,128 @@ export function TemplateEditor({
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">{types[type].label}</h2>
-          <p className="mt-0.5 text-sm text-muted">{types[type].hint}</p>
-        </div>
-
+    <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="flex flex-col gap-4 rounded-tile border border-border bg-surface p-5 lg:p-6"
+      >
+        <h2 className="sr-only">{types[type].label}</h2>
         {formError ? <Alert tone="error">{formError}</Alert> : null}
         {saved ? <Alert tone="success">{te.saved}</Alert> : null}
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-            <FormField
-              id={`tpl-${type}-subject`}
-              label={te.subject}
-              error={errors.subject?.message}
-              hint={te.subjectHint}
-            >
-              <Input
-                {...fieldAria(`tpl-${type}-subject`, { error: errors.subject?.message })}
-                placeholder={defaults.subject}
-                disabled={isSubmitting}
-                {...register("subject")}
-              />
-            </FormField>
+        {/* Puste pole = tekst domyślny — stoi w tle pola jako podpowiedź. */}
+        <FormField id={`tpl-${type}-subject`} label={te.subject} error={errors.subject?.message}>
+          <Input
+            {...fieldAria(`tpl-${type}-subject`, { error: errors.subject?.message })}
+            placeholder={defaults.subject}
+            className="font-mono"
+            disabled={isSubmitting}
+            {...register("subject")}
+          />
+        </FormField>
 
-            <FormField
-              id={`tpl-${type}-heading`}
-              label={te.heading}
-              error={errors.heading?.message}
-            >
-              <Input
-                {...fieldAria(`tpl-${type}-heading`, { error: errors.heading?.message })}
-                placeholder={defaults.heading}
-                disabled={isSubmitting}
-                {...register("heading")}
-              />
-            </FormField>
+        <FormField id={`tpl-${type}-heading`} label={te.heading} error={errors.heading?.message}>
+          <Input
+            {...fieldAria(`tpl-${type}-heading`, { error: errors.heading?.message })}
+            placeholder={defaults.heading}
+            disabled={isSubmitting}
+            {...register("heading")}
+          />
+        </FormField>
 
-            <FormField
-              id={`tpl-${type}-intro`}
-              label={te.intro}
-              error={errors.intro?.message}
-            >
-              <Textarea
-                {...fieldAria(`tpl-${type}-intro`, { error: errors.intro?.message })}
-                rows={4}
-                placeholder={defaults.intro}
-                disabled={isSubmitting}
-                {...register("intro")}
-              />
-            </FormField>
+        <FormField id={`tpl-${type}-intro`} label={te.intro} error={errors.intro?.message}>
+          <Textarea
+            {...fieldAria(`tpl-${type}-intro`, { error: errors.intro?.message })}
+            rows={4}
+            placeholder={defaults.intro}
+            disabled={isSubmitting}
+            {...register("intro")}
+          />
+        </FormField>
 
-            <FormField
-              id={`tpl-${type}-outro`}
-              label={te.outro}
-              error={errors.outro?.message}
-            >
-              <Textarea
-                {...fieldAria(`tpl-${type}-outro`, { error: errors.outro?.message })}
-                rows={3}
-                placeholder={defaults.outro}
-                disabled={isSubmitting}
-                {...register("outro")}
-              />
-            </FormField>
+        <FormField id={`tpl-${type}-outro`} label={te.outro} error={errors.outro?.message}>
+          <Textarea
+            {...fieldAria(`tpl-${type}-outro`, { error: errors.outro?.message })}
+            rows={3}
+            placeholder={defaults.outro}
+            disabled={isSubmitting}
+            {...register("outro")}
+          />
+        </FormField>
 
-            <div className="rounded-card border border-border bg-surface-alt p-3">
-              <p className="text-xs font-medium text-fg">{te.variables}</p>
-              <p className="mt-0.5 text-xs text-muted">
-                {te.variablesHint}
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-1.5">
-                {templateVariables(d).map((variable) => (
-                  <li key={variable.name}>
-                    <span
-                      title={variable.description}
-                      className="tabular inline-block rounded-btn border border-border bg-surface px-1.5 py-0.5 text-[11px] text-muted"
-                    >
-                      {`{{${variable.name}}}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="submit" size="sm" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : saved ? (
-                  <Check className="h-4 w-4" aria-hidden />
-                ) : null}
-                Zapisz
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={sendTest}
-                disabled={testState.status === "sending"}
-              >
-                {testState.status === "sending" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                ) : (
-                  <Send className="h-4 w-4" aria-hidden />
-                )}
-                {misc.sendTestToSelf}
-              </Button>
-            </div>
-
-            {/*
-              Test wysyła treść *zapisaną*, nie tę z pól. Bez tego zdania łatwo
-              uznać, że przycisk nie działa, bo w skrzynce ląduje poprzednia
-              wersja tekstu.
-            */}
-            {isDirty ? (
-              <p className="text-xs text-muted">
-                {te.testHint}
-              </p>
-            ) : null}
-
-            {testState.status === "sent" ? (
-              <Alert tone="success">{fill(misc.testSent, { email: testState.email })}</Alert>
-            ) : null}
-            {testState.status === "error" ? (
-              <Alert tone="error">{testState.message}</Alert>
-            ) : null}
-          </form>
-
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-0.5">
-              <p className="text-xs font-medium text-fg">{misc.previewTitle}</p>
-              <p className="text-xs text-muted">
-                {misc.previewSubject} <span className="text-fg">{preview.subject}</span>
-              </p>
-            </div>
-
-            {/*
-              Podgląd w ramce, a nie wstrzyknięty w stronę.
-
-              Wiadomość niesie własne `<body>` i style w atrybutach; wpuszczona
-              wprost w panel dziedziczyłaby jego czcionki i tła, więc pokazywałaby
-              coś, czego najemca nigdy nie zobaczy. `sandbox` bez uprawnień
-              wyłącza skrypty — treść pochodzi z pola tekstowego użytkownika.
-            */}
-            <iframe
-              title={fill(misc.previewFrameTitle, { type: types[type].label })}
-              sandbox=""
-              srcDoc={preview.html}
-              className="h-[420px] w-full rounded-card border border-border bg-white"
-            />
-          </div>
+        <div className="flex flex-col gap-2">
+          <p className="flex items-center gap-1 text-[13px] font-[550] text-fg">
+            {te.variables}
+            <InfoTip label={te.variablesInfo}>{te.variablesHint}</InfoTip>
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {templateVariables(d).map((variable) => (
+              <li key={variable.name}>
+                <Badge tone="outline" title={variable.description} className="font-mono">
+                  {`{{${variable.name}}}`}
+                </Badge>
+              </li>
+            ))}
+          </ul>
         </div>
-      </CardContent>
-    </Card>
+
+        {testState.status === "sent" ? (
+          <Alert tone="success">{fill(misc.testSent, { email: testState.email })}</Alert>
+        ) : null}
+        {testState.status === "error" ? <Alert tone="error">{testState.message}</Alert> : null}
+
+        <div className="flex flex-col gap-2 pt-1">
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <Button type="button" variant="secondary" onClick={sendTest} disabled={testState.status === "sending"}>
+              {testState.status === "sending" ? (
+                <Loader2 className="size-[18px] animate-spin" aria-hidden />
+              ) : (
+                <Send className="size-[18px]" aria-hidden />
+              )}
+              {misc.sendTestToSelf}
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="size-[18px] animate-spin" aria-hidden />
+              ) : saved ? (
+                <Check className="size-[18px]" aria-hidden />
+              ) : null}
+              {d.panel.settings.seller.save}
+            </Button>
+          </div>
+          {/*
+            Test wysyła treść *zapisaną*, nie tę z pól. Bez tej linijki łatwo
+            uznać, że przycisk nie działa, bo w skrzynce ląduje poprzednia
+            wersja tekstu.
+          */}
+          {isDirty ? <p className="text-right text-[12.5px] text-muted">{te.testHint}</p> : null}
+        </div>
+      </form>
+
+      <section className="flex flex-col gap-3 rounded-tile border border-border bg-surface p-4 lg:p-5">
+        <div className="flex flex-col gap-0.5 px-1">
+          <h3 className="text-sm font-[550] text-muted">{misc.previewTitle}</h3>
+          <p className="text-[13px] text-muted">
+            {misc.previewSubject} <span className="font-[550] text-fg">{preview.subject}</span>
+          </p>
+        </div>
+
+        {/*
+          Podgląd w ramce, a nie wstrzyknięty w stronę.
+
+          Wiadomość niesie własne `<body>` i style w atrybutach; wpuszczona
+          wprost w panel dziedziczyłaby jego czcionki i tła, więc pokazywałaby
+          coś, czego najemca nigdy nie zobaczy. `sandbox` bez uprawnień
+          wyłącza skrypty — treść pochodzi z pola tekstowego użytkownika.
+        */}
+        <iframe
+          title={fill(misc.previewFrameTitle, { type: types[type].label })}
+          sandbox=""
+          srcDoc={preview.html}
+          className="h-[480px] w-full rounded-alert border border-border bg-on-color lg:h-[560px]"
+        />
+      </section>
+    </div>
   );
 }

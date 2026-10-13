@@ -2,10 +2,11 @@
 @import "tw-animate-css";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Rentix — design tokens
-   Źródło prawdy: "Rentix Design System.dc.html" (Claude Design).
-   Zmiana koloru w tym pliku propaguje się na całą aplikację — nigdy nie
-   wpisujemy hexów w komponentach.
+   RentixON — design tokens
+   Źródło prawdy: redesign/01-design-system.svg i `THEMES` w
+   redesign/_generator/lib.mjs („Księga w butelkowej zieleni”). Zmiana koloru
+   w tym pliku propaguje się na całą aplikację — nigdy nie wpisujemy hexów
+   w komponentach.
 
    Motyw przełącza atrybut `data-theme` na <html> ("light" | "dark").
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -14,43 +15,57 @@
 
 :root,
 [data-theme="light"] {
-  /* Powierzchnie */
-  --bg: #fbf7ef;
+  /* Powierzchnie — papier z nutą szałwii, nie krem */
+  --bg: #f3f4ef;
   --surface: #ffffff;
-  --surface-alt: #f2eada;
-  --border: #ded2b8;
+  --sunken: #ebede6;
+  --hover: #f7f8f4;
+  --line: #e0e3da;
+  --line-2: #cdd2c6;
 
-  /* Typografia */
-  --text: #16301d;
-  --text-secondary: #6b7266;
+  /* Tekst */
+  --ink: #14241c;
+  --ink-2: #56615a;
+  --ink-3: #8a928c;
 
-  /* Marka — zieleń butelkowa */
-  --accent: #1b4d3e;
-  --accent-strong: #123a2e;
-  --accent-soft: #dcebd9;
-  --accent-contrast: #fbf7ef;
+  /* Marka — zieleń butelkowa i bursztynowe R */
+  --primary: #1b4d3e;
+  --primary-hover: #143d31;
+  --primary-soft: #e2ece5;
+  --on-primary: #ffffff;
+  --amber: #f0c878;
+  --amber-ink: #1b4d3e;
+  --amber-soft: #fbf1dc;
 
-  /* Drugorzędny — terakota (CTA, ważne powiadomienia) */
-  --accent2: #c4653b;
-  --accent2-strong: #a2502c;
-  --accent2-soft: #f3dfcf;
+  /* Terakota — awatary i plakietka administracji */
+  --clay: #b4562e;
+  --clay-soft: #f6e3d8;
 
-  /* Wyróżnienie (logo, zakreślacz w nagłówkach) */
-  --highlight: #f0c878;
-  --highlight-text: #16301d;
+  /* Pasek boczny w ciemnej zieleni */
+  --side: #0f2b22;
+  --side-end: #0b231b;
+  --side-line: #1f4034;
+  --side-ink: #c5d3ca;
+  --side-ink-2: #7f998c;
+  --side-active: #1d4537;
+  --side-active-ink: #ffffff;
+  /* Biel na kolorowym tle (czerwony przycisk, gałka przełącznika, tło podglądu e-maila). */
+  --on-color: #ffffff;
+  --side-on: #7fd1a2;
 
-  /* Tła dekoracyjne kart */
-  --mint: #d5e9d2;
-  --sand: #f0ddbb;
-  --clay: #ead0c4;
-
-  /* Statusy — stonowane, nie neonowe */
-  --good: #3f7d52; /* opłacone */
-  --good-soft: #e1efdf;
-  --warn: #b9832b; /* zbliżający się termin */
-  --warn-soft: #f6ecd8;
-  --bad: #b14a34; /* zaległość */
-  --bad-soft: #f5e1d9;
+  /* Statusy: kolor znaku, tło plakietki, tekst na tym tle */
+  --good: #23794a; /* opłacone, zysk */
+  --good-soft: #e1f1e6;
+  --good-ink: #1a5e39;
+  --warn: #a86708; /* zbliżający się termin */
+  --warn-soft: #fbefd6;
+  --warn-ink: #7e4d06;
+  --bad: #b83a2c; /* zaległość, strata */
+  --bad-soft: #fbe5e1;
+  --bad-ink: #8f2b20;
+  --info: #1f63b0; /* nadchodzące */
+  --info-soft: #e3edf8;
+  --info-ink: #1a4f8a;
 
   /* Wykresy — sloty kategorialne 1 i 2 z docs/chart-palette.md.
      Paleta wyszła z walidatora CVD, nie z oka: zieleń marki i terakota leżą
@@ -58,118 +73,201 @@
      serią jest niebieski, a nie kolor marki. */
   --chart-1: #018161; /* przychód */
   --chart-2: #166eb9; /* koszty */
-  --chart-grid: #e6ded0;
+  --chart-grid: #e6e8e1;
 
-  --shadow-card: 0 1px 2px rgba(22, 48, 29, 0.06);
-  --shadow-float: 0 10px 28px rgba(22, 48, 29, 0.1);
+  /* Tła dekoracyjne strony głównej */
+  --mint: #d5e9d2;
+  --sand: #f0ddbb;
+  --clay-decor: #ead0c4;
+
+  --scrim: rgb(14 26 20 / 0.42);
+  /* Panele mają linię 1 px bez cienia; cień dostają tylko przyciski
+     i elementy pływające (menu, okno, toast). */
+  --elev-btn: 0 1px 1.5px rgb(20 36 28 / 0.14);
+  --elev-float: 0 2px 4px rgb(20 36 28 / 0.06), 0 16px 40px rgb(20 36 28 / 0.12);
 
   color-scheme: light;
 }
 
 [data-theme="dark"] {
-  --bg: #10201a;
-  --surface: #17281f;
-  --surface-alt: #1e3129;
-  --border: #2b4038;
+  --bg: #0b1510;
+  --surface: #121f19;
+  --sunken: #0e1914;
+  --hover: #16261f;
+  --line: #22352c;
+  --line-2: #30473c;
 
-  --text: #eeebe0;
-  --text-secondary: #97a597;
+  --ink: #ecefe9;
+  --ink-2: #a3b0a7;
+  --ink-3: #728177;
 
-  --accent: #6fbe97;
-  --accent-strong: #8ed2ac;
-  --accent-soft: #22392e;
-  --accent-contrast: #0e1a15;
+  --primary: #7fcba3;
+  --primary-hover: #9ad9b7;
+  --primary-soft: #183126;
+  --on-primary: #0b1510;
+  --amber: #f0c878;
+  --amber-ink: #1b4d3e;
+  --amber-soft: #2e2715;
 
-  --accent2: #e08a5f;
-  --accent2-strong: #f0a277;
-  --accent2-soft: #33261d;
+  --clay: #e08a5f;
+  --clay-soft: #33231b;
 
-  --highlight: #4b3d22;
-  --highlight-text: #f0c878;
+  --side: #07100c;
+  --side-end: #050c09;
+  --side-line: #16271f;
+  --side-ink: #b9c7be;
+  --side-ink-2: #6c8277;
+  --side-active: #14302a;
+  --side-active-ink: #ffffff;
+  /* Biel na kolorowym tle (czerwony przycisk, gałka przełącznika, tło podglądu e-maila). */
+  --on-color: #ffffff;
+  --side-on: #7fd1a2;
+
+  --good: #63c18a;
+  --good-soft: #14301f;
+  --good-ink: #8ed6ab;
+  --warn: #e2aa4f;
+  --warn-soft: #33280f;
+  --warn-ink: #f0c27a;
+  --bad: #f07d69;
+  --bad-soft: #3a1d18;
+  --bad-ink: #f7a495;
+  --info: #72a9ea;
+  --info-soft: #14263a;
+  --info-ink: #9cc3f2;
+
+  /* Wykresy — kolumna Dark tej samej palety. */
+  --chart-1: #339e7c;
+  --chart-2: #3a84ca;
+  --chart-grid: #22352c;
 
   --mint: #1f3629;
   --sand: #362c1b;
-  --clay: #372822;
+  --clay-decor: #372822;
 
-  --good: #5fae7c;
-  --good-soft: #1e3126;
-  --warn: #d8a857;
-  --warn-soft: #392e1a;
-  --bad: #d3735a;
-  --bad-soft: #3a2620;
-
-  /* Wykresy — kolumna Dark tej samej palety, przewalidowana na tle #17281F. */
-  --chart-1: #339e7c;
-  --chart-2: #3a84ca;
-  --chart-grid: #2b3f34;
-
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-float: 0 10px 32px rgba(0, 0, 0, 0.4);
+  --scrim: rgb(0 0 0 / 0.6);
+  --elev-btn: 0 1px 1.5px rgb(0 0 0 / 0.4);
+  --elev-float: 0 2px 4px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.55);
 
   color-scheme: dark;
+}
+
+/*
+  Dawne nazwy zmiennych. Część kodu (wykres przepływów, natywne checkboxy)
+  czyta je wprost przez `var(--…)`, więc zostają jako aliasy nowych tokenów,
+  a nie jako osobne kolory. Liczone na <html>, czyli tam, gdzie siedzi
+  `data-theme`, więc przełączają się razem z motywem.
+*/
+:root {
+  --text: var(--ink);
+  --text-secondary: var(--ink-2);
+  --surface-alt: var(--sunken);
+  --border: var(--line);
+  --accent: var(--primary);
 }
 
 /* ── Mapowanie na utilities Tailwinda ──────────────────────────────────────
    `inline` sprawia, że utility kompiluje się do `var(--token)`, więc jedna
    klasa (np. `bg-surface`) sama reaguje na zmianę motywu.
 
-   Nazwy 1:1 z design systemem, z dwoma wyjątkami dla czytelności kodu:
-     --text            → text-fg      (`text-text` czytałoby się źle)
-     --text-secondary  → text-muted
+   Nazwy utilities zostały z poprzedniego systemu, żeby ekrany nieobjęte
+   jeszcze redesignem nie traciły kolorów. Odpowiedniki w projekcie:
+     fg → ink · muted → ink2 · subtle → ink3 · border → line
+     border-strong → line2 · surface-alt → sunken · accent → primary
+     accent2 → clay · highlight → amber
    ──────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-surface-alt: var(--surface-alt);
-  --color-border: var(--border);
+  --color-surface-alt: var(--sunken);
+  --color-hover: var(--hover);
+  --color-border: var(--line);
+  --color-border-strong: var(--line-2);
 
-  --color-fg: var(--text);
-  --color-muted: var(--text-secondary);
+  --color-fg: var(--ink);
+  --color-muted: var(--ink-2);
+  --color-subtle: var(--ink-3);
 
-  --color-accent: var(--accent);
-  --color-accent-strong: var(--accent-strong);
-  --color-accent-soft: var(--accent-soft);
-  --color-accent-contrast: var(--accent-contrast);
+  --color-accent: var(--primary);
+  --color-accent-strong: var(--primary-hover);
+  --color-accent-soft: var(--primary-soft);
+  --color-accent-contrast: var(--on-primary);
 
-  --color-accent2: var(--accent2);
-  --color-accent2-strong: var(--accent2-strong);
-  --color-accent2-soft: var(--accent2-soft);
+  --color-accent2: var(--clay);
+  --color-accent2-strong: color-mix(in srgb, var(--clay) 82%, var(--ink));
+  --color-accent2-soft: var(--clay-soft);
 
-  --color-highlight: var(--highlight);
-  --color-highlight-text: var(--highlight-text);
+  --color-highlight: var(--amber);
+  --color-highlight-text: var(--amber-ink);
+  --color-highlight-soft: var(--amber-soft);
+
+  --color-side: var(--side);
+  --color-side-end: var(--side-end);
+  --color-side-line: var(--side-line);
+  --color-side-ink: var(--side-ink);
+  --color-side-ink-2: var(--side-ink-2);
+  --color-side-active: var(--side-active);
+  --color-side-active-ink: var(--side-active-ink);
+  --color-on-color: var(--on-color);
+  --color-side-on: var(--side-on);
 
   --color-mint: var(--mint);
   --color-sand: var(--sand);
-  --color-clay: var(--clay);
+  --color-clay: var(--clay-decor);
 
   --color-good: var(--good);
   --color-good-soft: var(--good-soft);
+  --color-good-ink: var(--good-ink);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
+  --color-warn-ink: var(--warn-ink);
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
+  --color-bad-ink: var(--bad-ink);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
 
-  /* Krój pisma — zmienne wstrzykuje next/font w layout.tsx */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), var(--font-inter), sans-serif;
-  --font-mono: var(--font-roboto-mono), ui-monospace, monospace;
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
+  --color-scrim: var(--scrim);
 
-  /* Promienie — zaokrąglone, ale spokojne */
-  --radius-card: 14px;
-  --radius-control: 8px;
-  --radius-btn: 6px;
+  /* Kroje — zmienne wstrzykuje next/font w layout.tsx. Dwa kroje: Bricolage
+     Grotesque do tytułów, Geist do całej reszty. */
+  --font-sans:
+    var(--font-geist), "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-display:
+    var(--font-bricolage), var(--font-geist), "Segoe UI", system-ui, -apple-system,
+    sans-serif;
+  /* `font-mono` oznaczało dotąd kwoty i numery. Krój mono wypadł, więc klasa
+     daje Geist z cyframi tabelarycznymi — kolumna kwot się nie przesuwa. */
+  --font-mono: var(--font-sans);
+  --font-mono--font-feature-settings: "tnum" 1;
+
+  /* Promienie: plakietka 6, pole i przycisk 8, alert 10, panel 14,
+     okno i kafel 16. */
   --radius-mark: 4px;
+  --radius-badge: 6px;
+  --radius-btn: 8px;
+  --radius-control: 8px;
+  --radius-alert: 10px;
+  --radius-card: 14px;
+  --radius-tile: 16px;
 
-  --shadow-sm: var(--shadow-card);
-  --shadow-md: var(--shadow-float);
+  --shadow-sm: var(--elev-btn);
+  --shadow-md: var(--elev-float);
+  --shadow-btn: var(--elev-btn);
+  --shadow-float: var(--elev-float);
 }
 
 /* ── Warstwa bazowa ──────────────────────────────────────────────────────── */
 
 @layer base {
   * {
-    border-color: var(--border);
+    border-color: var(--line);
   }
 
   html {
@@ -178,24 +276,25 @@
 
   body {
     background-color: var(--bg);
-    color: var(--text);
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
 
   /* Fokus klawiaturowy — nigdy domyślny niebieski pierścień przeglądarki. */
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    background: color-mix(in srgb, var(--primary) 25%, transparent);
   }
 
   /* Kwoty i daty w tabelach mają się nie „przesuwać" między wierszami. */
   .tabular {
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
   /*
@@ -221,14 +320,14 @@
 
 @layer components {
   /*
-   * Nagłówek wyrazisty — Bricolage Grotesque 800. Waga i tracking chodzą razem
-   * z krojem (tak definiuje je design system), więc jedna klasa zamiast trzech
-   * utilities powtarzanych na każdym nagłówku.
+   * Tytuł strony i okna — Bricolage Grotesque 700 z lekko zaciśniętym
+   * światłem (30 px / −0,4 px w projekcie). Waga i tracking chodzą razem
+   * z krojem, więc jedna klasa zamiast trzech utilities na każdym nagłówku.
    */
   .r-display {
-    font-family: var(--font-bricolage), var(--font-inter), sans-serif;
-    font-weight: 800;
-    letter-spacing: 0.01em;
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.013em;
   }
 
   /*
@@ -237,7 +336,7 @@
    * wyłącznie krycie na hover, a nie kolor w stanie spoczynku.
    */
   .r-navlink {
-    color: var(--text);
+    color: var(--ink);
     text-decoration: none;
     font-weight: 500;
     font-size: 14.5px;
@@ -269,13 +368,13 @@
   .r-range::-webkit-slider-runnable-track {
     height: 6px;
     border-radius: 999px;
-    background: var(--accent-soft);
+    background: var(--primary-soft);
   }
 
   .r-range::-moz-range-track {
     height: 6px;
     border-radius: 999px;
-    background: var(--accent-soft);
+    background: var(--primary-soft);
   }
 
   /* Marginesem środkujemy uchwyt na torze: (6px toru - 20px uchwytu) / 2. */
@@ -286,9 +385,9 @@
     height: 20px;
     width: 20px;
     border-radius: 999px;
-    background: var(--accent);
+    background: var(--primary);
     border: 2px solid var(--surface);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+    box-shadow: var(--elev-btn);
   }
 
   .r-range::-moz-range-thumb {
@@ -296,14 +395,14 @@
     width: 20px;
     border: 2px solid var(--surface);
     border-radius: 999px;
-    background: var(--accent);
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+    background: var(--primary);
+    box-shadow: var(--elev-btn);
   }
 
   /* Zakreślacz w nagłówkach marketingowych: „Zarządzaj <mark>najmem</mark>". */
   .r-mark {
-    background: var(--highlight);
-    color: var(--highlight-text);
+    background: var(--amber);
+    color: var(--amber-ink);
     padding: 0 0.35em;
     border-radius: var(--radius-mark);
     box-decoration-break: clone;

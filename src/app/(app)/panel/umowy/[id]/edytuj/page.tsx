@@ -1,10 +1,9 @@
-import { ArrowLeft } from "lucide-react";
+import { Building2, Lock, Users } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { LeaseEditForm } from "@/components/panel/leases/lease-edit-form";
-import { Alert } from "@/components/ui/alert";
+import { PageHeader } from "@/components/panel/page-header";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getLease } from "@/lib/leases/service";
 import { formatAmount } from "@/lib/money";
@@ -34,34 +33,32 @@ export default async function EditLeasePage({ params }: { params: Promise<{ id: 
   const settableStatus = LEASE_SETTABLE_STATUSES.find((value) => value === lease.status);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link
-          href={`/panel/umowy/${lease.id}`}
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {title}
-        </Link>
-
-        <h1 className="r-display text-[26px] leading-tight text-fg">
-          {d.panel.panelMisc.leaseEditTitle}
-        </h1>
-        <p className="text-sm text-muted">
-          {lease.property.name}
-          {lease.room ? ` · ${lease.room.name}` : ""} ·{" "}
-          {lease.tenants.map(({ tenant }) => `${tenant.firstName} ${tenant.lastName}`).join(", ")}
-        </p>
-      </div>
-
-      {/* Mówimy wprost, czego tu nie ma, zamiast zostawiać użytkownika
-          z szukaniem pola, którego nie znajdzie. */}
-      <Alert tone="info">
-        {d.panel.panelMisc.leaseEditLead} {d.panel.panelMisc.leaseEditElsewhere}
-      </Alert>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader
+        back={{ href: `/panel/umowy/${lease.id}`, label: title }}
+        title={d.panel.panelMisc.leaseEditTitle}
+      />
 
       <LeaseEditForm
         leaseId={lease.id}
+        /* Lokal i najemców zmienia się nową umową, nie edycją tej — karta
+           pokazuje je z kłódką zamiast zdania, czego tu nie ma. */
+        subject={
+          <section className="flex items-start gap-3 rounded-tile border border-border bg-surface-alt p-4 lg:rounded-card lg:px-6">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <span className="flex items-center gap-2.5 text-[14.5px] font-semibold text-fg">
+                <Building2 className="size-[18px] shrink-0 text-subtle" aria-hidden />
+                {lease.property.name}
+                {lease.room ? `, ${lease.room.name}` : ""}
+              </span>
+              <span className="flex items-center gap-2.5 text-sm text-muted">
+                <Users className="size-[18px] shrink-0 text-subtle" aria-hidden />
+                {lease.tenants.map(({ tenant }) => `${tenant.firstName} ${tenant.lastName}`).join(", ")}
+              </span>
+            </div>
+            <Lock className="size-[18px] shrink-0 text-subtle" aria-label={d.panel.panelMisc.leaseEditElsewhere} />
+          </section>
+        }
         defaultValues={{
           number: lease.number ?? "",
           // Umowa wypowiedziana albo wygasła nie dostaje selecta: przestawienie

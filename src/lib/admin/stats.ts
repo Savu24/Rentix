@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma";
 
 const DAY = 24 * 60 * 60 * 1000;
 
-export type PlanBreakdown = { plan: SubscriptionPlan; organizations: number };
+export type PlanBreakdown = { plan: SubscriptionPlan; organizations: number; sharePercent: number };
 
 export type RevenueLine = {
   locale: Locale;
@@ -92,10 +92,15 @@ export async function platformStats(): Promise<PlatformStats> {
   const withSubscription = planGroups.reduce((sum, group) => sum + group._count._all, 0);
   const withoutSubscription = organizations - withSubscription;
 
-  const plans: PlanBreakdown[] = PLAN_ORDER.map((plan) => ({
-    plan,
-    organizations: (counted.get(plan) ?? 0) + (plan === "FREE" ? withoutSubscription : 0),
-  }));
+  const plans: PlanBreakdown[] = PLAN_ORDER.map((plan) => {
+    const count = (counted.get(plan) ?? 0) + (plan === "FREE" ? withoutSubscription : 0);
+    return {
+      plan,
+      organizations: count,
+      /** Udział w liczbie wszystkich organizacji, w pełnych procentach. */
+      sharePercent: organizations === 0 ? 0 : Math.round((count / organizations) * 100),
+    };
+  });
 
   const revenue = new Map<Locale, RevenueLine>(
     LOCALES.map((locale) => [locale, { locale, amount: 0, accounts: 0 }]),

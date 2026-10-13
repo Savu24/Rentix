@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import { EMPTY_OWNER, OwnerFields } from "@/components/panel/owners/owner-fields";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { FormSection } from "@/components/panel/form-section";
 import { api } from "@/lib/api/client";
 import {
   ownerFormSchema,
@@ -65,26 +65,20 @@ export function OwnerForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
-            <p className="mt-0.5 text-sm text-muted">{t.lead}</p>
-          </div>
+      <FormSection title={t.title} icon={UserRound} collapsible={false}>
 
           <OwnerFields register={register} errors={errors} disabled={isSubmitting} />
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-row-reverse flex-wrap justify-start gap-2.5">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+          {isSubmitting ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
           {isEdit ? t.save : d.panel.ownersPage.add}
         </Button>
-        <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => router.back()}>
+        <Button type="button" variant="ghost" disabled={isSubmitting} onClick={() => router.back()}>
           {d.panel.common.cancel}
         </Button>
       </div>

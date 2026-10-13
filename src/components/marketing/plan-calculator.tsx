@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import {
   CALCULATOR_DEFAULT_LEASES,
   CALCULATOR_MAX_LEASES,
@@ -59,20 +58,20 @@ export function PlanCalculator({ locale, t, plans }: Props) {
         }).format(estimate.shareOfRent);
 
   return (
-    <Card className="mx-auto mt-7 max-w-[1100px]">
-      <CardContent className="grid gap-8 p-[26px] sm:p-8 lg:grid-cols-2 lg:items-center lg:gap-12">
-        <div className="flex flex-col gap-7">
-          <div>
-            <h3 className="text-[15px] font-semibold text-fg">{t.heading}</h3>
-            <p className="mt-1 text-[13.5px] text-muted">{t.lead}</p>
-          </div>
+    <section className="mt-8 grid grid-cols-1 gap-8 rounded-tile border border-border bg-surface p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center lg:gap-10">
+      <div className="flex flex-col gap-6">
+        <div>
+          <h3 className="text-lg font-semibold text-fg">{t.heading}</h3>
+          <p className="mt-1 text-[13.5px] text-muted">{t.lead}</p>
+        </div>
 
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8">
           <div>
             <div className="flex items-baseline justify-between gap-3">
-              <label htmlFor="calc-leases" className="text-[13.5px] font-medium text-fg">
+              <label htmlFor="calc-leases" className="text-[13.5px] text-muted">
                 {t.leases}
               </label>
-              <span className="tabular r-display text-[19px] text-fg">
+              <span className="font-mono text-[15px] font-semibold text-fg">
                 {leases}
                 {leases === CALCULATOR_MAX_LEASES ? "+" : ""}
               </span>
@@ -91,10 +90,10 @@ export function PlanCalculator({ locale, t, plans }: Props) {
 
           <div>
             <div className="flex items-baseline justify-between gap-3">
-              <label htmlFor="calc-rent" className="text-[13.5px] font-medium text-fg">
+              <label htmlFor="calc-rent" className="text-[13.5px] text-muted">
                 {t.rent}
               </label>
-              <span className="tabular r-display text-[19px] text-fg">
+              <span className="font-mono text-[15px] font-semibold whitespace-nowrap text-fg">
                 {formatMoneyWhole(rent, locale)}
               </span>
             </div>
@@ -109,31 +108,28 @@ export function PlanCalculator({ locale, t, plans }: Props) {
               onChange={(event) => setRent(Number(event.target.value))}
             />
           </div>
-
-          <p className="text-[13px] text-muted">
-            {fill(t.rentRoll, { amount: formatMoneyWhole(estimate.rentRollGrosze, locale) })}
-          </p>
         </div>
 
-        <div className="rounded-[16px] bg-mint px-6 py-8 text-center">
-          <p className="text-[13px] text-fg/60">{t.plan}</p>
-          <p className="r-display mt-1 text-[26px] text-fg">{card.name}</p>
+        <p className="text-[13px] text-subtle">
+          {fill(t.rentRoll, { amount: formatMoneyWhole(estimate.rentRollGrosze, locale) })}
+        </p>
+      </div>
 
-          <p className="r-display mt-4 text-[38px] leading-none text-fg">
-            {card.price}
-            <span className="font-sans text-[15px] font-medium text-fg/60">{card.period}</span>
-          </p>
-          <p className="mt-1.5 text-[13.5px] text-fg/70">{card.note}</p>
-
-          {/* Zdanie o udziale to puenta kalkulatora, więc dostaje własną
-              kreskę — ma się czytać jako wniosek, a nie kolejny wiersz. */}
-          <p className="mt-5 border-t border-fg/10 pt-5 text-[13.5px] text-fg/80">
-            {estimate.priceGrosze === 0 || share === null
-              ? t.shareFree
-              : fill(t.share, { percent: share })}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex flex-col gap-1 border-t border-border pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8" aria-live="polite">
+        <p className="text-sm font-semibold text-accent">
+          {t.plan}: {card.name}
+        </p>
+        <p className="r-display mt-2 text-[38px] leading-none tracking-[-0.8px] text-fg">
+          {card.price}
+          <span className="font-sans text-[14px] font-medium tracking-normal text-muted">{card.period}</span>
+        </p>
+        <p className="mt-1 text-[13.5px] text-muted">{card.note}</p>
+        {/* Udział w czynszu to puenta kalkulatora: cena stoi w miejscu, więc
+            procent spada z każdą kolejną umową. */}
+        <p className="mt-3 text-[13.5px] text-muted">
+          {estimate.priceGrosze === 0 || share === null ? t.shareFree : fill(t.share, { percent: share })}
+        </p>
+      </div>
+    </section>
   );
 }

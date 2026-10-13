@@ -3,10 +3,9 @@ import { notFound } from "next/navigation";
 
 import { DeleteAccount } from "@/components/panel/settings/delete-account";
 import { PasswordForm } from "@/components/panel/settings/password-form";
-import { PlanCard } from "@/components/panel/settings/plan-card";
 import { ProfileForm } from "@/components/panel/settings/profile-form";
+import { SettingsColumns } from "@/components/panel/settings/settings-columns";
 import { requireOwnerSession } from "@/lib/auth/session";
-import { organizationPlan } from "@/lib/billing/server";
 import { accountDeletionSummary } from "@/lib/organizations/service";
 import { prisma } from "@/lib/prisma";
 import { panelDictionary } from "@/lib/panel/dictionary";
@@ -18,25 +17,22 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SettingsAccountPage() {
   const session = await requireOwnerSession("/panel/ustawienia/konto");
 
-  const [user, organizations, plan] = await Promise.all([
+  const [user, organizations] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: { email: true, name: true, phone: true, passwordHash: true },
     }),
     accountDeletionSummary(session.user.id),
-    organizationPlan(session.user.organizationId),
   ]);
 
   if (!user) notFound();
 
   return (
-    <div className="flex flex-col gap-5">
+    <SettingsColumns>
       <ProfileForm
         email={user.email}
         defaultValues={{ name: user.name ?? "", phone: user.phone ?? "" }}
       />
-
-      <PlanCard usage={plan} />
 
       {/* Konto bez hasła loguje się przez zewnętrznego dostawcę — formularz
           zmiany hasła nie miałby czego zmieniać. */}
@@ -44,6 +40,6 @@ export default async function SettingsAccountPage() {
 
       {/* Usunięcie konta na końcu strony: nie sąsiaduje z żadnym „Zapisz". */}
       {user.passwordHash ? <DeleteAccount organizations={organizations} /> : null}
-    </div>
+    </SettingsColumns>
   );
 }

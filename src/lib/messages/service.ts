@@ -78,6 +78,7 @@ export async function listSentEmails(organizationId: string, query: MessageListQ
         title: true,
         toEmail: true,
         createdAt: true,
+        tenant: { select: { firstName: true, lastName: true } },
       },
     }),
     prisma.notification.count({ where }),

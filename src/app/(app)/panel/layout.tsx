@@ -2,7 +2,6 @@ import { AccessRevoked } from "@/components/panel/access-revoked";
 import { MobileNav } from "@/components/panel/mobile-nav";
 import { PanelLocaleSync } from "@/components/panel/panel-locale";
 import { Sidebar } from "@/components/panel/sidebar";
-import { Topbar } from "@/components/panel/topbar";
 import { membershipRole, resolveOwnerSession, userOrganizations } from "@/lib/auth/session";
 import { PlanFeaturesProvider } from "@/lib/billing/client";
 import { organizationFeatures, organizationPlan } from "@/lib/billing/server";
@@ -35,7 +34,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     (`requireApiOwner`), a tutaj chodzi o widok — inaczej usunięty
     współpracownik oglądałby cudze dane do wygaśnięcia tokenu.
   */
-  if (!(await membershipRole(session.user.id, session.user.organizationId))) {
+  const role = await membershipRole(session.user.id, session.user.organizationId);
+  if (!role) {
     return <AccessRevoked />;
   }
 
@@ -51,6 +51,12 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   const userInitials = initials(session.user.name);
   const userName = session.user.name ?? dictionary.panel.shell.fallbackAccountName;
+  /*
+    Rola bierze się z tokenu sesji, więc bywa o odświeżenie spóźniona — i to
+    wystarcza, bo decyduje wyłącznie o widoczności odnośnika do administracji.
+    Kto na niego kliknie bez uprawnień, dostanie 404 z `requireAdminSession`.
+  */
+  const isAdmin = session.user.role === "ADMIN";
 
   return (
     <I18nProvider locale={locale} dictionary={clientDictionary(locale)}>
@@ -62,21 +68,34 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <PlanFeaturesProvider features={features}>
         <PanelLocaleSync locale={locale} />
 
+        {/*
+          Bez paska górnego: przełącznik organizacji siedzi pod logo w pasku
+          bocznym, a motyw, powiadomienia, administracja i wylogowanie
+          w menu konta w jego stopce. Na telefonie to samo jest w arkuszu
+          „Więcej" dolnego paska.
+        */}
         <div className="flex min-h-dvh bg-bg">
-          <Sidebar userName={userName} planLabel={planLabel} initials={userInitials} />
+          <Sidebar
+            userName={userName}
+            email={session.user.email ?? null}
+            roleLabel={dictionary.panel.team.roles[role]}
+            planLabel={planLabel}
+            initials={userInitials}
+            organizations={organizations}
+            activeOrganizationId={session.user.organizationId}
+            isAdmin={isAdmin}
+          />
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar
-              initials={userInitials}
-              locale={locale}
+            <main className="flex-1 px-4 pt-6 pb-8 sm:px-6 lg:px-12 lg:pt-10 lg:pb-12">
+              {children}
+            </main>
+
+            <MobileNav
               organizations={organizations}
               activeOrganizationId={session.user.organizationId}
-              isAdmin={session.user.role === "ADMIN"}
+              isAdmin={isAdmin}
             />
-
-            <main className="flex-1 px-4 py-5 sm:px-6 sm:py-7 lg:px-8">{children}</main>
-
-            <MobileNav />
           </div>
         </div>
       </PlanFeaturesProvider>

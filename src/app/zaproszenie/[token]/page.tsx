@@ -1,3 +1,4 @@
+import { ArrowRight, Check, Clock, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -9,7 +10,7 @@ import {
 } from "@/components/auth/invitation-form";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/auth";
 import { loginPathWithReturn, publicRoutes } from "@/lib/auth/routes";
 import { clientDictionary, getDictionary } from "@/lib/i18n";
@@ -18,6 +19,7 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 import { fill, formatDateIn } from "@/lib/i18n/format";
 import { findInvitation } from "@/lib/invitations/service";
 import { invitationPath } from "@/lib/invitations/tokens";
+import { initials } from "@/lib/utils";
 import { membershipRoleLabels } from "@/lib/validations/team";
 
 import { acceptAsCurrentUser, acceptWithNewAccount } from "./actions";
@@ -56,16 +58,19 @@ export default async function InvitationPage({ params }: Params) {
 
     return (
       <Shell locale={DEFAULT_LOCALE}>
-        <Card>
-          <CardContent className="flex flex-col gap-3">
-            <Alert tone="error">{message}</Alert>
-            {/* Jedyne sensowne wyjście z każdego z tych trzech stanów: kto
-                konto ma, ten się loguje; kto nie ma, prosi o nowy link. */}
-            <Button asChild size="sm" variant="secondary">
-              <Link href={publicRoutes(DEFAULT_LOCALE).login}>{d.auth.login.submit}</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <span className="flex size-14 items-center justify-center rounded-tile bg-bad-soft" aria-hidden>
+            <Clock className="size-7 text-bad" strokeWidth={1.8} />
+          </span>
+          <h1 className="r-display text-[22px] leading-8 text-fg" role="alert">
+            {message}
+          </h1>
+          {/* Jedyne sensowne wyjście z każdego z tych trzech stanów: kto
+              konto ma, ten się loguje; kto nie ma, prosi o nowy link. */}
+          <Button asChild variant="secondary">
+            <Link href={publicRoutes(DEFAULT_LOCALE).login}>{d.auth.login.submit}</Link>
+          </Button>
+        </div>
       </Shell>
     );
   }
@@ -80,79 +85,79 @@ export default async function InvitationPage({ params }: Params) {
 
   const isTeam = invitation.kind === "TEAM";
   const heading = isTeam ? t.team.heading : t.tenant.heading;
-  const lead = isTeam
-    ? fill(t.team.lead, {
-        organization: invitation.organizationName,
-        role: membershipRoleLabels(d)[invitation.role ?? "MEMBER"],
-      })
-    : fill(t.tenant.lead, { organization: invitation.organizationName });
 
   const session = await auth();
   const sessionEmail = session?.user?.email?.toLowerCase() ?? null;
 
   return (
     <Shell locale={locale}>
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="r-display text-[22px] leading-tight text-fg">{heading}</h1>
-            <p className="text-sm text-muted">{lead}</p>
-          </div>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-[13.5px] font-semibold text-muted">{invitation.organizationName}</p>
+          <h1 className="r-display text-[30px] leading-9 tracking-[-0.5px] text-fg">{heading}</h1>
+          {isTeam ? (
+            <Badge tone="accent" icon={Users}>
+              {membershipRoleLabels(d)[invitation.role ?? "MEMBER"]}
+            </Badge>
+          ) : null}
+        </div>
 
-          <dl className="flex flex-col gap-0.5 rounded-control bg-surface-alt px-3.5 py-3 text-sm">
-            <dt className="text-xs text-muted">{t.email}</dt>
-            <dd className="font-medium text-fg">{invitation.email}</dd>
-          </dl>
-
-          {sessionEmail === null ? (
-            invitation.hasAccount ? (
-              // Konto istnieje, ale nikt nie jest zalogowany. Nie zakładamy
-              // drugiego na ten sam adres i nie przyjmujemy zaproszenia bez
-              // hasła — najpierw logowanie, z adresem powrotu tutaj.
-              <div className="flex flex-col gap-3">
-                <h2 className="text-[15px] font-semibold text-fg">{t.existing.heading}</h2>
-                <p className="text-sm text-muted">
-                  {fill(t.existing.lead, { email: invitation.email })}
-                </p>
-                <Button asChild>
-                  <Link href={loginPathWithReturn(locale, invitationPath(token))}>
-                    {t.existing.login}
-                  </Link>
-                </Button>
+        {sessionEmail === null ? (
+          invitation.hasAccount ? (
+            // Konto istnieje, ale nikt nie jest zalogowany. Nie zakładamy
+            // drugiego na ten sam adres i nie przyjmujemy zaproszenia bez
+            // hasła — najpierw logowanie, z adresem powrotu tutaj.
+            <div className="flex flex-col gap-4">
+              <h2 className="sr-only">{t.existing.heading}</h2>
+              <div className="flex items-center gap-3 rounded-card bg-surface-alt px-4 py-3.5">
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[13px] font-semibold text-accent"
+                  aria-hidden
+                >
+                  {initials(invitation.email)}
+                </span>
+                <span className="min-w-0 text-[14.5px] font-semibold [overflow-wrap:anywhere] text-fg">
+                  {invitation.email}
+                </span>
               </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div>
-                  <h2 className="text-[15px] font-semibold text-fg">{t.create.heading}</h2>
-                  <p className="mt-0.5 text-sm text-muted">{t.create.lead}</p>
-                </div>
-                <InvitationCreateAccountForm
-                  action={acceptWithNewAccount.bind(null, token)}
-                />
-              </div>
-            )
-          ) : sessionEmail === invitation.email.toLowerCase() ? (
-            <div className="flex flex-col gap-3">
-              <h2 className="text-[15px] font-semibold text-fg">{t.ready.heading}</h2>
-              <p className="text-sm text-muted">{fill(t.ready.lead, { email: sessionEmail })}</p>
-              <InvitationAcceptButton action={acceptAsCurrentUser} token={token} />
+              <Button asChild size="lg" block>
+                <Link href={loginPathWithReturn(locale, invitationPath(token))}>
+                  {t.existing.login}
+                  <ArrowRight className="size-[18px]" aria-hidden />
+                </Link>
+              </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
-              <Alert tone="warning">{t.errors.wrongAccount}</Alert>
-              <form action={signOutAction}>
-                <Button type="submit" variant="secondary" size="sm">
-                  {d.panel.shell.signOut}
-                </Button>
-              </form>
+            <div className="flex flex-col gap-4">
+              <h2 className="sr-only">{t.create.heading}</h2>
+              <InvitationCreateAccountForm action={acceptWithNewAccount.bind(null, token)} email={invitation.email} />
             </div>
-          )}
+          )
+        ) : sessionEmail === invitation.email.toLowerCase() ? (
+          <div className="flex flex-col items-start gap-4">
+            <h2 className="sr-only">{t.ready.heading}</h2>
+            <Badge tone="good" icon={Check} className="h-auto max-w-full py-1 whitespace-normal [overflow-wrap:anywhere]">
+              {fill(t.ready.lead, { email: sessionEmail })}
+            </Badge>
+            <div className="w-full">
+              <InvitationAcceptButton action={acceptAsCurrentUser} token={token} />
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <Alert tone="warning">{t.errors.wrongAccount}</Alert>
+            <form action={signOutAction}>
+              <Button type="submit" variant="secondary">
+                {d.panel.shell.signOut}
+              </Button>
+            </form>
+          </div>
+        )}
 
-          <p className="text-xs text-muted">
-            {fill(t.expires, { date: formatDateIn(invitation.expiresAt, locale, "long") })}
-          </p>
-        </CardContent>
-      </Card>
+        <p className="text-center text-[13px] text-subtle">
+          {fill(t.expires, { date: formatDateIn(invitation.expiresAt, locale, "long") })}
+        </p>
+      </div>
     </Shell>
   );
 }

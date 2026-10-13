@@ -69,6 +69,7 @@ export async function getTenantPortal(userId: string) {
                   number: true,
                   status: true,
                   issueDate: true,
+                  periodStart: true,
                   dueDate: true,
                   totalGrossGrosze: true,
                   paidGrosze: true,
@@ -93,7 +94,17 @@ export async function getTenantPortal(userId: string) {
     })),
   }));
 
+  const unpaid = leases
+    .flatMap((lease) => lease.invoices)
+    .filter((invoice) => invoice.remainingGrosze > 0 && invoice.status !== "CANCELLED")
+    .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
   return {
+    /**
+     * Najstarszy nieopłacony dokument — to od niego najemca zaczyna płacić,
+     * więc jego termin i PDF stoją przy kwocie „Do zapłaty".
+     */
+    nextPayment: unpaid[0] ?? null,
     tenant: {
       id: tenant.id,
       firstName: tenant.firstName,

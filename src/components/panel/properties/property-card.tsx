@@ -1,114 +1,176 @@
-import { Building2, MapPin } from "lucide-react";
+import { Building2, ChevronRight, KeyRound, Layers, Ruler } from "lucide-react";
 import Link from "next/link";
 
+import { OccupancyBadge } from "@/components/panel/properties/occupancy-badge";
+import { PropertyIcon } from "@/components/panel/properties/property-icon";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { fill, formatArea } from "@/lib/i18n/format";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import type { PropertyListItem } from "@/lib/properties/service";
-import { fill, pluralize } from "@/lib/i18n/format";
-import type { Dictionary } from "@/lib/i18n/types";
-import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+import { cn } from "@/lib/utils";
 import { propertyTypeLabels } from "@/lib/validations/property";
 
-/**
- * Status obłożenia całej nieruchomości, wyprowadzony z jej jednostek.
- * Nie trzymamy go w bazie — zmienia się przy każdej umowie i byłby ciągle
- * nieaktualny.
- */
-function occupancyBadge(property: PropertyListItem, t: Dictionary["panel"]["propertiesPage"]) {
-  const badge = t.badge;
+/*
+  Lista nieruchomości (redesign/03-nieruchomosci-lista-*.svg): gęsta tabela
+  na desktopie, karty na telefonie. Bez wchodzenia w kartę widać wszystko,
+  co było na liście: adres, typ, pokoje, piętro, metraż i kod do domofonu.
+*/
 
-  // Remont przykrywa rachunek pokoi: lokal wyłączony z najmu nie jest „wolny",
-  // choćby wszystkie pokoje stały puste.
-  if (property.status === "UNAVAILABLE") {
-    return { tone: "neutral" as const, label: badge.underRefurbishment };
-  }
+/** Kolumny tabeli — te same dla nagłówka i wierszy. */
+const COLUMNS =
+  "lg:grid lg:grid-cols-[minmax(0,1fr)_120px_128px_56px_88px_104px_168px_18px] lg:items-center lg:gap-4";
 
-  // Bez pokoi wynajmuje się całość — wtedy liczy się status nieruchomości.
-  if (property.roomCount === 0) {
-    return property.status === "OCCUPIED"
-      ? { tone: "good" as const, label: badge.let }
-      : { tone: "warning" as const, label: badge.vacant };
-  }
-  if (property.availableRoomCount === 0) {
-    // Krótko, bo etykieta stoi w wąskiej kolumnie na telefonie — „Wszystkie
-    // pokoje zajęte" nie mieściło się i rozpychało kartę poza ekran.
-    return { tone: "good" as const, label: badge.allLet };
-  }
-  if (property.occupiedRoomCount === 0) {
-    return { tone: "warning" as const, label: badge.vacant };
-  }
-  return {
-    tone: "warning" as const,
-    label: fill(badge.someVacant, {
-      available: property.availableRoomCount,
-      total: property.roomCount,
-    }),
-  };
+export async function PropertyTableHead() {
+  const t = (await panelDictionary()).panel.propertiesPage.table;
+
+  return (
+    <div
+      className={cn(
+        COLUMNS,
+        "hidden h-10 border-b border-border bg-hover px-6 text-[12.5px] font-[550] text-muted",
+      )}
+    >
+      <span>{t.property}</span>
+      <span>{t.type}</span>
+      <span>{t.rooms}</span>
+      <span>{t.floor}</span>
+      <span>{t.area}</span>
+      <span>{t.intercom}</span>
+      <span className="text-right">{t.status}</span>
+      <span />
+    </div>
+  );
+}
+
+function Fact({
+  icon: Icon,
+  children,
+  strong,
+}: {
+  icon: typeof Ruler;
+  children: React.ReactNode;
+  strong?: boolean;
+}) {
+  return (
+    <span className="inline-flex h-[26px] items-center gap-1.5 rounded-[7px] bg-surface-alt px-2 text-[13px] font-[550] text-muted">
+      <Icon className="size-3 text-subtle" strokeWidth={2} aria-hidden />
+      <span className={cn("font-mono", strong && "text-fg")}>{children}</span>
+    </span>
+  );
 }
 
 export async function PropertyCard({ property }: { property: PropertyListItem }) {
   const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
   const t = d.panel.propertiesPage;
 
-  const badge = occupancyBadge(property, t);
   const address = formatPropertyAddress(property);
+  const typeLabel = propertyTypeLabels(d)[property.type];
+  const floor =
+    property.floor === null ? null : property.floor === 0 ? t.groundFloor : String(property.floor);
+  const area = property.areaM2 ? formatArea(property.areaM2, locale) : null;
+  const full = property.roomCount > 0 && property.occupiedRoomCount === property.roomCount;
+
+  const meter =
+    property.roomCount > 0 ? (
+      <span className="flex items-center gap-2.5">
+        <span
+          className="block h-1.5 w-[100px] overflow-hidden rounded-full bg-surface-alt lg:w-[76px]"
+          aria-hidden
+        >
+          <span
+            className={cn("block h-full rounded-full", full ? "bg-good" : "bg-accent")}
+            style={{ width: `${property.occupancyPercent}%` }}
+          />
+        </span>
+        <span className="font-mono text-[13px] font-[550] text-muted lg:text-[13.5px]">
+          <span className="lg:hidden">
+            {fill(t.roomsOccupied, {
+              occupied: property.occupiedRoomCount,
+              total: property.roomCount,
+            })}
+          </span>
+          <span className="hidden lg:inline">
+            {property.occupiedRoomCount}/{property.roomCount}
+          </span>
+        </span>
+      </span>
+    ) : (
+      <span className="text-sm text-subtle">{t.whole}</span>
+    );
 
   return (
-    <Card className="transition-colors hover:border-muted">
+    <li className="lg:border-t lg:border-border lg:first:border-t-0">
       <Link
         href={`/panel/nieruchomosci/${property.id}`}
-        className="flex h-full flex-col gap-3 rounded-card p-4"
+        className={cn(
+          COLUMNS,
+          "group flex flex-col gap-3 rounded-tile border border-border bg-surface p-4 transition-colors",
+          "lg:min-h-[72px] lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:py-3 lg:hover:bg-hover",
+        )}
       >
-        {/*
-          Nagłówek zawija się, gdy zabraknie miejsca.
-
-          Znacznik statusu ma `whitespace-nowrap`, więc nie da się go zwęzić —
-          bez `flex-wrap` i minimalnej szerokości bloku z nazwą wypychał treść
-          poza kartę, a wraz z nią całą stronę w poziomie. Teraz przy wąskim
-          ekranie spada do drugiej linii zamiast rozpychać układ.
-        */}
-        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-surface-alt">
-            <Building2 className="h-5 w-5 text-muted" aria-hidden />
-          </span>
-
-          <div className="min-w-[9rem] flex-1">
-            <p className="truncate text-[15px] font-semibold text-fg">{property.name}</p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-              <MapPin className="h-3 w-3 shrink-0" aria-hidden />
-              <span className="truncate">{address}</span>
-            </p>
-          </div>
-
-          <Badge tone={badge.tone} className="shrink-0">
-            {badge.label}
-          </Badge>
-        </div>
-
-        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
-          <span>{propertyTypeLabels(d)[property.type]}</span>
-          {property.roomCount > 0 ? (
-            <span>
-              {property.roomCount} {pluralize(locale, property.roomCount, t.rooms)}
+        <span className="flex min-w-0 items-center gap-3 lg:gap-4">
+          <PropertyIcon type={property.type} />
+          <span className="min-w-0">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-[15px] font-semibold text-fg lg:text-[14.5px]">
+                {property.name}
+              </span>
+              {property.archivedAt ? (
+                <Badge size="sm" className="shrink-0">
+                  {t.detail.archived}
+                </Badge>
+              ) : null}
             </span>
+            <span className="block truncate text-[13px] text-muted">{address}</span>
+          </span>
+        </span>
+
+        {/* Telefon: fakty jako żetony pod nazwą. */}
+        <span className="flex flex-wrap gap-1.5 lg:hidden">
+          <Fact icon={Building2}>{typeLabel}</Fact>
+          {floor !== null ? (
+            <Fact icon={Layers}>
+              {property.floor === 0 ? floor : fill(t.detail.floor, { floor: floor })}
+            </Fact>
           ) : null}
-          {property.areaM2 ? (
-            <span className="tabular">{locale === "pl" ? property.areaM2.replace(".", ",") : property.areaM2} m²</span>
-          ) : null}
-          {property.floor !== null ? (
-            <span className="tabular">{fill(t.detail.floor, { floor: property.floor })}</span>
-          ) : null}
+          {area ? <Fact icon={Ruler}>{area}</Fact> : null}
           {/* Kod do domofonu na liście, bo po niego się tu wraca — zwykle
               stojąc przed budynkiem z telefonem w ręku. */}
           {property.intercomCode ? (
-            <span className="tabular">domofon {property.intercomCode}</span>
+            <Fact icon={KeyRound} strong>
+              {property.intercomCode}
+            </Fact>
           ) : null}
-          {property.archivedAt ? (
-            <span className="font-medium text-warn">Zarchiwizowana</span>
+        </span>
+
+        {/* Desktop: kolumny tabeli. */}
+        <span className="hidden truncate text-sm text-muted lg:block">{typeLabel}</span>
+        <span className="hidden lg:block">{meter}</span>
+        <span className="hidden font-mono text-sm text-muted lg:block">{floor ?? ""}</span>
+        <span className="hidden font-mono text-sm whitespace-nowrap text-muted lg:block">
+          {area ?? ""}
+        </span>
+        <span className="hidden lg:block">
+          {property.intercomCode ? (
+            <span className="inline-flex h-6 items-center gap-1.5 rounded-badge bg-surface-alt px-2">
+              <KeyRound className="size-3.5 text-subtle" strokeWidth={2} aria-hidden />
+              <span className="font-mono text-[13.5px] font-semibold text-fg">
+                {property.intercomCode}
+              </span>
+            </span>
           ) : null}
-        </div>
+        </span>
+
+        <span className="flex items-center justify-between gap-3 lg:justify-end">
+          <span className="lg:hidden">{meter}</span>
+          <OccupancyBadge property={property} labels={t.badge} />
+        </span>
+        <ChevronRight
+          className="hidden size-[18px] text-subtle transition-colors group-hover:text-fg lg:block"
+          aria-hidden
+        />
       </Link>
-    </Card>
+    </li>
   );
 }

@@ -1,7 +1,6 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { FormPage } from "@/components/panel/form-page";
 import { TenantForm } from "@/components/panel/tenants/tenant-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { panelDictionary } from "@/lib/panel/dictionary";
@@ -12,23 +11,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function NewTenantPage() {
   await requireOwnerSession("/panel/najemcy/nowy");
-  const t = (await panelDictionary()).panel.tenantsPage;
+  const d = await panelDictionary();
+  const t = d.panel.tenantsPage;
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link
-          href="/panel/najemcy"
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {t.title}
-        </Link>
-        <h1 className="r-display text-[26px] leading-tight text-fg">{t.newTitle}</h1>
-        <p className="text-sm text-muted">{t.newLead}</p>
-      </div>
-
+    <FormPage
+      back={{ href: "/panel/najemcy", label: t.title }}
+      title={t.newTitle}
+      steps={{ label: d.panel.panelMisc.next, items: d.panel.panelMisc.tenantSteps, active: 0 }}
+    >
       <TenantForm />
-    </div>
+    </FormPage>
   );
 }

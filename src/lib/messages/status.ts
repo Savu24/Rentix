@@ -20,11 +20,11 @@ export function resolveMessageStatus(row: {
 
 export const MESSAGE_STATUS_TONE: Record<
   MessageStatus,
-  "neutral" | "good" | "warning" | "critical" | "accent"
+  "neutral" | "good" | "warning" | "critical" | "info"
 > = {
   queued: "neutral",
   scheduled: "neutral",
-  sent: "accent",
+  sent: "info",
   delivered: "good",
   opened: "good",
   clicked: "good",

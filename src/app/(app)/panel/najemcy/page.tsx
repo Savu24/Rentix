@@ -1,31 +1,36 @@
-import { Archive, CalendarClock, Plus, SearchX, UserPlus } from "lucide-react";
+import { Archive, CheckCircle2, ChevronRight, Clock, SearchX, UserPlus, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { ListSearch } from "@/components/panel/list-search";
 import { ListSort } from "@/components/panel/list-sort";
+import { PageHeader } from "@/components/panel/page-header";
+import { SegmentedFilter } from "@/components/panel/segmented-filter";
+import { LeaseStatusBadge, TenantStatusBadge } from "@/components/panel/status-badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { fill, pluralize } from "@/lib/i18n/format";
 import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { formatMoney } from "@/lib/money";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { listTenants } from "@/lib/tenants/service";
-import { leaseStatusLabels, LEASE_STATUS_TONE } from "@/lib/validations/lease";
+import { cn, initials } from "@/lib/utils";
 import {
-  tenantStatusLabels,
-  TENANT_STATUS_TONE,
   tenantListQuerySchema,
   tenantSortLabels,
   TENANT_SORT_OPTIONS,
 } from "@/lib/validations/tenant";
-import { fill, pluralize } from "@/lib/i18n/format";
-import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await panelDictionary()).panel.tenantsPage.title };
 }
+
+/** Kolumny tabeli — te same dla nagłówka i wierszy. */
+const COLUMNS =
+  "lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,0.9fr)_164px_18px] lg:items-center lg:gap-5";
 
 export default async function TenantsPage({
   searchParams,
@@ -42,156 +47,236 @@ export default async function TenantsPage({
 
   const tenants = await listTenants(session.user.organizationId, query);
   const withDebt = tenants.filter((tenant) => tenant.outstandingGrosze > 0).length;
+  const filtered = Boolean(query.q) || query.overdue;
 
   // Jedna chwila dla całej listy — inaczej dwaj najemcy z tą samą datą końca
   // umowy mogliby dostać różne liczby dni, gdyby render trafił w północ.
   const now = new Date();
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
-          <p className="text-sm text-muted">
-            {fill(pluralize(locale, tenants.length, t.count), { count: tenants.length })}
-            {withDebt > 0 ? fill(t.withDebt, { count: withDebt }) : ""}
-          </p>
-        </div>
-
-        {/* Archiwum obok dodawania, bo to para: jedno chowa, drugie
-            przywraca. Schowane w menu byłoby nie do znalezienia. */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button asChild size="sm" variant="secondary">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader
+        title={t.title}
+        primary={{ href: "/panel/najemcy/nowy", label: t.add, icon: UserPlus }}
+        /* Archiwum obok dodawania, bo to para: jedno chowa, drugie
+           przywraca. Schowane w menu byłoby nie do znalezienia. */
+        actions={
+          <Button asChild variant="ghost">
             <Link href="/panel/najemcy/archiwum">
-              <Archive className="h-4 w-4" aria-hidden />
+              <Archive className="size-[18px]" aria-hidden />
               {t.archived}
             </Link>
           </Button>
+        }
+      />
 
-          <Button asChild size="sm">
-            <Link href="/panel/najemcy/nowy">
-              <Plus className="h-4 w-4" aria-hidden />
-              {t.add}
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* Szukanie i porządek w jednym wierszu: oba mówią, co widać na liście,
-          a nie co się z nią robi — to zostaje przy przyciskach wyżej. */}
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-        <ListSearch placeholder={t.searchPlaceholder} ariaLabel={t.searchLabel} />
-        <ListSort
-          options={TENANT_SORT_OPTIONS}
-          labels={tenantSortLabels(d)}
-          defaultValue="name"
-          ariaLabel={t.sortAria}
-        />
-      </div>
-
-      {tenants.length === 0 && query.q ? (
-        <EmptyState
-          icon={SearchX}
-          title={t.noMatchTitle}
-          description={fill(t.noMatchLead, { query: query.q })}
-        />
-      ) : tenants.length === 0 ? (
+      {tenants.length === 0 && !filtered ? (
         <EmptyState
           icon={UserPlus}
           title={t.emptyTitle}
-          description={t.emptyLead}
           action={
             <Button asChild>
               <Link href="/panel/najemcy/nowy">
-                <Plus className="h-4 w-4" aria-hidden />
+                <UserPlus className="size-[18px]" aria-hidden />
                 {t.add}
               </Link>
             </Button>
           }
         />
       ) : (
-        /* Karty, nie tabela — na telefonie wiersz z sześcioma kolumnami
-           byłby nieczytelny, a to widok używany w biegu. */
-        <div className="flex flex-col gap-2">
-          {tenants.map((tenant) => {
-            // Odliczanie tylko dla umowy, która trwa: przy szkicu i rezerwacji
-            // „kończy się za 14 dni" mówiłoby o czymś, co się nie zaczęło.
-            const lease = tenant.lease;
-            const expiry = resolveLeaseExpiry(
-              lease?.status === "ACTIVE" ? lease.endDate : null,
-              now,
-            );
+        <>
+          {/* Szukanie, filtr i porządek w jednym wierszu: mówią, co widać na
+              liście, a nie co się z nią robi — to zostaje przy przyciskach wyżej. */}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+            <Suspense fallback={null}>
+              <ListSearch placeholder={t.searchPlaceholder} ariaLabel={t.searchLabel} />
+              <SegmentedFilter
+                param="overdue"
+                ariaLabel={t.filterAria}
+                options={[
+                  { value: "all", label: t.filterAll },
+                  { value: "true", label: t.filterOverdue },
+                ]}
+              />
+            </Suspense>
+            <div className="flex items-center justify-between gap-3 lg:ml-auto">
+              <span className="text-[13.5px] text-muted lg:order-2">
+                {fill(pluralize(locale, tenants.length, t.count), { count: tenants.length })}
+                {withDebt > 0 ? fill(t.withDebt, { count: withDebt }) : ""}
+              </span>
+              <Suspense fallback={null}>
+                <ListSort
+                  options={TENANT_SORT_OPTIONS}
+                  labels={tenantSortLabels(d)}
+                  defaultValue="name"
+                  ariaLabel={t.sortAria}
+                />
+              </Suspense>
+            </div>
+          </div>
 
-            return (
-              <Card key={tenant.id} className="transition-colors hover:border-muted">
-                <Link href={`/panel/najemcy/${tenant.id}`} className="block rounded-card">
-                  <CardContent className="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[15px] font-semibold text-fg">
-                          {tenant.firstName} {tenant.lastName}
-                        </p>
-                        <Badge tone={TENANT_STATUS_TONE[tenant.status]}>
-                          {tenantStatusLabels(d)[tenant.status]}
-                        </Badge>
-                        {tenant.archivedAt ? <Badge tone="neutral">{t.archivedBadge}</Badge> : null}
-                        {/* Odliczanie stoi przy nazwisku, a nie przy kwocie:
-                            to termin do zaplanowania, nie stan rozliczeń. */}
-                        {expiry ? (
-                          <Badge tone={expiry.tone}>
-                            <CalendarClock className="h-3 w-3" aria-hidden />
-                            {leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}
-                          </Badge>
-                        ) : null}
-                      </div>
+          {tenants.length === 0 ? (
+            <EmptyState
+              icon={SearchX}
+              title={query.q ? fill(t.noMatchTitle, { query: query.q }) : t.emptyTitle}
+              action={
+                <Button asChild variant="secondary">
+                  <Link href="/panel/najemcy">
+                    <X className="size-[18px]" aria-hidden />
+                    {d.panel.propertiesPage.filters.clear}
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-tile border border-border bg-surface lg:rounded-card">
+              <div
+                className={cn(
+                  COLUMNS,
+                  "hidden h-10 border-b border-border bg-hover px-6 text-[12.5px] font-[550] text-muted",
+                )}
+              >
+                <span>{t.table.tenant}</span>
+                <span>{t.table.place}</span>
+                <span>{t.table.lease}</span>
+                <span className="text-right">{t.table.toPay}</span>
+                <span />
+              </div>
 
-                      <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                        {lease ? (
-                          <>
-                            {/* Adres ciemniejszy niż e-mail i telefon: po liście
-                                szuka się „kto mieszka gdzie", a nie kontaktu. */}
-                            <span className="font-medium text-fg">
-                              {lease.propertyAddress}
-                              {lease.roomName ? ` · ${lease.roomName}` : ""}
-                            </span>
-                            <Badge tone={LEASE_STATUS_TONE[lease.status]}>
-                              {leaseStatusLabels(d)[lease.status]}
-                            </Badge>
-                          </>
-                        ) : (
-                          <span>{t.noLease}</span>
+              <ul>
+                {tenants.map((tenant) => {
+                  // Odliczanie tylko dla umowy, która trwa: przy szkicu i rezerwacji
+                  // „kończy się za 14 dni" mówiłoby o czymś, co się nie zaczęło.
+                  const lease = tenant.lease;
+                  const expiry = resolveLeaseExpiry(
+                    lease?.status === "ACTIVE" ? lease.endDate : null,
+                    now,
+                  );
+                  const name = `${tenant.firstName} ${tenant.lastName}`;
+                  const inDebt = tenant.outstandingGrosze > 0;
+                  const place = lease
+                    ? `${lease.propertyAddress}${lease.roomName ? `, ${lease.roomName}` : ""}`
+                    : null;
+
+                  return (
+                    <li key={tenant.id} className="border-t border-border first:border-t-0">
+                      <Link
+                        href={`/panel/najemcy/${tenant.id}`}
+                        className={cn(
+                          COLUMNS,
+                          "group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-hover lg:min-h-16 lg:px-6",
                         )}
-                        {tenant.email ? <span className="truncate">{tenant.email}</span> : null}
-                        {tenant.phone ? <span>{tenant.phone}</span> : null}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      {tenant.outstandingGrosze > 0 ? (
-                        <>
-                          <p
-                            className={`tabular font-mono text-sm font-medium ${
-                              tenant.overdueCount > 0 ? "text-bad" : "text-warn"
-                            }`}
+                      >
+                        {/* Najemca */}
+                        <span className="flex min-w-0 flex-1 items-center gap-3">
+                          <span
+                            className={cn(
+                              "flex size-9 shrink-0 items-center justify-center rounded-full text-[13.5px] font-semibold",
+                              inDebt ? "bg-accent2-soft text-accent2" : "bg-accent-soft text-accent",
+                            )}
+                            aria-hidden
                           >
-                            {formatMoney(tenant.outstandingGrosze, locale)}
-                          </p>
-                          <p className="text-xs text-muted">
-                            {tenant.overdueCount > 0
-                              ? fill(t.overdueCount, { count: tenant.overdueCount })
-                              : t.toPay}
-                          </p>
-                        </>
-                      ) : (
-                        <Badge tone="good">{t.settled}</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Link>
-              </Card>
-            );
-          })}
-        </div>
+                            {initials(name)}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-2">
+                              <span className="truncate text-[14.5px] font-semibold text-fg">{name}</span>
+                              {tenant.status !== "ACTIVE" ? (
+                                <span className="hidden sm:inline-flex">
+                                  <TenantStatusBadge status={tenant.status} d={d} size="sm" />
+                                </span>
+                              ) : null}
+                              {tenant.archivedAt ? (
+                                <Badge size="sm">{t.archivedBadge}</Badge>
+                              ) : null}
+                            </span>
+                            <span className="block truncate text-[13px] text-muted">
+                              {/* Telefon: lokal w drugiej linii, bo kolumny lokalu nie ma. */}
+                              <span className="lg:hidden">{place ?? t.noLease}</span>
+                              <span className="hidden font-mono lg:inline">
+                                {[tenant.phone, tenant.email].filter(Boolean).join(" · ")}
+                              </span>
+                            </span>
+                          </span>
+                        </span>
+
+                        {/* Lokal */}
+                        <span
+                          className={cn(
+                            "hidden truncate text-sm lg:block",
+                            place ? "text-fg" : "text-subtle",
+                          )}
+                        >
+                          {place ?? t.noPlace}
+                        </span>
+
+                        {/* Umowa */}
+                        <span className="hidden flex-wrap items-center gap-2 lg:flex">
+                          {lease ? (
+                            <LeaseStatusBadge status={lease.status} d={d} />
+                          ) : (
+                            <Badge tone="outline">{t.noLease}</Badge>
+                          )}
+                          {/* Odliczanie przy umowie, a nie przy kwocie:
+                              to termin do zaplanowania, nie stan rozliczeń. */}
+                          {expiry ? (
+                            <Badge
+                              tone={expiry.tone === "neutral" ? "neutral" : expiry.tone}
+                              icon={Clock}
+                              title={leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}
+                            >
+                              {expiry.days}
+                              {" "}
+                              {pluralize(locale, expiry.days, d.panel.leasesPage.expiry.days)}
+                            </Badge>
+                          ) : null}
+                        </span>
+
+                        {/* Do zapłaty */}
+                        <span className="shrink-0 text-right">
+                          {inDebt ? (
+                            <>
+                              <span
+                                className={cn(
+                                  "block font-mono text-[14.5px] font-[650] whitespace-nowrap",
+                                  tenant.overdueCount > 0 ? "text-bad" : "text-warn",
+                                )}
+                              >
+                                {formatMoney(tenant.outstandingGrosze, locale)}
+                              </span>
+                              <span className="hidden text-[12.5px] text-muted sm:block">
+                                {tenant.overdueCount > 0
+                                  ? fill(t.overdueCount, { count: tenant.overdueCount })
+                                  : t.toPay}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2
+                                className="size-[18px] text-good lg:hidden"
+                                aria-label={t.settled}
+                              />
+                              <span className="hidden lg:inline-flex">
+                                <Badge tone="good" icon={CheckCircle2}>
+                                  {t.settled}
+                                </Badge>
+                              </span>
+                            </>
+                          )}
+                        </span>
+
+                        <ChevronRight
+                          className="hidden size-[18px] text-subtle transition-colors group-hover:text-fg lg:block"
+                          aria-hidden
+                        />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

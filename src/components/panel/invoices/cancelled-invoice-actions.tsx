@@ -1,25 +1,33 @@
 "use client";
 
-import { Loader2, RotateCcw, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Loader2,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { InvoiceSummaryBox, type InvoiceSummary } from "@/components/panel/invoices/invoice-menu";
 import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Akcje na anulowanym dokumencie: przywrócenie albo trwałe usunięcie.
  *
- * Usunięcie wymaga drugiego kliknięcia, bo zwalnia numer z rejestru —
- * ostrzeżenie mówi o dziurze, chyba że to szkic, który numeru nie miał.
+ * Usunięcie idzie przez okno, bo zwalnia numer z rejestru — plakietka mówi
+ * o dziurze w numeracji, chyba że to szkic, który numeru nie miał.
  */
 export function CancelledInvoiceActions({
-  invoiceId,
+  invoice,
   isDraft,
 }: {
-  invoiceId: string;
+  invoice: InvoiceSummary;
   isDraft: boolean;
 }) {
   const { d } = useI18n();
@@ -33,7 +41,7 @@ export function CancelledInvoiceActions({
     setBusy("restore");
     setError(null);
 
-    const result = await api.post(`/api/invoices/${invoiceId}/restore`, {});
+    const result = await api.post(`/api/invoices/${invoice.id}/restore`, {});
     setBusy(null);
 
     if (!result.ok) {
@@ -48,7 +56,7 @@ export function CancelledInvoiceActions({
     setBusy("delete");
     setError(null);
 
-    const result = await api.delete(`/api/invoices/${invoiceId}/permanent`);
+    const result = await api.delete(`/api/invoices/${invoice.id}/permanent`);
 
     if (!result.ok) {
       setBusy(null);
@@ -60,54 +68,52 @@ export function CancelledInvoiceActions({
     router.refresh();
   }
 
-  if (confirming) {
-    return (
-      <div className="flex flex-col gap-2">
-        {error ? <Alert tone="error">{error}</Alert> : null}
+  return (
+    <>
+      <Button variant="danger-soft" onClick={() => setConfirming(true)} disabled={busy !== null}>
+        <Trash2 className="size-[18px]" aria-hidden />
+        {t.delete}
+      </Button>
+      <Button onClick={restore} disabled={busy !== null}>
+        {busy === "restore" ? (
+          <Loader2 className="size-[18px] animate-spin" aria-hidden />
+        ) : (
+          <RotateCcw className="size-[18px]" aria-hidden />
+        )}
+        {t.restore}
+      </Button>
 
-        <p className="text-xs text-muted">{isDraft ? t.deleteDraftWarning : t.deleteWarning}</p>
+      {error && !confirming ? (
+        <Alert tone="error" className="w-full">
+          {error}
+        </Alert>
+      ) : null}
 
-        <div className="flex flex-wrap gap-2.5">
-          <Button size="sm" variant="danger" onClick={remove} disabled={busy !== null}>
-            {busy === "delete" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-            {t.confirmDelete}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setConfirming(false)}
-            disabled={busy !== null}
-          >
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t.deleteTitle}
+        closeLabel={d.panel.common.close}
+        className="sm:max-w-[460px]"
+      >
+        <DialogBody>
+          {error ? <Alert tone="error">{error}</Alert> : null}
+          <InvoiceSummaryBox invoice={invoice}>
+            <Badge size="sm" tone={isDraft ? "outline" : "warning"} icon={isDraft ? undefined : AlertTriangle}>
+              {isDraft ? t.noNumber : t.numberFreed}
+            </Badge>
+          </InvoiceSummaryBox>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setConfirming(false)} disabled={busy !== null}>
             {t.keep}
           </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {error ? <Alert tone="error">{error}</Alert> : null}
-
-      <div className="flex flex-wrap gap-2.5">
-        <Button size="sm" variant="secondary" onClick={restore} disabled={busy !== null}>
-          {busy === "restore" ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <RotateCcw className="h-4 w-4" aria-hidden />
-          )}
-          {t.restore}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setConfirming(true)}
-          disabled={busy !== null}
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-          {t.delete}
-        </Button>
-      </div>
-    </div>
+          <Button variant="danger" onClick={remove} disabled={busy !== null}>
+            {busy === "delete" ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
+            {t.confirmDelete}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }

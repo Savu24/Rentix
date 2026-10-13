@@ -1,8 +1,7 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { FormPage } from "@/components/panel/form-page";
 import { TenantForm } from "@/components/panel/tenants/tenant-form";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { getTenant } from "@/lib/tenants/service";
@@ -28,20 +27,10 @@ export default async function EditTenantPage({
   if (!tenant) notFound();
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Link
-          href={`/panel/najemcy/${tenant.id}`}
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {tenant.firstName} {tenant.lastName}
-        </Link>
-        <h1 className="r-display text-[26px] leading-tight text-fg">
-          {(await panelDictionary()).panel.tenantsPage.editTitle}
-        </h1>
-      </div>
-
+    <FormPage
+      back={{ href: `/panel/najemcy/${tenant.id}`, label: `${tenant.firstName} ${tenant.lastName}` }}
+      title={(await panelDictionary()).panel.tenantsPage.editTitle}
+    >
       <TenantForm
         tenantId={tenant.id}
         defaultValues={{
@@ -80,6 +69,6 @@ export default async function EditTenantPage({
           notes: tenant.notes ?? "",
         }}
       />
-    </div>
+    </FormPage>
   );
 }

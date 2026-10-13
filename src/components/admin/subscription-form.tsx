@@ -1,16 +1,17 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { CheckboxField } from "@/components/ui/checkbox-field";
+import { SectionCard } from "@/components/panel/section-card";
 import { FormField } from "@/components/ui/form-field";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api/client";
 import { PLAN_LEASE_LIMIT } from "@/lib/billing/plans";
 import { PLAN_LABELS, STATUS_LABELS } from "@/lib/validations/admin";
@@ -89,95 +90,82 @@ export function SubscriptionForm({
   }
 
   return (
-    <Card>
-      <CardContent>
-        <form onSubmit={save} className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Subskrypcja</h2>
+    <SectionCard
+      title="Subskrypcja"
+      icon={Wallet}
+      actions={
+        <InfoTip label="Jak działają pola subskrypcji" align="end">
+          <span className="flex flex-col gap-1.5">
+            <span>Limit umów: puste pole oznacza próg z planu. Tędy wchodzą konta sprzed cennika.</span>
+            <span>Status: zaległość i anulowanie nie odbierają dziś dostępu, bramki chodzą po planie.</span>
+            <span>Bez opłat: konto własne, demo albo partner. Korzysta z planu, nie trafia do rozliczenia.</span>
+            <span>Każda zmiana trafia do dziennika.</span>
+          </span>
+        </InfoTip>
+      }
+    >
+      <form onSubmit={save} className="flex flex-col gap-4">
+        {error ? <Alert tone="error">{error}</Alert> : null}
+        {notice ? <Alert tone="success">{notice}</Alert> : null}
 
-          {error ? <Alert tone="error">{error}</Alert> : null}
-          {notice ? <Alert tone="success">{notice}</Alert> : null}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField id="plan" label="Plan">
+            <Select id="plan" value={plan} onChange={(event) => setPlan(event.target.value as SubscriptionPlan)}>
+              {Object.entries(PLAN_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                  {PLAN_LEASE_LIMIT[value as SubscriptionPlan] === null
+                    ? " · bez limitu"
+                    : ` · ${PLAN_LEASE_LIMIT[value as SubscriptionPlan]} umów`}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="plan" label="Plan">
-              <Select
-                id="plan"
-                value={plan}
-                onChange={(event) => setPlan(event.target.value as SubscriptionPlan)}
-              >
-                {Object.entries(PLAN_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                    {PLAN_LEASE_LIMIT[value as SubscriptionPlan] === null
-                      ? " · bez limitu"
-                      : ` · ${PLAN_LEASE_LIMIT[value as SubscriptionPlan]} umów`}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <FormField
-              id="status"
-              label="Status"
-              hint="Zaległość i anulowanie nie odbierają dziś dostępu — bramki chodzą po planie."
-            >
-              <Select
-                id="status"
-                value={status}
-                onChange={(event) => setStatus(event.target.value as SubscriptionStatus)}
-              >
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <FormField
+          <FormField id="leaseLimit" label="Limit umów (opcjonalnie)">
+            <Input
               id="leaseLimit"
-              label="Limit umów"
-              hint="Puste pole = próg z planu. Tędy wchodzą konta sprzed cennika."
-            >
-              <Input
-                id="leaseLimit"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={100000}
-                value={leaseLimit}
-                onChange={(event) => setLeaseLimit(event.target.value)}
-                placeholder={
-                  PLAN_LEASE_LIMIT[plan] === null ? "bez limitu" : String(PLAN_LEASE_LIMIT[plan])
-                }
-              />
-            </FormField>
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={100000}
+              className="font-mono"
+              value={leaseLimit}
+              onChange={(event) => setLeaseLimit(event.target.value)}
+              placeholder={PLAN_LEASE_LIMIT[plan] === null ? "bez limitu" : String(PLAN_LEASE_LIMIT[plan])}
+            />
+          </FormField>
 
-            <div className="flex items-end pb-1">
-              <CheckboxField
-                label="Zwolnione z opłat"
-                hint="Konto własne, demo albo partner. Korzysta z planu, nie trafia do rozliczenia."
-                checked={billingExempt}
-                onChange={(event) => setBillingExempt(event.target.checked)}
-              />
-            </div>
-          </div>
+          <FormField id="status" label="Status">
+            <Select id="status" value={status} onChange={(event) => setStatus(event.target.value as SubscriptionStatus)}>
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </FormField>
 
-          {willBeOverLimit ? (
-            <Alert tone="warning">
-              Konto ma {used} umów, a po zapisie próg wyniesie {effectiveLimit}. Istniejące umowy
-              zostaną nietknięte — panel po prostu nie pozwoli dołożyć kolejnej.
-            </Alert>
-          ) : null}
+          <label className="flex items-center gap-3 self-end pb-2.5 text-sm font-[550] text-fg">
+            <Switch checked={billingExempt} onCheckedChange={setBillingExempt} label="Bez opłat" />
+            Bez opłat
+          </label>
+        </div>
 
-          <div className="flex items-center gap-3">
-            <Button type="submit" disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Zapisz
-            </Button>
-            <span className="text-xs text-muted">Każda zmiana trafia do dziennika.</span>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        {willBeOverLimit ? (
+          <Alert tone="warning">
+            Konto ma {used} umów, a po zapisie próg wyniesie {effectiveLimit}. Istniejące umowy zostaną
+            nietknięte, panel po prostu nie pozwoli dołożyć kolejnej.
+          </Alert>
+        ) : null}
+
+        <div className="flex justify-end">
+          <Button type="submit" disabled={saving}>
+            {saving ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
+            Zapisz
+          </Button>
+        </div>
+      </form>
+    </SectionCard>
   );
 }

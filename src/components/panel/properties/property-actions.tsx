@@ -4,14 +4,16 @@ import { Archive, ArchiveRestore, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ActionMenu } from "@/components/panel/action-menu";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/lib/api/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
 
 /**
- * Archiwizacja i przywracanie nieruchomości.
+ * Archiwizacja i przywracanie nieruchomości — menu „⋯" w nagłówku karty.
  *
  * Nie ma tu trwałego usuwania: z obiektem wiszą umowy i faktury, czyli
  * historia księgowa. API pozwala skasować tylko obiekt, który nigdy nie miał
@@ -56,11 +58,11 @@ export function PropertyActions({
   if (archived) {
     return (
       <div className="flex flex-col items-end gap-2">
-        <Button size="sm" variant="secondary" onClick={() => run("restore")} disabled={busy}>
+        <Button variant="secondary" onClick={() => run("restore")} disabled={busy}>
           {busy ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <Loader2 className="size-[18px] animate-spin" aria-hidden />
           ) : (
-            <ArchiveRestore className="h-4 w-4" aria-hidden />
+            <ArchiveRestore className="size-[18px]" aria-hidden />
           )}
           {d.panel.common.restore}
         </Button>
@@ -69,30 +71,44 @@ export function PropertyActions({
     );
   }
 
-  if (!confirming) {
-    return (
-      <Button size="sm" variant="secondary" onClick={() => setConfirming(true)}>
-        <Archive className="h-4 w-4" aria-hidden />
-        {d.panel.common.archive}
-      </Button>
-    );
-  }
-
   return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted">
-          {fill(misc.archiveConfirm, { name: propertyName })}
-        </span>
-        <Button size="sm" variant="danger" onClick={() => run("archive")} disabled={busy}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-          {misc.archiveYes}
-        </Button>
-        <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>
-          {d.panel.common.cancel}
-        </Button>
-      </div>
-      {error ? <Alert tone="error">{error}</Alert> : null}
-    </div>
+    <>
+      <ActionMenu
+        size="md"
+        label={d.panel.common.more}
+        items={[
+          {
+            label: d.panel.common.archive,
+            icon: Archive,
+            danger: true,
+            onSelect: () => {
+              setError(null);
+              setConfirming(true);
+            },
+          },
+        ]}
+      />
+
+      <Dialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={d.panel.common.archive}
+        closeLabel={d.panel.common.close}
+      >
+        <DialogBody>
+          <p className="text-sm text-fg">{fill(misc.archiveConfirm, { name: propertyName })}</p>
+          {error ? <Alert tone="error">{error}</Alert> : null}
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setConfirming(false)} disabled={busy}>
+            {d.panel.common.cancel}
+          </Button>
+          <Button variant="danger" onClick={() => run("archive")} disabled={busy}>
+            {busy ? <Loader2 className="size-[18px] animate-spin" aria-hidden /> : null}
+            {misc.archiveYes}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </>
   );
 }

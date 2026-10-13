@@ -96,11 +96,11 @@ export function ExpenseFilters({
     Boolean(searchParams.get("month"));
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2.5 sm:flex-row">
-        <div className="relative flex-1">
+    <div className="flex min-w-0 flex-1 flex-col gap-3">
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:flex-wrap xl:items-center">
+        <div className="relative xl:w-60">
           <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+            className="pointer-events-none absolute top-1/2 left-3 size-[18px] -translate-y-1/2 text-subtle"
             aria-hidden
           />
           <Input
@@ -113,12 +113,12 @@ export function ExpenseFilters({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:w-auto">
+        <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
           <Select
             aria-label={t.year}
             value={searchParams.get("year") ?? "all"}
             onChange={(event) => setYear(event.target.value)}
-            className="sm:w-32"
+            className="sm:w-[150px]"
           >
             <option value="all">{t.allYears}</option>
             {years.map((year) => (
@@ -132,7 +132,7 @@ export function ExpenseFilters({
             aria-label={t.month}
             value={searchParams.get("month") ?? "all"}
             onChange={(event) => setMonth(event.target.value)}
-            className="sm:w-40"
+            className="sm:w-[190px]"
           >
             <option value="all">{t.allMonths}</option>
             {monthNames(locale).map((name, index) => (
@@ -144,11 +144,12 @@ export function ExpenseFilters({
             ))}
           </Select>
 
+          <div className="col-span-2 sm:col-span-1">
           <Select
             aria-label={t.category}
             value={searchParams.get("category") ?? "all"}
             onChange={(event) => setParam("category", event.target.value)}
-            className="sm:w-52"
+            className="sm:w-[200px]"
           >
             <option value="all">{t.allCategories}</option>
             {EXPENSE_CATEGORY_ORDER.map((value) => (
@@ -157,13 +158,15 @@ export function ExpenseFilters({
               </option>
             ))}
           </Select>
+          </div>
 
           {properties.length > 0 ? (
+            <div className="col-span-2 sm:col-span-1">
             <Select
               aria-label={t.property}
               value={searchParams.get("propertyId") ?? "all"}
               onChange={(event) => setParam("propertyId", event.target.value)}
-              className="sm:w-52"
+              className="sm:w-[220px]"
             >
               <option value="all">{t.allProperties}</option>
               {properties.map((property) => (
@@ -172,11 +175,12 @@ export function ExpenseFilters({
                 </option>
               ))}
             </Select>
+            </div>
           ) : null}
         </div>
       </div>
 
-      <div className="flex min-h-5 items-center gap-3 text-xs text-muted">
+      <div className="flex min-h-5 items-center gap-3 text-[13.5px] text-muted">
         <span aria-live="polite">
           {isPending ? t.filtering : fill(pluralize(locale, total, t.counted), { count: total })}
         </span>
@@ -188,9 +192,9 @@ export function ExpenseFilters({
               setQuery("");
               apply(new URLSearchParams());
             }}
-            className="inline-flex items-center gap-1 rounded-btn font-medium text-accent hover:underline"
+            className="inline-flex items-center gap-1 rounded-btn font-[550] text-accent hover:underline"
           >
-            <X className="h-3 w-3" aria-hidden />
+            <X className="size-3.5" aria-hidden />
             {t.clear}
           </button>
         ) : null}

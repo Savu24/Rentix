@@ -1,34 +1,44 @@
-import { ArrowLeft, Download, Home, Pencil, User } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Download,
+  FileText,
+  NotebookPen,
+  Pencil,
+  Users,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArchiveAction } from "@/components/panel/archive/archive-action";
 import { ActivateLease } from "@/components/panel/leases/activate-lease";
+import { BillingStartField } from "@/components/panel/leases/billing-start-field";
+import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
 import { ExtendLease } from "@/components/panel/leases/extend-lease";
 import { TerminateLease } from "@/components/panel/leases/terminate-lease";
+import { PageHeader } from "@/components/panel/page-header";
+import { CardRows, DataItem, SectionCard } from "@/components/panel/section-card";
+import { InvoiceStatusBadge, LeaseStatusBadge } from "@/components/panel/status-badges";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { MoneyDisplay } from "@/components/ui/money-display";
 import { requireOwnerSession } from "@/lib/auth/session";
+import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
+import { hasRegisterNumber } from "@/lib/invoices/draft";
+import { resolveInvoiceStatus } from "@/lib/invoices/status";
 import { leaseExpiryLabel, resolveLeaseExpiry } from "@/lib/leases/expiry";
 import { getLease } from "@/lib/leases/service";
-import { hasRegisterNumber } from "@/lib/invoices/draft";
-import { INVOICE_STATUS_TONE, resolveInvoiceStatus } from "@/lib/invoices/status";
-import { BillingStartField } from "@/components/panel/leases/billing-start-field";
-import { EmailDeliveryToggle } from "@/components/panel/leases/email-delivery-toggle";
-import { fill, formatDateIn, pluralize } from "@/lib/i18n/format";
+import { leaseMonthlySummary, leasePeriodProgress } from "@/lib/leases/summary";
 import { formatMoney } from "@/lib/money";
 import { groszeToPolishWords } from "@/lib/money-words";
-import { formatPropertyAddress } from "@/lib/properties/address";
-import {
-  leaseStatusLabels,
-  LEASE_STATUS_TONE,
-  utilitiesModeIncomplete,
-  utilitiesModeLabels,
-} from "@/lib/validations/lease";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+import { cn, initials } from "@/lib/utils";
+import { utilitiesModeIncomplete, utilitiesModeLabels } from "@/lib/validations/lease";
+
 type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
@@ -44,7 +54,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       : t.panelMisc.meta.lease,
   };
 }
-
 
 export default async function LeaseDetailPage({ params }: Params) {
   const [d, locale] = await Promise.all([panelDictionary(), panelLocale()]);
@@ -65,316 +74,344 @@ export default async function LeaseDetailPage({ params }: Params) {
   // końca niczego nie wskrzesi.
   const canExtend = Boolean(lease.endDate) && canTerminate && !lease.terminatedAt;
   const expiry = resolveLeaseExpiry(lease.endDate, now);
+  const monthly = leaseMonthlySummary(lease);
+  const progress = leasePeriodProgress(lease.startDate, lease.endDate, now);
+
+  const unitLabel = `${lease.property.name}${lease.room ? `, ${lease.room.name}` : ""}`;
+  const period = `${formatDateIn(lease.startDate, locale, "short")} - ${
+    lease.endDate ? formatDateIn(lease.endDate, locale, "short") : t.openEnded
+  }`;
+  const documentUnavailable = d.panel.leases.leaseDocument.unavailable;
+  const incomplete = utilitiesModeIncomplete(d)[lease.utilitiesMode];
+
+  const pdfLink = documentUnavailable ? null : (
+    /* target="_blank": PDF otwiera się w podglądzie, a użytkownik nie traci
+       widoku umowy. */
+    <a href={`/api/leases/${lease.id}/pdf`} target="_blank" rel="noopener noreferrer">
+      <Download className="size-[18px]" aria-hidden />
+      {d.panel.leases.leaseDocument.download}
+    </a>
+  );
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/panel/umowy"
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {d.panel.leasesPage.title}
-        </Link>
-
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="r-display text-[26px] leading-tight text-fg">
-                {lease.number ? fill(t.numbered, { number: lease.number }) : t.untitled}
-              </h1>
-              <Badge tone={LEASE_STATUS_TONE[lease.status]}>
-                {leaseStatusLabels(d)[lease.status]}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader
+        back={{ href: "/panel/umowy", label: d.panel.leasesPage.title }}
+        title={lease.number ? fill(t.numbered, { number: lease.number }) : t.untitled}
+        badges={
+          <>
+            <LeaseStatusBadge status={lease.status} d={d} />
+            {/* Odliczanie na karcie umowy, nie tylko przy najemcy: to tutaj
+                właściciel trafia, gdy ma zdecydować o przedłużeniu. */}
+            {expiry ? (
+              <Badge tone={expiry.tone === "neutral" ? "neutral" : expiry.tone} icon={Clock}>
+                {leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}
               </Badge>
-            </div>
-
-            <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-              <span>
-                {formatDateIn(lease.startDate, locale, "short")} –{" "}
-                {lease.endDate ? formatDateIn(lease.endDate, locale, "short") : t.openEnded}
-              </span>
-              {/* Odliczanie na karcie umowy, nie tylko przy najemcy: to tutaj
-                  właściciel trafia, gdy ma zdecydować o przedłużeniu. */}
-              {expiry ? <Badge tone={expiry.tone}>{leaseExpiryLabel(expiry, locale, d.panel.leasesPage.expiry)}</Badge> : null}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="secondary">
-              <Link href={`/panel/umowy/${lease.id}/edytuj`}>
-                <Pencil className="h-4 w-4" aria-hidden />
-                Edytuj
-              </Link>
-            </Button>
-
-            {/*
-              Wzór umowy jest napisany pod polskie prawo, więc w wersji, która
-              go nie obsługuje, przycisku nie ma — zamiast wypuścić dokument
-              mówiący najemcy nieprawdę o jego prawach, mówimy wprost, czego
-              brakuje. Wraca razem z edytowalnym szablonem w ustawieniach.
-            */}
-            {d.panel.leases.leaseDocument.unavailable ? null : (
-              <Button asChild size="sm">
-                {/* target="_blank": PDF otwiera się w podglądzie, a użytkownik
-                    nie traci widoku umowy. */}
-                <a href={`/api/leases/${lease.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                  <Download className="h-4 w-4" aria-hidden />
-                  {d.panel.leases.leaseDocument.download}
-                </a>
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {d.panel.leases.leaseDocument.unavailable ? (
-          <p className="mt-3 text-[13px] text-muted">
-            {d.panel.leases.leaseDocument.unavailable}
-          </p>
-        ) : null}
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Card>
-          <CardContent className="flex flex-col gap-2 p-4">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
-              <Home className="h-3.5 w-3.5 text-muted" aria-hidden />
-              {t.subject}
-            </p>
+            ) : null}
+          </>
+        }
+        meta={
+          <>
             <Link
               href={`/panel/nieruchomosci/${lease.property.id}`}
-              className="text-sm font-medium text-accent hover:underline"
+              className="flex items-center gap-1.5 font-[550] text-accent hover:underline"
             >
-              {lease.property.name}
-              {lease.room ? ` · ${lease.room.name}` : ""}
+              <Building2 className="size-4 text-subtle" aria-hidden />
+              {unitLabel}
             </Link>
-            {lease.room ? (
-              <Badge tone="accent" className="w-fit">
-                {t.singleRoom}
-              </Badge>
-            ) : null}
-            <p className="text-xs text-muted">
-              {formatPropertyAddress(lease.property)}
-            </p>
-            {lease.property.areaM2 ? (
-              <p className="text-xs text-muted">
-                {locale === "pl"
-                  ? lease.property.areaM2.toFixed(2).replace(".", ",")
-                  : lease.property.areaM2.toFixed(2)}{" "}
-                m²
-                {lease.property.floor !== null
-                  ? fill(misc.propertyFloor, { floor: lease.property.floor })
-                  : ""}
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-col gap-2 p-4">
-            <p className="flex items-center gap-2 text-[13px] font-semibold text-fg">
-              <User className="h-3.5 w-3.5 text-muted" aria-hidden />
-              {lease.tenants.length > 1 ? t.tenants : t.tenant}
-            </p>
-            {lease.tenants.map(({ tenant, isPrimary }) => (
-              <div key={tenant.id} className="flex items-center gap-2">
-                <Link
-                  href={`/panel/najemcy/${tenant.id}`}
-                  className="text-sm font-medium text-accent hover:underline"
-                >
-                  {tenant.firstName} {tenant.lastName}
-                </Link>
-                {isPrimary && lease.tenants.length > 1 ? (
-                  <Badge tone="accent">{t.primary}</Badge>
-                ) : null}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardContent className="flex flex-col gap-3 p-4">
-          <p className="text-[13px] font-semibold text-fg">{t.terms}</p>
-
-          <dl className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">
-            <Term label={t.rent} value={formatMoney(lease.rentGrosze, locale)} />
-            {/* Kwota słownie jest wymogiem polskiej umowy; w wersji, która jej
-                nie zna, słownik zostawia pusty tekst i wiersz nie powstaje. */}
-            {t.inWords ? (
-              <Term label={t.inWords} value={groszeToPolishWords(lease.rentGrosze)} />
-            ) : null}
-            <Term label={t.deposit} value={formatMoney(lease.depositGrosze, locale)} />
-            <Term label={t.utilities} value={utilitiesModeLabels(d)[lease.utilitiesMode]} />
-            {lease.utilitiesAdvanceGrosze > 0 ? (
-              <Term
-                label={t.utilitiesAdvance}
-                value={`${formatMoney(lease.utilitiesAdvanceGrosze)} / mies.`}
+            <span className="flex items-center gap-1.5">
+              <Users className="size-4 text-subtle" aria-hidden />
+              {lease.tenants.map(({ tenant }, index) => (
+                <span key={tenant.id}>
+                  <Link href={`/panel/najemcy/${tenant.id}`} className="font-[550] text-accent hover:underline">
+                    {tenant.firstName} {tenant.lastName}
+                  </Link>
+                  {index < lease.tenants.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </span>
+            <span className="flex items-center gap-1.5 font-mono">
+              <CalendarDays className="size-4 text-subtle" aria-hidden />
+              {period}
+            </span>
+          </>
+        }
+        actions={
+          <>
+            {/* Archiwizacja dopiero po zakończeniu umowy — aktywna zajmuje
+                jednostkę, więc schowana z listy zostawiłaby lokal zablokowany
+                bez śladu. */}
+            {lease.status !== "ACTIVE" ? (
+              <ArchiveAction
+                endpoint="/api/leases"
+                id={lease.id}
+                archived={lease.archivedAt !== null}
+                label={t.archiveLabel}
+                hint={t.archiveHint}
               />
             ) : null}
-            <Term
-              label={t.billingDay}
-              value={fill(t.billingDayValue, { day: lease.billingDay })}
-            />
-            <Term
-              label={t.paymentTerm}
-              value={fill(t.paymentTermValue, { days: lease.paymentTermDays })}
-            />
-            {/* Wiersz stoi zawsze, także bez ustalonego okresu: „terminy
-                ustawowe" to odpowiedź na pytanie o wypowiedzenie, a pusty
-                brak wiersza wyglądałby jak niedokończona umowa. */}
-            <Term
-              label={t.noticePeriod}
-              value={
-                lease.noticePeriodMonths === null
-                  ? t.noticePeriodStatutory
-                  : `${lease.noticePeriodMonths} ${pluralize(
-                      locale,
-                      lease.noticePeriodMonths,
-                      t.noticeMonths,
-                    )}`
-              }
-            />
-          </dl>
+            {pdfLink ? (
+              <Button asChild variant="secondary">
+                {pdfLink}
+              </Button>
+            ) : null}
+            <Button asChild variant={canExtend ? "secondary" : "primary"}>
+              <Link href={`/panel/umowy/${lease.id}/edytuj`}>
+                <Pencil className="size-[18px]" aria-hidden />
+                {d.panel.common.edit}
+              </Link>
+            </Button>
+            {canExtend && lease.endDate ? (
+              <ExtendLease leaseId={lease.id} endDate={lease.endDate.toISOString().slice(0, 10)} />
+            ) : null}
+          </>
+        }
+      />
 
-          <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4">
-            <BillingStartField
-              leaseId={lease.id}
-              billingStartsAt={lease.billingStartsAt?.toISOString().slice(0, 10) ?? ""}
-            />
-
-            <EmailDeliveryToggle
-              leaseId={lease.id}
-              enabled={lease.sendInvoicesByEmail}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Ostrzeżenie zostaje na karcie umowy, nie tylko w formularzu: umowę
-          zakłada się raz, a rozliczenia wystawia co miesiąc. */}
-      {utilitiesModeIncomplete(d)[lease.utilitiesMode] ? (
-        <Alert tone="warning">{utilitiesModeIncomplete(d)[lease.utilitiesMode]}</Alert>
-      ) : null}
-
-      {canExtend && lease.endDate ? (
-        <ExtendLease leaseId={lease.id} endDate={lease.endDate.toISOString().slice(0, 10)} />
-      ) : null}
-
-      <section className="flex flex-col gap-2">
-        {/* Naliczanie i wystawianie przeniesione do profilu najemcy:
-            rozliczamy człowieka, a nie umowę — ten sam najemca miewa dwie
-            umowy i oczekuje jednego miejsca do obsługi płatności. */}
-        <h2 className="text-[15px] font-semibold text-fg">
-          {t.invoices} <span className="font-normal text-muted">({lease.invoices.length})</span>
-        </h2>
-
-        {lease.invoices.length === 0 ? (
-          <Card>
-            <CardContent className="p-4 text-sm text-muted">
-              {fill(misc.noInvoicesYet, { day: lease.billingDay })}
-              {/* Bez tego dopisku pusta lista wygląda jak awaria naliczania,
-                  a jest dokładnie tym, o co poprosił właściciel. */}
-              {lease.billingStartsAt
-                ? fill(misc.noInvoicesBefore, {
-                    date: formatDateIn(lease.billingStartsAt, locale, "long"),
-                  })
-                : "."}
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col p-0">
-              {lease.invoices.map((invoice, index) => {
-                const status = resolveInvoiceStatus(invoice, now);
-                const tone = INVOICE_STATUS_TONE[status];
-
-                return (
-                  <Link
-                    key={invoice.id}
-                    href={`/panel/finanse/${invoice.id}`}
-                    className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 transition-colors hover:bg-surface-alt ${
-                      index > 0 ? "border-t border-border" : ""
-                    }`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-fg">
-                        {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {fill(misc.dueOn, {
-                          date: formatDateIn(invoice.dueDate, locale, "short"),
-                        })}
-                        {invoice.payments.length > 0
-                          ? ` · ${invoice.payments.length} ${pluralize(
-                              locale,
-                              invoice.payments.length,
-                              misc.paymentsCount,
-                            )}`
-                          : ""}
-                      </p>
-                    </div>
-                    <Badge tone={tone}>{d.panel.invoices.status[status]}</Badge>
-                    <p className="tabular w-24 text-right font-mono text-sm text-fg">
-                      {formatMoney(invoice.totalGrossGrosze)}
-                    </p>
-                  </Link>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
-      {lease.notes ? (
-        <Card className="bg-surface-alt">
-          <CardContent className="flex flex-col gap-1.5 p-4">
-            <p className="text-[13px] font-semibold text-fg">{t.extras}</p>
-            <p className="text-sm leading-relaxed whitespace-pre-line text-muted">{lease.notes}</p>
-          </CardContent>
-        </Card>
-      ) : null}
+      {/*
+        Wzór umowy jest napisany pod polskie prawo, więc w wersji, która go nie
+        obsługuje, przycisku nie ma — zamiast wypuścić dokument mówiący
+        najemcy nieprawdę o jego prawach, mówimy wprost, czego brakuje.
+      */}
+      {documentUnavailable ? <Alert tone="info">{documentUnavailable}</Alert> : null}
 
       {lease.status === "DRAFT" || lease.status === "RESERVED" ? (
         <ActivateLease leaseId={lease.id} status={lease.status} />
       ) : null}
 
+      {/* Ostrzeżenie zostaje na karcie umowy, nie tylko w formularzu: umowę
+          zakłada się raz, a rozliczenia wystawia co miesiąc. */}
+      {incomplete ? <Alert tone="warning">{incomplete}</Alert> : null}
+
       {lease.terminatedAt ? (
-        <Card className="bg-bad-soft">
-          <CardContent className="flex flex-col gap-1 p-4">
-            <p className="text-[13px] font-semibold text-fg">
-              {fill(misc.leaseTerminatedOn, {
-                date: formatDateIn(lease.terminatedAt, locale, "short"),
-              })}
-            </p>
-            {lease.terminationNote ? (
-              <p className="text-sm text-fg/80">{lease.terminationNote}</p>
+        <Alert tone="error">
+          <span className="block font-semibold">
+            {fill(misc.leaseTerminatedOn, { date: formatDateIn(lease.terminatedAt, locale, "short") })}
+          </span>
+          {lease.terminationNote ? <span className="block font-normal">{lease.terminationNote}</span> : null}
+        </Alert>
+      ) : null}
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,640px)_minmax(0,1fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {/* Warunki finansowe: miesięczna kwota dużą liczbą, rozbicie paskiem. */}
+          <section className="flex flex-col gap-5 rounded-tile border border-border bg-surface p-5 lg:p-7">
+            <div className="flex flex-col gap-3">
+              <h2 className="text-sm font-[550] text-muted">{misc.monthly}</h2>
+              <MoneyDisplay
+                grosze={monthly.totalGrosze}
+                locale={locale}
+                className="text-[34px] leading-none tracking-[-0.8px] text-fg lg:text-[42px] lg:tracking-[-1.1px]"
+                currencyClassName="text-muted"
+              />
+            </div>
+
+            {monthly.utilitiesGrosze > 0 ? (
+              <div className="flex flex-col gap-3">
+                <div className="flex h-2 gap-[3px] overflow-hidden rounded-full" aria-hidden>
+                  <span className="h-full rounded-full bg-accent" style={{ width: `${monthly.rentPercent}%` }} />
+                  <span className="h-full flex-1 rounded-full bg-chart-2" />
+                </div>
+                <dl className="grid gap-2 sm:grid-cols-2 sm:gap-6">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2.5 rounded-[3px] bg-accent" aria-hidden />
+                    <dt className="flex-1 text-[13.5px] text-muted">{t.rent}</dt>
+                    <dd className="font-mono text-sm font-semibold text-fg">{formatMoney(monthly.rentGrosze, locale)}</dd>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="size-2.5 rounded-[3px] bg-chart-2" aria-hidden />
+                    <dt className="flex-1 text-[13.5px] text-muted">{t.utilitiesAdvance}</dt>
+                    <dd className="font-mono text-sm font-semibold text-fg">
+                      {formatMoney(monthly.utilitiesGrosze, locale)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             ) : null}
-          </CardContent>
-        </Card>
-      ) : canTerminate ? (
-        <TerminateLease leaseId={lease.id} />
-      ) : null}
 
-      {/* Archiwizacja dopiero po zakończeniu umowy — aktywna zajmuje jednostkę,
-          więc schowana z listy zostawiłaby lokal zablokowany bez śladu. */}
-      {lease.status !== "ACTIVE" ? (
-        <ArchiveAction
-          endpoint="/api/leases"
-          id={lease.id}
-          archived={lease.archivedAt !== null}
-          label={t.archiveLabel}
-          hint={t.archiveHint}
-        />
-      ) : null}
-    </div>
-  );
-}
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-5 border-t border-border pt-5 sm:grid-cols-2">
+              <DataItem label={t.deposit}>
+                <span className="font-mono">{formatMoney(lease.depositGrosze, locale)}</span>
+              </DataItem>
+              <DataItem label={t.utilities}>{utilitiesModeLabels(d)[lease.utilitiesMode]}</DataItem>
+              <DataItem label={t.billingDay}>{fill(t.billingDayValue, { day: lease.billingDay })}</DataItem>
+              <DataItem label={t.paymentTerm}>
+                {fill(t.paymentTermValue, { days: lease.paymentTermDays })}
+              </DataItem>
+              {/* Wiersz stoi zawsze, także bez ustalonego okresu: „terminy
+                  ustawowe" to odpowiedź na pytanie o wypowiedzenie, a brak
+                  wiersza wyglądałby jak niedokończona umowa. */}
+              <DataItem label={t.noticePeriod}>
+                {lease.noticePeriodMonths === null
+                  ? t.noticePeriodStatutory
+                  : `${lease.noticePeriodMonths} ${pluralize(locale, lease.noticePeriodMonths, t.noticeMonths)}`}
+              </DataItem>
+              <BillingStartField
+                leaseId={lease.id}
+                billingStartsAt={lease.billingStartsAt?.toISOString().slice(0, 10) ?? ""}
+              />
+            </dl>
 
-function Term({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="font-medium text-fg">{value}</dd>
+            {/* Kwota słownie jest wymogiem polskiej umowy; w wersji, która jej
+                nie zna, słownik zostawia pusty tekst i wiersz nie powstaje. */}
+            {t.inWords ? (
+              <p className="text-[13px] text-subtle">
+                {t.inWords}: {groszeToPolishWords(lease.rentGrosze)}
+              </p>
+            ) : null}
+          </section>
+
+          {lease.notes ? (
+            <SectionCard title={t.extras} icon={NotebookPen}>
+              <p className="text-sm leading-relaxed whitespace-pre-line text-fg">{lease.notes}</p>
+            </SectionCard>
+          ) : null}
+
+          {/* Naliczanie i wystawianie siedzą w profilu najemcy: rozliczamy
+              człowieka, a nie umowę — ten sam najemca miewa dwie umowy. */}
+          <SectionCard
+            title={t.invoices}
+            count={lease.invoices.length > 0 ? lease.invoices.length : undefined}
+          >
+            {lease.invoices.length === 0 ? (
+              <p className="py-2 text-sm text-muted">
+                {fill(misc.noInvoicesYet, { day: lease.billingDay })}
+                {/* Bez tego dopisku pusta lista wygląda jak awaria naliczania,
+                    a jest dokładnie tym, o co poprosił właściciel. */}
+                {lease.billingStartsAt
+                  ? fill(misc.noInvoicesBefore, {
+                      date: formatDateIn(lease.billingStartsAt, locale, "long"),
+                    })
+                  : ""}
+              </p>
+            ) : (
+              <CardRows>
+                {lease.invoices.map((invoice) => (
+                  <li key={invoice.id}>
+                    <Link
+                      href={`/panel/finanse/${invoice.id}`}
+                      className="group flex flex-wrap items-center gap-x-4 gap-y-1.5 py-3"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-mono text-sm font-semibold text-fg">
+                          {hasRegisterNumber(invoice.number) ? invoice.number : d.panel.invoices.draftNumber}
+                        </span>
+                        <span className="block text-[13px] text-muted">
+                          {fill(misc.dueOn, { date: formatDateIn(invoice.dueDate, locale, "short") })}
+                          {invoice.payments.length > 0
+                            ? `, ${invoice.payments.length} ${pluralize(locale, invoice.payments.length, misc.paymentsCount)}`
+                            : ""}
+                        </span>
+                      </span>
+                      <InvoiceStatusBadge status={resolveInvoiceStatus(invoice, now)} d={d} />
+                      <span className="w-28 text-right font-mono text-sm font-semibold whitespace-nowrap text-fg">
+                        {formatMoney(invoice.totalGrossGrosze, locale)}
+                      </span>
+                      <ChevronRight
+                        className="hidden size-[18px] text-subtle transition-colors group-hover:text-fg sm:block"
+                        aria-hidden
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </CardRows>
+            )}
+          </SectionCard>
+        </div>
+
+        <div className="flex flex-col gap-6">
+          {progress ? (
+            <section className="flex flex-col gap-4 rounded-tile border border-border bg-surface p-5 lg:p-6">
+              <h2 className="text-sm font-[550] text-muted">{misc.leasePeriod}</h2>
+              <div className="flex items-center justify-between gap-3 font-mono text-[15px] font-semibold text-fg">
+                <span>{formatDateIn(lease.startDate, locale, "short")}</span>
+                <span>{lease.endDate ? formatDateIn(lease.endDate, locale, "short") : ""}</span>
+              </div>
+              <span className="block h-2 overflow-hidden rounded-full bg-surface-alt" aria-hidden>
+                <span
+                  className={cn(
+                    "block h-full rounded-full",
+                    expiry?.tone === "critical" ? "bg-bad" : expiry?.tone === "warning" ? "bg-warn" : "bg-accent",
+                  )}
+                  style={{ width: `${progress.percent}%` }}
+                />
+              </span>
+              {progress.daysLeft >= 0 ? (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[13px] text-muted">{misc.remaining}</span>
+                  <span
+                    className={cn(
+                      "text-sm font-[650]",
+                      expiry?.tone === "critical" ? "text-bad-ink" : expiry?.tone === "warning" ? "text-warn-ink" : "text-fg",
+                    )}
+                  >
+                    {progress.daysLeft} {pluralize(locale, progress.daysLeft, d.panel.leasesPage.expiry.days)}
+                  </span>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+
+          <SectionCard
+            title={lease.tenants.length > 1 ? t.tenants : t.tenant}
+            count={lease.tenants.length > 1 ? lease.tenants.length : undefined}
+          >
+            <CardRows>
+              {lease.tenants.map(({ tenant, isPrimary }) => {
+                const name = `${tenant.firstName} ${tenant.lastName}`;
+
+                return (
+                  <li key={tenant.id}>
+                    <Link href={`/panel/najemcy/${tenant.id}`} className="flex items-center gap-3 py-3">
+                      <span
+                        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[13.5px] font-semibold text-accent"
+                        aria-hidden
+                      >
+                        {initials(name)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14.5px] font-semibold text-fg">{name}</span>
+                        {tenant.phone ? (
+                          <span className="block font-mono text-[13px] text-muted">{tenant.phone}</span>
+                        ) : null}
+                      </span>
+                      {isPrimary && lease.tenants.length > 1 ? <Badge tone="accent">{t.primary}</Badge> : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </CardRows>
+          </SectionCard>
+
+          <section className="flex flex-col rounded-tile border border-border bg-surface lg:rounded-card">
+            <div className="px-4 py-4 lg:px-6">
+              <EmailDeliveryToggle leaseId={lease.id} enabled={lease.sendInvoicesByEmail} />
+            </div>
+            {pdfLink ? (
+              <a
+                href={`/api/leases/${lease.id}/pdf`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 border-t border-border px-4 py-4 lg:px-6"
+              >
+                <FileText className="size-[18px] shrink-0 text-subtle" aria-hidden />
+                <span className="flex-1 text-[14.5px] font-semibold text-fg">{misc.leasePdf}</span>
+                <span className="text-[13.5px] font-semibold text-accent">{misc.download}</span>
+              </a>
+            ) : null}
+          </section>
+
+          {canTerminate && !lease.terminatedAt ? (
+            <div className="flex">
+              <TerminateLease
+                leaseId={lease.id}
+                unitLabel={unitLabel}
+                tenantCount={lease.tenants.length}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

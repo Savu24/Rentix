@@ -46,15 +46,15 @@ export function ListSort<T extends string>({
   const current = searchParams.get("sort");
 
   return (
-    <label className="flex items-center gap-2 text-xs text-muted">
-      <ArrowDownUp className="h-3.5 w-3.5 shrink-0" aria-hidden />
+    <label className="flex items-center gap-2 text-[13px] text-muted">
+      <ArrowDownUp className="size-3.5 shrink-0" aria-hidden />
       <span className="shrink-0">{d.panel.common.sort}</span>
       <Select
         aria-label={ariaLabel}
         value={current && (options as readonly string[]).includes(current) ? current : defaultValue}
         onChange={(event) => setSort(event.target.value)}
         disabled={isPending}
-        className="h-9 w-auto text-sm"
+        className="h-8 w-auto pr-8 text-[13.5px] font-[550]"
       >
         {options.map((value) => (
           <option key={value} value={value}>

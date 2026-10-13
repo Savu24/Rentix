@@ -1,14 +1,26 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  Building,
+  Building2,
+  ClipboardCheck,
+  KeyRound,
+  Loader2,
+  MapPin,
+  NotebookPen,
+  Ruler,
+  TrainFront,
+  UserRound,
+  Wifi,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { CheckboxField } from "@/components/ui/checkbox-field";
 import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
@@ -16,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { PostalCodeInput } from "@/components/ui/postal-code-input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { FormSection } from "@/components/panel/form-section";
 import { OwnerPicker, type OwnerOption } from "@/components/panel/owners/owner-picker";
 import { api } from "@/lib/api/client";
 import {
@@ -105,6 +118,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
   });
 
   const ownerId = watch("ownerId") ?? "";
+  const ownerSummary = ownerId
+    ? (owners.find((owner) => owner.id === ownerId)?.name ?? null)
+    : d.panel.ownersPage.picker.own;
 
   /**
    * Surowe wartości pól, nie wynik resolvera — API waliduje tym samym
@@ -146,19 +162,16 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-3">
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionBasics}</h2>
+      <FormSection title={t.sectionBasics} icon={Building2} collapsible={false}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="name"
               label={t.name}
               error={errors.name?.message}
-              hint={t.nameHint}
               className="sm:col-span-2"
             >
               <Input
@@ -187,7 +200,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 id="status"
                 label={t.status}
                 error={errors.status?.message}
-                hint={t.statusHint}
               >
                 <Select
                   {...fieldAria("status", { error: errors.status?.message })}
@@ -208,7 +220,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
                 id="roomCount"
                 label={t.roomCount}
                 error={errors.roomCount?.message}
-                hint={t.roomCountHint}
               >
                 <Input
                   {...fieldAria("roomCount", {
@@ -223,15 +234,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               </FormField>
             ) : null}
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{d.panel.panelMisc.sectionOwner}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionOwnerHint}
-          </p>
+      <FormSection title={d.panel.panelMisc.sectionOwner} icon={UserRound} summary={ownerSummary}>
 
           <OwnerPicker
             owners={owners}
@@ -239,12 +244,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             onChange={(value) => setValue("ownerId", value, { shouldValidate: true })}
             disabled={isSubmitting}
           />
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">Adres</h2>
+      <FormSection title={d.panel.panelMisc.sectionAddress} icon={MapPin} defaultOpen>
 
           <div className="grid gap-4 sm:grid-cols-6">
             <FormField
@@ -280,7 +282,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               id="apartmentNumber"
               label={t.apartmentNumber}
               error={errors.apartmentNumber?.message}
-              hint={t.apartmentNumberHint}
               className="sm:col-span-2"
             >
               <Input
@@ -334,12 +335,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{d.panel.panelMisc.sectionArea}</h2>
+      <FormSection title={d.panel.panelMisc.sectionArea} icon={Ruler}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="areaM2" label={t.area} error={errors.areaM2?.message}>
@@ -360,15 +358,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionAccess}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionAccessHint}
-          </p>
+      <FormSection title={t.sectionAccess} icon={KeyRound}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -389,7 +381,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               id="storageUnit"
               label={t.storage}
               error={errors.storageUnit?.message}
-              hint={t.storageHint}
               className="sm:col-span-2"
             >
               <Input
@@ -425,15 +416,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionManager}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionManagerHint}
-          </p>
+      <FormSection title={t.sectionManager} icon={Building}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -494,12 +479,9 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionUtilities}</h2>
+      <FormSection title={t.sectionUtilities} icon={Wifi}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
@@ -579,7 +561,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               id="wifiPassword"
               label={t.wifiPassword}
               error={errors.wifiPassword?.message}
-              hint={t.wifiPasswordHint}
             >
               <Input
                 {...fieldAria("wifiPassword", {
@@ -594,7 +575,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               id="internetContractEndsAt"
               label={t.internetContractEnd}
               error={errors.internetContractEndsAt?.message}
-              hint={t.internetContractEndHint}
             >
               <DateInput
                 {...fieldAria("internetContractEndsAt", {
@@ -606,22 +586,15 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionPapers}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionPapersHint}
-          </p>
+      <FormSection title={t.sectionPapers} icon={ClipboardCheck}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="landRegistryNumber"
               label={t.landRegistry}
               error={errors.landRegistryNumber?.message}
-              hint={t.landRegistryHint}
             >
               <Input
                 {...fieldAria("landRegistryNumber", {
@@ -632,22 +605,15 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionArea}</h2>
-          <p className="-mt-2 text-xs text-muted">
-            {t.sectionAreaHint}
-          </p>
+      <FormSection title={t.sectionArea} icon={TrainFront}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               id="transitLines"
               label={t.transitLines}
               error={errors.transitLines?.message}
-              hint={t.transitLinesHint}
               className="sm:col-span-2"
             >
               <Input
@@ -663,7 +629,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               id="nearbyPlaces"
               label={t.nearbyPlaces}
               error={errors.nearbyPlaces?.message}
-              hint={t.nearbyPlacesHint}
               className="sm:col-span-2"
             >
               <Textarea
@@ -675,18 +640,14 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionNotes}</h2>
+      <FormSection title={t.sectionNotes} icon={NotebookPen}>
 
           <FormField
             id="description"
             label={t.description}
             error={errors.description?.message}
-            hint={t.descriptionHint}
           >
             <Textarea
               {...fieldAria("description", {
@@ -701,7 +662,6 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             id="notes"
             label={t.notes}
             error={errors.notes?.message}
-            hint={t.notesHint}
           >
             <Textarea
               {...fieldAria("notes", { error: errors.notes?.message })}
@@ -710,16 +670,17 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
             />
           </FormField>
 
-          <CheckboxField
-            label={t.publiclyListed}
-            hint={t.publiclyListedHint}
-            disabled={isSubmitting}
-            {...register("publiclyListed")}
-          />
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <div className="flex flex-wrap gap-2.5">
+      <section className="flex min-h-16 items-center rounded-tile border border-border bg-surface px-4 lg:rounded-card lg:px-6">
+        <CheckboxField
+          label={t.publiclyListed}
+          disabled={isSubmitting}
+          {...register("publiclyListed")}
+        />
+      </section>
+
+      <div className="flex flex-row-reverse flex-wrap justify-start gap-2.5">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -738,11 +699,11 @@ export function PropertyForm({ propertyId, defaultValues, owners }: Props) {
 
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           disabled={isSubmitting}
           onClick={() => router.back()}
         >
-          Anuluj
+          {d.panel.common.cancel}
         </Button>
       </div>
     </form>

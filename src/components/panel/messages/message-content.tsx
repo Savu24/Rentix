@@ -61,7 +61,7 @@ export function MessageContent({
           title={fill(t.previewFrameTitle, { subject })}
           sandbox=""
           srcDoc={html}
-          className="h-[640px] w-full rounded-card border border-border bg-white"
+          className="h-[480px] w-full rounded-card border border-border bg-on-color lg:h-[640px]"
         />
       ) : null}
 

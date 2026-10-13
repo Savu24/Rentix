@@ -65,7 +65,6 @@ export function BillingStartField({
       <FormField
         id="billingStartsAt"
         label={t.label}
-        hint={t.hint}
       >
         <div className="flex items-center gap-2">
           <DateInput
@@ -75,7 +74,7 @@ export function BillingStartField({
             onChange={(event) => save(event.target.value)}
           />
           {busy ? (
-            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted" aria-hidden />
+            <Loader2 className="size-4 shrink-0 animate-spin text-subtle" aria-hidden />
           ) : null}
         </div>
       </FormField>

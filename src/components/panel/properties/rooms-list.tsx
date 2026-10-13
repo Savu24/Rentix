@@ -1,32 +1,33 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { DoorClosed, Loader2, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { BedDouble, DoorOpen, Home, Loader2, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+import { ActionMenu } from "@/components/panel/action-menu";
+import { CardRows, SectionCard } from "@/components/panel/section-card";
 import { Alert } from "@/components/ui/alert";
-import { Badge, StatusDot } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import type { RentalStatus } from "@/generated/prisma/enums";
 import { api } from "@/lib/api/client";
-import { formatMoney } from "@/lib/money";
+import { useI18n, useValidationContext } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
+import { formatMoney, formatMoneyParts, sumGrosze } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import {
   rentalStatusLabels,
-  RENTAL_STATUS_TONE,
   roomFormSchema,
   type RoomFormInput,
   type RoomFormOutput,
 } from "@/lib/validations/property";
-import type { RentalStatus } from "@/generated/prisma/enums";
-import { useI18n, useValidationContext } from "@/lib/i18n/client";
-import { fill } from "@/lib/i18n/format";
+
 export type RoomView = {
   id: string;
   name: string;
@@ -39,7 +40,7 @@ export type RoomView = {
 };
 
 /**
- * Pokoje nieruchomości.
+ * Pokoje nieruchomości (redesign/04-nieruchomosc-karta-*.svg).
  *
  * Przypisanie osoby do pokoju idzie przez umowę, a nie przez pole na pokoju —
  * inaczej powstałyby dwa źródła prawdy o tym, kto gdzie mieszka, i przy
@@ -50,118 +51,106 @@ export function RoomsList({
   propertyName,
   rooms,
   wholePropertyTenant,
+  wholeLetHref,
 }: {
   propertyId: string;
   propertyName: string;
   rooms: RoomView[];
   /** Najemca całej nieruchomości — wtedy pokoje nie są wynajmowane osobno. */
   wholePropertyTenant: { id: string; name: string; leaseId: string } | null;
+  /** Adres umowy na całość — tylko gdy nikt jeszcze nie zajmuje pokoi. */
+  wholeLetHref: string | null;
 }) {
-  const { d, locale, plural } = useI18n();
+  const { d, locale } = useI18n();
   const t = d.panel.propertiesPage.roomsPanel;
   const misc = d.panel.panelMisc;
   const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<RoomView | null>(null);
 
   const occupied = rooms.filter((room) => room.status === "OCCUPIED").length;
-  const totalRent = rooms.reduce((sum, room) => sum + (room.monthlyRentGrosze ?? 0), 0);
+  const totalRent = sumGrosze(rooms.map((room) => room.monthlyRentGrosze ?? 0));
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex flex-wrap items-baseline gap-2 text-[15px] font-semibold text-fg">
-          <span className="flex items-center gap-2">
-            <DoorClosed className="h-4 w-4 text-muted" aria-hidden />
-            {misc.roomsTitle}
-          </span>
-          {rooms.length > 0 ? (
-            <span className="text-sm font-normal text-muted">
-              {fill(misc.roomsOccupied, { occupied, total: rooms.length })}
-              {totalRent > 0
-                ? fill(misc.roomsTotalRent, { amount: formatMoney(totalRent, locale) })
-                : ""}
-            </span>
+    <SectionCard
+      title={misc.roomsTitle}
+      count={rooms.length > 0 ? fill(misc.roomsOccupied, { occupied, total: rooms.length }) : undefined}
+      actions={
+        <>
+          {wholeLetHref ? (
+            <Button asChild size="sm" variant="ghost">
+              <Link href={wholeLetHref}>
+                <Home className="size-4" aria-hidden />
+                {d.panel.propertiesPage.detail.wholeLetButton}
+              </Link>
+            </Button>
           ) : null}
-        </h2>
-
-        {!creating ? (
           <Button size="sm" variant="secondary" onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" aria-hidden />
+            <Plus className="size-4" aria-hidden />
             {t.add}
           </Button>
-        ) : null}
-      </div>
-
+        </>
+      }
+      footer={
+        totalRent > 0 ? (
+          <>
+            <span className="text-sm font-[550] text-muted">{misc.roomsSum}</span>
+            <span className="font-mono text-[15px] font-[650] text-fg">
+              {formatMoney(totalRent, locale)}
+            </span>
+          </>
+        ) : undefined
+      }
+    >
       {wholePropertyTenant ? (
-        <Alert tone="info">
+        <Alert tone="info" className="mb-3">
           {t.wholeLet}
-          <Link
-            href={`/panel/najemcy/${wholePropertyTenant.id}`}
-            className="font-medium underline"
-          >
+          <Link href={`/panel/najemcy/${wholePropertyTenant.id}`} className="underline">
             {wholePropertyTenant.name}
           </Link>
           {t.notLetSeparately}
         </Alert>
       ) : null}
 
-      {creating ? (
-        <RoomForm
-          propertyId={propertyId}
-          onDone={() => setCreating(false)}
-          onCancel={() => setCreating(false)}
-        />
-      ) : null}
-
-      {rooms.length === 0 && !creating ? (
-        <EmptyState
-          icon={DoorClosed}
-          title={t.emptyTitle}
-          description={t.emptyLead}
-          action={
-            <Button size="sm" onClick={() => setCreating(true)}>
-              <Plus className="h-4 w-4" aria-hidden />
-              {t.add}
-            </Button>
-          }
-        />
+      {rooms.length === 0 ? (
+        <p className="py-3 text-sm text-muted">{t.emptyTitle}</p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {rooms.map((room) =>
-            editing === room.id ? (
-              <li key={room.id}>
-                <RoomForm
-                  propertyId={propertyId}
-                  room={room}
-                  onDone={() => setEditing(null)}
-                  onCancel={() => setEditing(null)}
-                />
-              </li>
-            ) : (
-              <li key={room.id}>
-                <RoomRow
-                  room={room}
-                  propertyId={propertyId}
-                  propertyName={propertyName}
-                  disabled={Boolean(wholePropertyTenant)}
-                  onEdit={() => setEditing(room.id)}
-                />
-              </li>
-            ),
-          )}
-        </ul>
+        <CardRows>
+          {rooms.map((room) => (
+            <li key={room.id}>
+              <RoomRow
+                room={room}
+                propertyId={propertyId}
+                propertyName={propertyName}
+                disabled={Boolean(wholePropertyTenant)}
+                onEdit={() => setEditing(room)}
+              />
+            </li>
+          ))}
+        </CardRows>
       )}
 
-      {rooms.length > 0 ? (
-        <p className="text-xs text-muted">
-          {fill(misc.roomsFree, {
-            lead: plural(rooms.length - occupied, misc.roomsFreeLead),
-            count: rooms.length - occupied,
-            noun: plural(rooms.length - occupied, misc.roomsCount),
-          })}
-        </p>
-      ) : null}
-    </section>
+      <Dialog
+        open={creating || editing !== null}
+        onClose={() => {
+          setCreating(false);
+          setEditing(null);
+        }}
+        title={editing ? editing.name : t.newRoom}
+        closeLabel={d.panel.common.close}
+      >
+        {creating || editing ? (
+          <RoomForm
+            key={editing?.id ?? "new"}
+            propertyId={propertyId}
+            room={editing ?? undefined}
+            onDone={() => {
+              setCreating(false);
+              setEditing(null);
+            }}
+          />
+        ) : null}
+      </Dialog>
+    </SectionCard>
   );
 }
 
@@ -183,6 +172,7 @@ function RoomRow({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const vacant = !room.tenantId;
 
   async function remove() {
     setBusy(true);
@@ -198,75 +188,80 @@ function RoomRow({
   }
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-2 p-3.5">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <StatusDot tone={RENTAL_STATUS_TONE[room.status]} />
-
-          <span className="text-sm font-semibold text-fg">{room.name}</span>
-
-          <span className="min-w-0 flex-1">
-            {room.tenantId ? (
-              <Link
-                href={`/panel/najemcy/${room.tenantId}`}
-                className="text-sm font-medium text-accent hover:underline"
-              >
-                {room.tenantName}
-              </Link>
-            ) : (
-              <Badge tone={RENTAL_STATUS_TONE[room.status]}>
-                {rentalStatusLabels(d)[room.status]}
-              </Badge>
-            )}
-          </span>
-
-          {room.monthlyRentGrosze ? (
-            <span className="tabular font-mono text-sm text-fg">
-              {formatMoney(room.monthlyRentGrosze, locale)}
-            </span>
-          ) : (
-            <span className="text-xs text-muted">{misc.roomNoPrice}</span>
+    <div className="flex flex-col gap-2 py-3">
+      <div className="flex items-center gap-3 lg:gap-4">
+        <span
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-[10px]",
+            vacant ? "bg-info-soft text-info" : "bg-accent-soft text-accent",
           )}
+          aria-hidden
+        >
+          {vacant ? <DoorOpen className="size-[18px]" /> : <BedDouble className="size-[18px]" />}
+        </span>
 
-          <span className="flex items-center gap-0.5">
-            {room.tenantId && room.leaseId ? (
-              <Button asChild size="sm" variant="ghost">
-                <Link href={`/panel/umowy/${room.leaseId}`}>{misc.roomLease}</Link>
-              </Button>
-            ) : !disabled ? (
-              <Button asChild size="sm" variant="ghost">
-                <Link
-                  href={`/panel/umowy/nowa?propertyId=${propertyId}&roomId=${room.id}`}
-                  title={fill(misc.roomAssignTitle, {
-                    room: room.name,
-                    property: propertyName,
-                  })}
-                >
-                  <UserPlus className="h-3.5 w-3.5" aria-hidden />
-                  <span className="sr-only sm:not-sr-only">{misc.roomAssign}</span>
-                </Link>
-              </Button>
-            ) : null}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-fg">{room.name}</span>
+          {room.tenantId ? (
+            <Link
+              href={`/panel/najemcy/${room.tenantId}`}
+              className="block truncate text-[13px] text-muted hover:text-fg hover:underline"
+            >
+              {room.tenantName}
+            </Link>
+          ) : (
+            <span className="block text-[13px] font-[550] text-info">
+              {rentalStatusLabels(d)[room.status]}
+            </span>
+          )}
+        </span>
 
-            <Button size="sm" variant="ghost" onClick={onEdit} disabled={busy}>
-              <Pencil className="h-3.5 w-3.5" aria-hidden />
-              <span className="sr-only">{fill(misc.roomEdit, { room: room.name })}</span>
-            </Button>
-
-            <Button size="sm" variant="ghost" onClick={remove} disabled={busy}>
-              {busy ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-              )}
-              <span className="sr-only">{fill(misc.roomDelete, { room: room.name })}</span>
-            </Button>
+        {room.monthlyRentGrosze ? (
+          <span className="font-mono text-sm font-semibold whitespace-nowrap text-fg">
+            {formatMoney(room.monthlyRentGrosze, locale)}
           </span>
-        </div>
+        ) : (
+          <span className="text-[13px] text-subtle">{misc.roomNoPrice}</span>
+        )}
 
-        {error ? <Alert tone="error">{error}</Alert> : null}
-      </CardContent>
-    </Card>
+        <span className="flex shrink-0 items-center gap-1">
+          {room.tenantId && room.leaseId ? (
+            <Button asChild size="sm" variant="ghost" className="hidden sm:inline-flex">
+              <Link href={`/panel/umowy/${room.leaseId}`}>{misc.roomLease}</Link>
+            </Button>
+          ) : !disabled ? (
+            <Button asChild size="sm" variant="soft">
+              <Link
+                href={`/panel/umowy/nowa?propertyId=${propertyId}&roomId=${room.id}`}
+                title={fill(misc.roomAssignTitle, { room: room.name, property: propertyName })}
+              >
+                <UserPlus className="size-4" aria-hidden />
+                <span className="sr-only sm:not-sr-only">{misc.roomAssign}</span>
+              </Link>
+            </Button>
+          ) : null}
+
+          <ActionMenu
+            label={fill(misc.roomEdit, { room: room.name })}
+            items={[
+              ...(room.tenantId && room.leaseId
+                ? [{ label: misc.roomLease, href: `/panel/umowy/${room.leaseId}` }]
+                : []),
+              { label: d.panel.common.edit, icon: Pencil, onSelect: onEdit },
+              {
+                label: fill(misc.roomDelete, { room: room.name }),
+                icon: busy ? Loader2 : Trash2,
+                danger: true,
+                disabled: busy,
+                onSelect: remove,
+              },
+            ]}
+          />
+        </span>
+      </div>
+
+      {error ? <Alert tone="error">{error}</Alert> : null}
+    </div>
   );
 }
 
@@ -274,14 +269,12 @@ function RoomForm({
   propertyId,
   room,
   onDone,
-  onCancel,
 }: {
   propertyId: string;
   room?: RoomView;
   onDone: () => void;
-  onCancel: () => void;
 }) {
-  const { d } = useI18n();
+  const { d, locale } = useI18n();
   const t = d.panel.propertiesPage.roomsPanel;
   const v = useValidationContext();
   const router = useRouter();
@@ -329,68 +322,60 @@ function RoomForm({
   const idFor = (suffix: string) => `room-${suffix}-${room?.id ?? "new"}`;
 
   return (
-    <Card className="border-accent/40">
-      <CardContent className="p-4">
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-fg">
-              {isEdit ? room!.name : t.newRoom}
-            </p>
-            <Button type="button" size="icon" variant="ghost" onClick={onCancel} aria-label={t.close}>
-              <X className="h-4 w-4" aria-hidden />
-            </Button>
-          </div>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <DialogBody>
+        {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-          {formError ? <Alert tone="error">{formError}</Alert> : null}
+        <FormField id={idFor("name")} label={t.designation} error={errors.name?.message}>
+          <Input
+            {...fieldAria(idFor("name"), { error: errors.name?.message })}
+            disabled={isSubmitting}
+            {...register("name")}
+          />
+        </FormField>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <FormField id={idFor("name")} label={t.designation} error={errors.name?.message}>
-              <Input
-                {...fieldAria(idFor("name"), { error: errors.name?.message })}
-                disabled={isSubmitting}
-                {...register("name")}
-              />
-            </FormField>
-
-            <FormField id={idFor("status")} label={t.status} error={errors.status?.message}>
-              <Select
-                {...fieldAria(idFor("status"), { error: errors.status?.message })}
-                disabled={isSubmitting}
-                {...register("status")}
-              >
-                {Object.entries(rentalStatusLabels(d)).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </FormField>
-
-            <FormField
-              id={idFor("rent")}
-              label={t.rent}
-              error={errors.monthlyRentGrosze?.message}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField id={idFor("status")} label={t.status} error={errors.status?.message}>
+            <Select
+              {...fieldAria(idFor("status"), { error: errors.status?.message })}
+              disabled={isSubmitting}
+              {...register("status")}
             >
+              {Object.entries(rentalStatusLabels(d)).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+
+          <FormField id={idFor("rent")} label={t.rent} error={errors.monthlyRentGrosze?.message}>
+            <div className="relative">
               <Input
                 {...fieldAria(idFor("rent"), { error: errors.monthlyRentGrosze?.message })}
                 inputMode="decimal"
+                placeholder="0,00"
+                className="pr-10 font-mono"
                 disabled={isSubmitting}
                 {...register("monthlyRentGrosze")}
               />
-            </FormField>
-          </div>
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-subtle">
+                {formatMoneyParts(0, locale).currency}
+              </span>
+            </div>
+          </FormField>
+        </div>
+      </DialogBody>
 
-          <div className="flex flex-wrap gap-2.5">
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              {isEdit ? d.panel.common.save : t.add}
-            </Button>
-            <Button type="button" size="sm" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-              {d.panel.common.cancel}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onDone} disabled={isSubmitting}>
+          {d.panel.common.cancel}
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          {isEdit ? d.panel.common.save : t.add}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

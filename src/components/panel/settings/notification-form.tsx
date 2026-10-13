@@ -1,15 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Send } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SectionCard } from "@/components/panel/section-card";
 import { fieldAria, FormField } from "@/components/ui/form-field";
+import { InfoTip } from "@/components/ui/info-tip";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api/client";
 import {
@@ -72,95 +74,87 @@ export function NotificationForm({
     router.refresh();
   }
 
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">{t.title}</h2>
-          <p className="mt-0.5 text-sm text-muted">
-            {t.lead}
-          </p>
+  const daysField = (name: "reminderDaysBefore" | "overdueRepeatDays", label: string, min: number, max: number) => {
+    const id = `notif-${name}`;
+    const error = errors[name]?.message;
+    return (
+      <FormField id={id} label={label} error={error}>
+        <div className="relative">
+          <Input
+            {...fieldAria(id, { error })}
+            type="number"
+            inputMode="numeric"
+            min={min}
+            max={max}
+            className="pr-12 font-mono"
+            disabled={isSubmitting}
+            {...register(name)}
+          />
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-subtle">
+            {t.daysUnit}
+          </span>
         </div>
+      </FormField>
+    );
+  };
 
+  return (
+    <SectionCard
+      title={t.title}
+      icon={Send}
+      actions={
+        <InfoTip label={t.overdueInfo} align="end">
+          {t.overdueHint}
+        </InfoTip>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
         {formError ? <Alert tone="error">{formError}</Alert> : null}
         {saved ? <Alert tone="success">{t.saved}</Alert> : null}
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-          <FormField
-            id="notif-senderName"
-            label={t.senderName}
-            error={errors.senderName?.message}
-            hint={`Widoczna w skrzynce najemcy. Puste pole = „${organizationName}".`}
+        {/*
+          Adres odpowiedzi ustawia się w zakładce „Organizacja", ale jego brak
+          boli właśnie tutaj: bez niego odpowiedź najemcy na powiadomienie idzie
+          na skrzynkę platformy, czyli w próżnię.
+        */}
+        {!contactEmail ? (
+          <Alert
+            tone="warning"
+            action={
+              <Link href="/panel/ustawienia" className="hover:underline">
+                {t.openOrganization}
+              </Link>
+            }
           >
+            {t.noContactEmail}
+          </Alert>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Puste pole = nazwa organizacji; widać ją jako podpowiedź w polu. */}
+          <FormField id="notif-senderName" label={t.senderName} error={errors.senderName?.message}>
             <Input
               {...fieldAria("notif-senderName", { error: errors.senderName?.message })}
+              placeholder={organizationName}
               disabled={isSubmitting}
               {...register("senderName")}
             />
           </FormField>
+          {daysField("reminderDaysBefore", t.reminderDays, 1, 30)}
+          {daysField("overdueRepeatDays", t.overdueDays, 2, 60)}
+        </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              id="notif-reminderDaysBefore"
-              label={t.reminderDays}
-              error={errors.reminderDaysBefore?.message}
-            >
-              <Input
-                {...fieldAria("notif-reminderDaysBefore", {
-                  error: errors.reminderDaysBefore?.message,
-                })}
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={30}
-                disabled={isSubmitting}
-                {...register("reminderDaysBefore")}
-              />
-            </FormField>
-
-            <FormField
-              id="notif-overdueRepeatDays"
-              label={t.overdueDays}
-              error={errors.overdueRepeatDays?.message}
-              hint={t.overdueHint}
-            >
-              <Input
-                {...fieldAria("notif-overdueRepeatDays", {
-                  error: errors.overdueRepeatDays?.message,
-                })}
-                type="number"
-                inputMode="numeric"
-                min={2}
-                max={60}
-                disabled={isSubmitting}
-                {...register("overdueRepeatDays")}
-              />
-            </FormField>
-          </div>
-
-          {/*
-            Adres odpowiedzi ustawia się w zakładce „Organizacja", ale jego brak
-            boli właśnie tutaj: bez niego odpowiedź najemcy na powiadomienie idzie
-            na skrzynkę platformy, czyli w próżnię.
-          */}
-          {!contactEmail ? (
-            <Alert tone="warning">
-              {t.noContactEmail}
-            </Alert>
-          ) : null}
-
-          <div>
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : saved ? (
-                <Check className="h-4 w-4" aria-hidden />
-              ) : null}
-              Zapisz
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <Loader2 className="size-[18px] animate-spin" aria-hidden />
+            ) : saved ? (
+              <Check className="size-[18px]" aria-hidden />
+            ) : null}
+            {d.panel.settings.seller.save}
+          </Button>
+        </div>
+      </form>
+    </SectionCard>
   );
 }

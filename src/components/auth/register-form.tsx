@@ -5,12 +5,14 @@ import { Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PasswordChecklist } from "@/components/ui/password-checklist";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ROUTES } from "@/lib/auth/routes";
 import { useI18n } from "@/lib/i18n/client";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
@@ -30,11 +32,13 @@ export function RegisterForm() {
     register,
     handleSubmit,
     setError,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema(d.auth.validation)),
     defaultValues: { name: "", organizationName: "", email: "", password: "" },
   });
+  const password = useWatch({ control, name: "password" });
 
   async function onSubmit(values: RegisterInput) {
     setFormError(null);
@@ -104,7 +108,6 @@ export function RegisterForm() {
         id="organizationName"
         label={t.organizationName}
         error={errors.organizationName?.message}
-        hint={t.organizationHint}
       >
         <Input
           {...fieldAria("organizationName", { error: errors.organizationName?.message })}
@@ -124,28 +127,23 @@ export function RegisterForm() {
         />
       </FormField>
 
-      <FormField
-        id="password"
-        label={t.password}
-        error={errors.password?.message}
-        hint={t.passwordHint}
-      >
-        <Input
-          {...fieldAria("password", {
-            error: errors.password?.message,
-            hint: t.passwordHint,
-          })}
-          type="password"
-          autoComplete="new-password"
-          disabled={isSubmitting}
-          {...register("password")}
-        />
-      </FormField>
+      <div className="flex flex-col gap-2.5">
+        <FormField id="password" label={t.password} error={errors.password?.message}>
+          <PasswordInput
+            {...fieldAria("password", { error: errors.password?.message })}
+            aria-describedby={errors.password?.message ? "password-error" : "password-rules"}
+            autoComplete="new-password"
+            disabled={isSubmitting}
+            {...register("password")}
+          />
+        </FormField>
+        <PasswordChecklist id="password-rules" value={password ?? ""} />
+      </div>
 
       <Button type="submit" size="lg" block disabled={isSubmitting} className="mt-1">
         {isSubmitting ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            <Loader2 className="size-[18px] animate-spin" aria-hidden />
             {t.submitting}
           </>
         ) : (

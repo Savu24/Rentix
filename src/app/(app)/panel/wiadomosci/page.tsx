@@ -1,18 +1,21 @@
-import { ChevronLeft, ChevronRight, Mail, SearchX } from "lucide-react";
+import { ChevronLeft, ChevronRight, Mail, SearchX, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { ListFilterSelect } from "@/components/panel/list-filter-select";
 import { ListSearch } from "@/components/panel/list-search";
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/panel/page-header";
+import { SegmentedFilter } from "@/components/panel/segmented-filter";
+import { MessageStatusBadge } from "@/components/panel/status-badges";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { fill, formatDateIn, formatRelativeTime, pluralize } from "@/lib/i18n/format";
 import { hasSentEmails, listSentEmails, MESSAGES_PAGE_SIZE } from "@/lib/messages/service";
-import { MESSAGE_STATUS_TONE, resolveMessageStatus } from "@/lib/messages/status";
+import { resolveMessageStatus } from "@/lib/messages/status";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+import { cn } from "@/lib/utils";
 import { messageListQuerySchema } from "@/lib/validations/message";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,8 +23,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Szerokości kolumn — wspólne dla nagłówka i wierszy, żeby się nie rozjechały. */
-const COLUMNS = "md:grid md:grid-cols-[minmax(0,1.15fr)_9.5rem_minmax(0,1.6fr)_8.5rem]";
+const COLUMNS = "lg:grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.1fr)_10rem_8.5rem_1.25rem] lg:items-center lg:gap-6";
 
+/**
+ * Wysłane e-maile (redesign/17-wiadomosci-lista.svg): do kogo, w jakiej
+ * sprawie, czy dotarło i kiedy. Status jako przełącznik nad tabelą.
+ */
 export default async function MessagesPage({
   searchParams,
 }: {
@@ -54,127 +61,150 @@ export default async function MessagesPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
-        <p className="text-sm text-muted">{t.lead}</p>
-      </div>
-
-      {anySent ? (
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-          <ListSearch placeholder={t.searchPlaceholder} ariaLabel={t.searchAria} />
-          <ListFilterSelect
-            param="period"
-            options={(["7", "30", "90"] as const).map((value) => ({
-              value,
-              label: t.periods[value],
-            }))}
-            allLabel={t.periods.all}
-            ariaLabel={t.periodAria}
-          />
-          <ListFilterSelect
-            param="status"
-            options={(["delivered", "sent", "failed"] as const).map((value) => ({
-              value,
-              label: t.statusFilters[value],
-            }))}
-            allLabel={t.allStatuses}
-            ariaLabel={t.statusAria}
-          />
-        </div>
-      ) : null}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader title={t.title} />
 
       {!anySent ? (
-        <EmptyState icon={Mail} title={t.emptyTitle} description={t.emptyLead} />
-      ) : rows.length === 0 && filtered ? (
-        <EmptyState icon={SearchX} title={t.noResultsTitle} description={t.noResultsLead} />
+        <EmptyState icon={Mail} title={t.emptyTitle} />
       ) : (
-        <Card className="overflow-hidden">
-          <div
-            className={`hidden border-b border-border bg-surface-alt px-4 py-2.5 text-xs font-medium text-muted ${COLUMNS} md:gap-4`}
-            aria-hidden
-          >
-            <span>{t.columns.to}</span>
-            <span>{t.columns.status}</span>
-            <span>{t.columns.subject}</span>
-            <span className="text-right">{t.columns.sent}</span>
+        <>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+            <Suspense fallback={null}>
+              <ListSearch placeholder={t.searchPlaceholder} ariaLabel={t.searchAria} />
+              <SegmentedFilter
+                param="status"
+                ariaLabel={t.statusAria}
+                options={[
+                  { value: "all", label: t.filterAll },
+                  ...(["delivered", "sent", "failed"] as const).map((value) => ({
+                    value,
+                    label: t.statusFilters[value],
+                  })),
+                ]}
+              />
+            </Suspense>
+            <div className="flex items-center justify-between gap-3 lg:ml-auto">
+              <Suspense fallback={null}>
+                <ListFilterSelect
+                  param="period"
+                  options={(["7", "30", "90"] as const).map((value) => ({
+                    value,
+                    label: t.periods[value],
+                  }))}
+                  allLabel={t.periods.all}
+                  ariaLabel={t.periodAria}
+                />
+              </Suspense>
+              <span className="shrink-0 text-[13.5px] whitespace-nowrap text-muted">
+                {fill(pluralize(locale, total, t.count), { count: total })}
+              </span>
+            </div>
           </div>
 
-          <ul className="flex flex-col">
-            {rows.map((row, index) => {
-              const status = resolveMessageStatus(row);
+          {rows.length === 0 && filtered ? (
+            <EmptyState
+              icon={SearchX}
+              title={t.noResultsTitle}
+              action={
+                <Button asChild variant="secondary">
+                  <Link href="/panel/wiadomosci">
+                    <X className="size-[18px]" aria-hidden />
+                    {d.panel.propertiesPage.filters.clear}
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="flex flex-col gap-3 lg:gap-0 lg:overflow-hidden lg:rounded-card lg:border lg:border-border lg:bg-surface">
+              <div
+                className={cn(COLUMNS, "hidden h-10 border-b border-border bg-hover px-6 text-[12.5px] font-[550] text-muted")}
+                aria-hidden
+              >
+                <span>{t.columns.to}</span>
+                <span>{t.columns.subject}</span>
+                <span>{t.columns.status}</span>
+                <span className="text-right">{t.columns.sent}</span>
+                <span />
+              </div>
 
-              return (
-                <li key={row.id} className={index > 0 ? "border-t border-border" : ""}>
-                  <Link
-                    href={`/panel/wiadomosci/${row.id}`}
-                    className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 transition-colors hover:bg-surface-alt ${COLUMNS} md:gap-4`}
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-border bg-surface-alt"
-                        aria-hidden
+              <ul className="flex flex-col gap-3 lg:gap-0">
+                {rows.map((row) => {
+                  const status = resolveMessageStatus(row);
+                  const name = row.tenant ? `${row.tenant.firstName} ${row.tenant.lastName}` : null;
+
+                  return (
+                    <li key={row.id} className="lg:border-b lg:border-border lg:last:border-b-0">
+                      <Link
+                        href={`/panel/wiadomosci/${row.id}`}
+                        className={cn(
+                          COLUMNS,
+                          "flex flex-col gap-2 rounded-tile border border-border bg-surface p-4 transition-colors hover:bg-hover",
+                          "lg:min-h-16 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-6 lg:py-3",
+                        )}
                       >
-                        <Mail className="h-4 w-4 text-muted" />
-                      </span>
-                      <span className="truncate text-sm font-medium text-fg">
-                        {row.toEmail ?? "—"}
-                      </span>
-                    </span>
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm font-semibold text-fg">{name ?? row.toEmail}</span>
+                          {name && row.toEmail ? (
+                            <span className="truncate text-[13px] text-muted">{row.toEmail}</span>
+                          ) : null}
+                        </span>
+                        <span className="min-w-0 text-sm text-fg lg:truncate">{row.title}</span>
+                        <span className="flex items-center justify-between gap-3 lg:contents">
+                          <span>
+                            <MessageStatusBadge status={status} d={d} />
+                          </span>
+                          <time
+                            dateTime={row.createdAt.toISOString()}
+                            title={formatRelativeTime(row.createdAt, now, locale)}
+                            className="font-mono text-[13px] whitespace-nowrap text-muted lg:text-right"
+                          >
+                            {formatDateIn(row.createdAt, locale, "dateTime")}
+                          </time>
+                        </span>
+                        <ChevronRight className="hidden size-[18px] text-subtle lg:block" aria-hidden />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
 
-                    <span className="justify-self-end md:justify-self-start">
-                      <Badge tone={MESSAGE_STATUS_TONE[status]}>{t.status[status]}</Badge>
-                    </span>
-
-                    <span className="col-span-2 truncate pl-11 text-sm text-muted md:col-span-1 md:pl-0">
-                      {row.title}
-                    </span>
-
-                    <span
-                      className="col-span-2 pl-11 text-xs text-muted md:col-span-1 md:pl-0 md:text-right md:text-sm"
-                      title={formatDateIn(row.createdAt, locale, "dateTime")}
-                    >
-                      <time dateTime={row.createdAt.toISOString()}>
-                        {formatRelativeTime(row.createdAt, now, locale)}
-                      </time>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      )}
-
-      {anySent && total > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
-          <span>
-            {fill(pluralize(locale, total, t.count), { count: total })}
-            {pages > 1 ? ` · ${fill(t.pageOf, { page: query.page, pages })}` : ""}
-          </span>
-
-          {pages > 1 ? (
-            <div className="flex items-center gap-2">
-              {query.page > 1 ? (
-                <Button asChild size="sm" variant="secondary">
-                  <Link href={pageHref(query.page - 1)}>
-                    <ChevronLeft className="h-4 w-4" aria-hidden />
-                    {t.newer}
-                  </Link>
-                </Button>
-              ) : null}
-              {query.page < pages ? (
-                <Button asChild size="sm" variant="secondary">
-                  <Link href={pageHref(query.page + 1)}>
-                    {t.older}
-                    <ChevronRight className="h-4 w-4" aria-hidden />
-                  </Link>
-                </Button>
+              {pages > 1 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 lg:border-t lg:border-border lg:px-6 lg:py-3">
+                  <span className="text-[13.5px] text-muted">
+                    {fill(t.pageOf, { page: query.page, pages })}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <PageLink href={query.page > 1 ? pageHref(query.page - 1) : null}>
+                      <ChevronLeft className="size-4" aria-hidden />
+                      {t.newer}
+                    </PageLink>
+                    <PageLink href={query.page < pages ? pageHref(query.page + 1) : null}>
+                      {t.older}
+                      <ChevronRight className="size-4" aria-hidden />
+                    </PageLink>
+                  </div>
+                </div>
               ) : null}
             </div>
-          ) : null}
-        </div>
-      ) : null}
+          )}
+        </>
+      )}
     </div>
+  );
+}
+
+/** Przycisk strony — wyłączony, gdy dalej nie ma już nic do pokazania. */
+function PageLink({ href, children }: { href: string | null; children: React.ReactNode }) {
+  if (!href) {
+    return (
+      <Button size="sm" variant="secondary" disabled>
+        {children}
+      </Button>
+    );
+  }
+  return (
+    <Button asChild size="sm" variant="secondary">
+      <Link href={href}>{children}</Link>
+    </Button>
   );
 }

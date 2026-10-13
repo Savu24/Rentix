@@ -1,9 +1,10 @@
-import { Archive, Building2, Plus, SearchX } from "lucide-react";
+import { Archive, Building2, Plus, SearchX, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { PropertyCard } from "@/components/panel/properties/property-card";
+import { PageHeader } from "@/components/panel/page-header";
+import { PropertyCard, PropertyTableHead } from "@/components/panel/properties/property-card";
 import { PropertyFilters } from "@/components/panel/properties/property-filters";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -34,67 +35,65 @@ export default async function PropertiesPage({
   const hasFilters = Boolean(query.q) || Boolean(query.type) || query.occupancy !== "all";
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="r-display text-[26px] leading-tight text-fg">{t.title}</h1>
-          <p className="text-sm text-muted">{t.lead}</p>
-        </div>
-
-        {/* Archiwum obok dodawania, bo to para: jedno chowa, drugie
-            przywraca. Schowane w menu byłoby nie do znalezienia. */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button asChild size="sm" variant="secondary">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader
+        title={t.title}
+        primary={{ href: "/panel/nieruchomosci/nowa", label: t.add, icon: Plus }}
+        /* Archiwum obok dodawania, bo to para: jedno chowa, drugie
+           przywraca. Schowane w menu byłoby nie do znalezienia. */
+        actions={
+          <Button asChild variant="ghost">
             <Link href="/panel/nieruchomosci/archiwum">
-              <Archive className="h-4 w-4" aria-hidden />
+              <Archive className="size-[18px]" aria-hidden />
               {t.archived}
             </Link>
           </Button>
+        }
+      />
 
-          <Button asChild size="sm">
-            <Link href="/panel/nieruchomosci/nowa">
-              <Plus className="h-4 w-4" aria-hidden />
-              {t.add}
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      <Suspense fallback={null}>
-        <PropertyFilters total={properties.length} />
-      </Suspense>
-
-      {properties.length === 0 ? (
-        hasFilters ? (
-          <EmptyState
-            icon={SearchX}
-            title={t.noMatchTitle}
-            description={t.noMatchLead}
-          />
-        ) : (
-          <EmptyState
-            icon={Building2}
-            title={t.emptyTitle}
-            description={t.emptyLead}
-            action={
-              <Button asChild>
-                <Link href="/panel/nieruchomosci/nowa">
-                  <Plus className="h-4 w-4" aria-hidden />
-                  {t.add}
-                </Link>
-              </Button>
-            }
-          />
-        )
+      {!hasFilters && properties.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title={t.emptyTitle}
+          action={
+            <Button asChild>
+              <Link href="/panel/nieruchomosci/nowa">
+                <Plus className="size-[18px]" aria-hidden />
+                {t.add}
+              </Link>
+            </Button>
+          }
+        />
       ) : (
-        // Jedna nieruchomość = jeden wiersz na całą szerokość. W trzech
-        // kolumnach nazwa i adres ucinały się po kilku znakach, a przy
-        // kilkunastu obiektach oko i tak szuka ich w pionie, nie w siatce.
-        <div className="flex flex-col gap-3">
-          {properties.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
+        <>
+          <Suspense fallback={null}>
+            <PropertyFilters total={properties.length} />
+          </Suspense>
+
+          {properties.length === 0 ? (
+            <EmptyState
+              icon={SearchX}
+              title={t.noMatchTitle}
+              action={
+                <Button asChild variant="secondary">
+                  <Link href="/panel/nieruchomosci">
+                    <X className="size-[18px]" aria-hidden />
+                    {t.filters.clear}
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="lg:overflow-hidden lg:rounded-card lg:border lg:border-border lg:bg-surface">
+              <PropertyTableHead />
+              <ul className="flex flex-col gap-3 lg:gap-0">
+                {properties.map((property) => (
+                  <PropertyCard key={property.id} property={property} />
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

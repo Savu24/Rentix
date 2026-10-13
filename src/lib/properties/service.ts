@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { Dictionary } from "@/lib/i18n/types";
 import { prisma } from "@/lib/prisma";
+import { occupancyPercent } from "@/lib/properties/occupancy";
 import type {
   PropertyCreateOutput,
   PropertyFormOutput,
@@ -81,6 +82,7 @@ export async function listProperties(organizationId: string, query: PropertyList
       roomCount: rooms.length,
       occupiedRoomCount: occupied,
       availableRoomCount: available,
+      occupancyPercent: occupancyPercent(occupied, rooms.length),
     };
   });
 }

@@ -3,6 +3,7 @@
 import { Lock } from "lucide-react";
 
 import { requiredPlan, type PlanFeature } from "@/lib/billing/features";
+import { Badge } from "@/components/ui/badge";
 import { usePlanAllows } from "@/lib/billing/client";
 import { useI18n } from "@/lib/i18n/client";
 import { fill } from "@/lib/i18n/format";
@@ -22,18 +23,28 @@ import { cn } from "@/lib/utils";
 export function PlanLockMark({
   feature,
   className,
+  variant = "icon",
 }: {
   feature: PlanFeature;
   className?: string;
+  /** `badge` — plakietka z nazwą planu („Pro") w arkuszu „Więcej" na telefonie. */
+  variant?: "icon" | "badge";
 }) {
   const { d } = useI18n();
   const allowed = usePlanAllows(feature);
 
   if (allowed) return null;
 
-  const label = fill(d.panel.shell.lockedHint, {
-    plan: d.panel.shell.planNames[requiredPlan(feature)],
-  });
+  const planName = d.panel.shell.planNames[requiredPlan(feature)];
+  const label = fill(d.panel.shell.lockedHint, { plan: planName });
+
+  if (variant === "badge") {
+    return (
+      <Badge tone="amber" size="sm" icon={Lock} className={className} title={label} aria-label={label}>
+        {planName}
+      </Badge>
+    );
+  }
 
   return (
     <Lock

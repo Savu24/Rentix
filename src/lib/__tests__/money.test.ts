@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   multiplyByQuantity,
   formatMoney,
+  formatMoneyParts,
   formatMoneyWhole,
   formatPLN,
   parseMoney,
@@ -179,5 +180,29 @@ describe("kwoty w wersji brytyjskiej", () => {
   it("nie przyjmuje kwoty z więcej niż dwoma miejscami po przecinku", () => {
     expect(parseMoney("12.345", "uk")).toBeNull();
     expect(parseMoney("12,345", "pl")).toBeNull();
+  });
+});
+
+describe("formatMoneyParts", () => {
+  it("rozbija złote na liczbę i symbol po niej", () => {
+    expect(formatMoneyParts(310500, "pl")).toEqual({
+      amount: "3 105,00",
+      currency: "zł",
+      currencyFirst: false,
+    });
+  });
+
+  it("w funtach symbol stoi przed liczbą", () => {
+    expect(formatMoneyParts(240000, "uk")).toEqual({
+      amount: "2,400.00",
+      currency: "£",
+      currencyFirst: true,
+    });
+  });
+
+  it("zachowuje znak minus z formatMoney", () => {
+    const parts = formatMoneyParts(-20500, "pl");
+    expect(formatMoney(-20500, "pl")).toContain(parts.amount);
+    expect(parts.amount).toMatch(/^[-−]205,00$/);
   });
 });

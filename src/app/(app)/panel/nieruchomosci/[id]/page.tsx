@@ -1,48 +1,56 @@
 import {
-  ArrowLeft,
+  Archive,
   Building2,
   ClipboardCheck,
+  Clock,
+  FilePlus,
+  Globe,
   KeyRound,
+  Layers,
   MapPin,
+  NotebookPen,
   Pencil,
-  TreePine,
-  UserPlus,
+  Ruler,
+  TrainFront,
+  TrendingDown,
+  TrendingUp,
+  UserRound,
   Wifi,
+  type LucideIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PropertyExpenses } from "@/components/panel/expenses/property-expenses";
+import { PageHeader } from "@/components/panel/page-header";
 import { CleaningSchedule } from "@/components/panel/properties/cleaning-schedule";
+import { OccupancyBadge } from "@/components/panel/properties/occupancy-badge";
 import { PropertyActions } from "@/components/panel/properties/property-actions";
+import { PROPERTY_TYPE_ICON } from "@/components/panel/properties/property-icon";
 import { RoomsList, type RoomView } from "@/components/panel/properties/rooms-list";
+import { InfoSections, nonEmptySections } from "@/components/panel/info-sections";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { MoneyDisplay } from "@/components/ui/money-display";
 import { requireOwnerSession } from "@/lib/auth/session";
 import { MIN_CLEANING_PARTICIPANTS } from "@/lib/cleaning/rotation";
 import { cleaningSchedule } from "@/lib/cleaning/service";
 import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { propertyExpenses } from "@/lib/expenses/service";
 import type { Locale } from "@/lib/i18n/config";
+import { fill, formatArea, formatDateIn } from "@/lib/i18n/format";
 import type { Dictionary } from "@/lib/i18n/types";
-import { fill, formatDateIn } from "@/lib/i18n/format";
 import { formatMoney } from "@/lib/money";
+import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { formatPropertyAddress } from "@/lib/properties/address";
 import { getProperty } from "@/lib/properties/service";
 import type { MonthlyBalance } from "@/lib/reports/aggregate";
 import { propertyMonthlyBalance } from "@/lib/reports/service";
-import {
-  heatingTypeLabels,
-  propertyTypeLabels,
-  rentalStatusLabels,
-  RENTAL_STATUS_TONE,
-} from "@/lib/validations/property";
-import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
-type Params = { params: Promise<{ id: string }> };
+import { cn } from "@/lib/utils";
+import { heatingTypeLabels, propertyTypeLabels } from "@/lib/validations/property";
 
+type Params = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const session = await requireOwnerSession();
@@ -92,272 +100,240 @@ export default async function PropertyDetailPage({ params }: Params) {
   // Cała rozpiska sprzątania od razu: to jedna lista tygodni, którą użytkownik
   // przewija już w przeglądarce, bez wracania na serwer po stronę.
   const cleaning = await cleaningSchedule(session.user.organizationId, property.id);
+  const hasCleaning = Boolean(
+    cleaning && cleaning.participants.length >= MIN_CLEANING_PARTICIPANTS,
+  );
 
   const now = new Date();
   const address = formatPropertyAddress(property);
+  const TypeIcon = PROPERTY_TYPE_ICON[property.type];
+  const newLeaseHref = `/panel/umowy/nowa?propertyId=${property.id}`;
+  const editHref = `/panel/nieruchomosci/${property.id}/edytuj`;
+
+  // Najem całości ma sens tylko wtedy, gdy nikt jeszcze nie zajmuje pokoi.
+  const canLetWhole = !wholeLease && rooms.every((room) => !room.tenantId);
+
+  const occupancy = {
+    status: property.status,
+    roomCount: rooms.length,
+    occupiedRoomCount: rooms.filter((room) => room.status === "OCCUPIED").length,
+    availableRoomCount: rooms.filter((room) => room.status === "AVAILABLE").length,
+  };
 
   // Każda sekcja pojawia się dopiero, gdy jest co pokazać — pusta ramka
   // z kreskami odsuwałaby tylko pokoje i koszty w dół.
-  const hasAccess = Boolean(
-    property.intercomCode ||
-      property.storageUnit ||
-      property.bikeStorage ||
-      property.wasteDisposal,
-  );
-  const hasManager = Boolean(
-    property.buildingManagerName ||
-      property.buildingManagerAddress ||
-      property.buildingManagerPhone ||
-      property.buildingManagerEmail,
-  );
-  const hasUtilities = Boolean(
-    property.heatingType ||
-      property.internetProvider ||
-      property.internetProviderPhone ||
-      property.internetSpeedMbps ||
-      property.wifiSsid ||
-      property.wifiPassword ||
-      property.internetContractEndsAt,
-  );
-  const hasPapers = Boolean(property.landRegistryNumber);
-  const hasNeighbourhood = Boolean(property.transitLines || property.nearbyPlaces);
+  const infoSections = nonEmptySections([
+    {
+      title: t.access,
+      icon: KeyRound,
+      items: [
+        [t.intercom, property.intercomCode],
+        [t.storage, property.storageUnit],
+        [t.bikeStorage, property.bikeStorage],
+        [t.waste, property.wasteDisposal],
+      ],
+    },
+    {
+      title: t.buildingManager,
+      icon: Building2,
+      items: [
+        [t.name, property.buildingManagerName],
+        [t.phone, property.buildingManagerPhone],
+        [t.email, property.buildingManagerEmail],
+        [t.address, property.buildingManagerAddress],
+      ],
+    },
+    {
+      title: t.utilities,
+      icon: Wifi,
+      items: [
+        [t.heating, property.heatingType ? heatingTypeLabels(d)[property.heatingType] : null],
+        [t.internetSpeed, property.internetSpeedMbps ? `${property.internetSpeedMbps} Mbit/s` : null],
+        [t.internetProvider, property.internetProvider],
+        [t.internetProviderPhone, property.internetProviderPhone],
+        [t.wifiSsid, property.wifiSsid],
+        [t.wifiPassword, property.wifiPassword],
+        [
+          t.internetContractEnd,
+          property.internetContractEndsAt ? (
+            <ContractEnd
+              date={property.internetContractEndsAt}
+              now={now}
+              locale={locale}
+              overdueLabel={t.overdue}
+            />
+          ) : null,
+        ],
+      ],
+    },
+    { title: t.inspections, icon: ClipboardCheck, items: [[t.landRegistry, property.landRegistryNumber]] },
+    {
+      title: t.area,
+      icon: TrainFront,
+      items: [
+        [t.transitLines, property.transitLines],
+        [t.nearbyPlaces, property.nearbyPlaces],
+      ],
+    },
+    { title: d.panel.propertiesPage.form.description, icon: Globe, text: property.description },
+    { title: t.notes, icon: NotebookPen, text: property.notes },
+  ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
-      <div className="flex flex-col gap-3">
-        <Link
-          href="/panel/nieruchomosci"
-          className="inline-flex w-fit items-center gap-1.5 rounded-btn text-sm text-muted transition-colors hover:text-fg"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          {d.panel.panelMisc.propertiesBack}
-        </Link>
-
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="r-display text-[26px] leading-tight text-fg">{property.name}</h1>
-              <Badge tone="accent">{propertyTypeLabels(d)[property.type]}</Badge>
-              <Badge tone={RENTAL_STATUS_TONE[property.status]}>
-                {rentalStatusLabels(d)[property.status]}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <PageHeader
+        back={{ href: "/panel/nieruchomosci", label: d.panel.panelMisc.propertiesBack }}
+        title={property.name}
+        badges={
+          <>
+            <Badge tone="outline" icon={TypeIcon}>
+              {propertyTypeLabels(d)[property.type]}
+            </Badge>
+            <OccupancyBadge property={occupancy} labels={d.panel.propertiesPage.badge} />
+            {property.archivedAt ? <Badge tone="warning" icon={Archive}>{t.archived}</Badge> : null}
+            {/* Oznaczenie do przyszłej strony ofert — sama strona jest poza
+                zakresem, więc plakietka tylko odnotowuje ustawienie. */}
+            {property.publiclyListed ? (
+              <Badge tone="good" icon={Globe}>
+                {t.publiclyListed}
               </Badge>
-              {property.archivedAt ? <Badge tone="warning">{t.archived}</Badge> : null}
-              {/* Oznaczenie do przyszłej strony ofert — sama strona jest poza
-                  zakresem, więc badge tylko odnotowuje ustawienie. */}
-              {property.publiclyListed ? <Badge tone="good">{t.publiclyListed}</Badge> : null}
-              {/* Podnajem widać na pierwszy rzut oka — przy cudzym lokalu
-                  inaczej wygląda rozliczenie i inaczej kończy się umowa. */}
-              {property.owner ? <Badge tone="accent">{t.sublet}</Badge> : null}
-            </div>
-
-            <p className="flex items-center gap-1.5 text-sm text-muted">
-              <MapPin className="h-4 w-4 shrink-0" aria-hidden />
-              {address}
-              {property.district ? ` · ${property.district}` : null}
-            </p>
-
+            ) : null}
+            {/* Podnajem widać na pierwszy rzut oka — przy cudzym lokalu
+                inaczej wygląda rozliczenie i inaczej kończy się umowa. */}
             {property.owner ? (
-              <p className="text-xs text-muted">
-                {t.ownerPrefix}
+              <Badge tone="accent" icon={KeyRound}>
+                {t.sublet}
+              </Badge>
+            ) : null}
+          </>
+        }
+        meta={
+          <>
+            <Fact icon={MapPin}>
+              {address}
+              {property.district ? `, ${property.district}` : null}
+            </Fact>
+            {property.floor !== null ? (
+              <Fact icon={Layers}>
+                {property.floor === 0
+                  ? d.panel.propertiesPage.groundFloor
+                  : fill(t.floor, { floor: property.floor })}
+              </Fact>
+            ) : null}
+            {property.areaM2 ? (
+              <Fact icon={Ruler}>
+                <span className="font-mono">{formatArea(property.areaM2.toString(), locale)}</span>
+              </Fact>
+            ) : null}
+            {property.owner ? (
+              <Fact icon={UserRound}>
                 <Link
                   href={`/panel/wlasciciele/${property.owner.id}`}
-                  className="font-medium text-accent hover:underline"
+                  className="font-[550] text-accent hover:underline"
+                  aria-label={`${t.ownerPrefix}${property.owner.name}`}
                 >
                   {property.owner.name}
                 </Link>
-              </p>
+              </Fact>
             ) : null}
-
-            <p className="flex flex-wrap items-center gap-x-3 text-xs text-muted">
-              {property.areaM2 ? (
-                <span className="tabular">
-                  {locale === "pl"
-                    ? property.areaM2.toFixed(2).replace(".", ",")
-                    : property.areaM2.toFixed(2)}{" "}
-                  m²
-                </span>
-              ) : null}
-              {property.floor !== null ? <span>{fill(t.floor, { floor: property.floor })}</span> : null}
-              {property.askingRentGrosze ? (
-                <span className="tabular">
-                  {fill(t.wholeRent, {
-                    amount: formatMoney(property.askingRentGrosze, locale),
-                  })}
-                </span>
-              ) : null}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" variant="secondary">
-              <Link href={`/panel/nieruchomosci/${property.id}/edytuj`}>
-                <Pencil className="h-4 w-4" aria-hidden />
-                {d.panel.common.edit}
-              </Link>
-            </Button>
-
+            {property.askingRentGrosze ? (
+              <span className="font-mono">
+                {fill(t.wholeRent, { amount: formatMoney(property.askingRentGrosze, locale) })}
+              </span>
+            ) : null}
+          </>
+        }
+        actions={
+          <>
             <PropertyActions
               propertyId={property.id}
               propertyName={property.name}
               archived={property.archivedAt !== null}
             />
-          </div>
-        </div>
-      </div>
-
-      {/* Bilans zaraz pod nagłówkiem, przed pokojami: to pierwsze, czego się
-          szuka, zaglądając do lokalu z telefonu. Bez umów i kosztów cyklicznych
-          byłyby same zera, więc wtedy karta się nie pokazuje. */}
-      {balance.incomeGrosze > 0 || balance.expenseGrosze > 0 ? (
-        <BalanceCard balance={balance} locale={locale} t={t} />
-      ) : null}
-
-      {property.description ? (
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm leading-relaxed whitespace-pre-line text-fg">
-              {property.description}
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <RoomsList
-        propertyId={property.id}
-        propertyName={property.name}
-        rooms={rooms}
-        wholePropertyTenant={
-          wholeTenant && wholeLease
-            ? {
-                id: wholeTenant.id,
-                name: `${wholeTenant.firstName} ${wholeTenant.lastName}`,
-                leaseId: wholeLease.id,
-              }
-            : null
-        }
-      />
-
-      {/* Najem całości ma sens tylko wtedy, gdy nikt jeszcze nie zajmuje pokoi. */}
-      {!wholeLease && rooms.every((room) => !room.tenantId) ? (
-        <Card className="bg-surface-alt">
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <p className="text-[13px] font-semibold text-fg">
-                {t.wholeLetTitle}
-              </p>
-              <p className="mt-0.5 text-xs text-muted">
-                {t.wholeLetLead}
-              </p>
-            </div>
-            <Button asChild size="sm" variant="secondary">
-              <Link href={`/panel/umowy/nowa?propertyId=${property.id}`}>
-                <UserPlus className="h-4 w-4" aria-hidden />
-                {t.wholeLetButton}
+            <Button asChild variant="secondary">
+              <Link href={editHref}>
+                <Pencil className="size-[18px]" aria-hidden />
+                {d.panel.common.edit}
               </Link>
             </Button>
-          </CardContent>
-        </Card>
-      ) : null}
+          </>
+        }
+        primary={{ href: newLeaseHref, label: d.panel.leasesPage.newTitle, icon: FilePlus }}
+      />
+
+      {/* Bilans obok pokoi: to pierwsze, czego się szuka, zaglądając do lokalu.
+          Bez umów i kosztów cyklicznych byłyby same zera, więc wtedy go nie ma. */}
+      {balance.incomeGrosze > 0 || balance.expenseGrosze > 0 ? (
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <BalanceCard balance={balance} locale={locale} t={t} />
+          <RoomsList
+            propertyId={property.id}
+            propertyName={property.name}
+            rooms={rooms}
+            wholePropertyTenant={
+              wholeTenant && wholeLease
+                ? {
+                    id: wholeTenant.id,
+                    name: `${wholeTenant.firstName} ${wholeTenant.lastName}`,
+                    leaseId: wholeLease.id,
+                  }
+                : null
+            }
+            wholeLetHref={canLetWhole ? newLeaseHref : null}
+          />
+        </div>
+      ) : (
+        <RoomsList
+          propertyId={property.id}
+          propertyName={property.name}
+          rooms={rooms}
+          wholePropertyTenant={
+            wholeTenant && wholeLease
+              ? {
+                  id: wholeTenant.id,
+                  name: `${wholeTenant.firstName} ${wholeTenant.lastName}`,
+                  leaseId: wholeLease.id,
+                }
+              : null
+          }
+          wholeLetHref={canLetWhole ? newLeaseHref : null}
+        />
+      )}
 
       {/* Rozpiska ma sens dopiero tam, gdzie jest ją między kogo podzielić:
           dwa pokoje albo dwoje najemców na umowie na całość. */}
-      {cleaning && cleaning.participants.length >= MIN_CLEANING_PARTICIPANTS ? (
-        <CleaningSchedule propertyId={property.id} initialSchedule={cleaning} />
-      ) : null}
+      <div className={cn("grid grid-cols-1 items-start gap-6", hasCleaning && "lg:grid-cols-2")}>
+        <PropertyExpenses
+          propertyId={property.id}
+          expenses={expenses.items}
+          totalGrosze={expenses.totalGrosze}
+          count={expenses.count}
+        />
+        {hasCleaning && cleaning ? (
+          <CleaningSchedule propertyId={property.id} initialSchedule={cleaning} />
+        ) : null}
+      </div>
 
-      <PropertyExpenses
-        propertyId={property.id}
-        expenses={expenses.items}
-        totalGrosze={expenses.totalGrosze}
-        count={expenses.count}
+      <InfoSections
+        sections={infoSections}
+        editHref={editHref}
+        editLabel={d.panel.common.edit}
       />
-
-      {hasAccess ? (
-        <DetailSection
-          title={t.access}
-          icon={<KeyRound className="h-4 w-4 text-muted" aria-hidden />}
-        >
-          <DetailItem label={t.intercom} value={property.intercomCode} />
-          <DetailItem label={t.storage} value={property.storageUnit} />
-          <DetailItem label={t.bikeStorage} value={property.bikeStorage} />
-          <DetailItem label={t.waste} value={property.wasteDisposal} />
-        </DetailSection>
-      ) : null}
-
-      {hasManager ? (
-        <DetailSection
-          title={t.buildingManager}
-          icon={<Building2 className="h-4 w-4 text-muted" aria-hidden />}
-        >
-          <DetailItem label={t.name} value={property.buildingManagerName} />
-          <DetailItem label={t.address} value={property.buildingManagerAddress} />
-          <DetailItem label={t.phone} value={property.buildingManagerPhone} />
-          <DetailItem label={t.email} value={property.buildingManagerEmail} />
-        </DetailSection>
-      ) : null}
-
-      {hasUtilities ? (
-        <DetailSection
-          title={t.utilities}
-          icon={<Wifi className="h-4 w-4 text-muted" aria-hidden />}
-        >
-          <DetailItem
-            label={t.heating}
-            value={property.heatingType ? heatingTypeLabels(d)[property.heatingType] : null}
-          />
-          <DetailItem
-            label={t.internetSpeed}
-            value={property.internetSpeedMbps ? `${property.internetSpeedMbps} Mbit/s` : null}
-          />
-          <DetailItem label={t.internetProvider} value={property.internetProvider} />
-          <DetailItem label={t.internetProviderPhone} value={property.internetProviderPhone} />
-          <DetailItem label={t.wifiSsid} value={property.wifiSsid} />
-          <DetailItem label={t.wifiPassword} value={property.wifiPassword} />
-          <DateItem
-            label={t.internetContractEnd}
-            date={property.internetContractEndsAt}
-            now={now}
-            locale={locale}
-            overdueSuffix={t.overdue}
-          />
-        </DetailSection>
-      ) : null}
-
-      {hasPapers ? (
-        <DetailSection
-          title={t.inspections}
-          icon={<ClipboardCheck className="h-4 w-4 text-muted" aria-hidden />}
-        >
-          <DetailItem label={t.landRegistry} value={property.landRegistryNumber} />
-        </DetailSection>
-      ) : null}
-
-      {hasNeighbourhood ? (
-        <DetailSection
-          title={t.area}
-          icon={<TreePine className="h-4 w-4 text-muted" aria-hidden />}
-        >
-          <DetailItem label={t.transitLines} value={property.transitLines} />
-          <DetailItem label={t.nearbyPlaces} value={property.nearbyPlaces} />
-        </DetailSection>
-      ) : null}
-
-      {property.notes ? (
-        <Card className="bg-surface-alt">
-          <CardContent className="flex flex-col gap-1.5 p-4">
-            <p className="text-[13px] font-semibold text-fg">{t.notes}</p>
-            <p className="text-sm leading-relaxed whitespace-pre-line text-muted">
-              {property.notes}
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }
 
+function Fact({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <Icon className="size-4 shrink-0 text-subtle" aria-hidden />
+      {children}
+    </span>
+  );
+}
+
 /**
- * Bilans miesięczny lokalu: wynik dużą liczbą, przychód i koszty obok.
+ * Bilans miesięczny lokalu: wynik dużą liczbą, przychód i koszty pod spodem.
  *
  * Znak przed wynikiem jest jawny także na plusie — kolor nie wystarcza,
  * gdy ekran telefonu jest w słońcu albo ktoś nie rozróżnia zieleni.
@@ -375,110 +351,71 @@ function BalanceCard({
   const tone = profit > 0 ? "text-good" : profit < 0 ? "text-bad" : "text-fg";
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 p-4">
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-col gap-0.5">
-            <p className="text-xs text-muted">{t.balanceTitle}</p>
-            <p className={`tabular font-mono text-[24px] leading-tight font-semibold ${tone}`}>
-              {profit > 0 ? "+" : ""}
-              {formatMoney(profit, locale)}
-            </p>
-            {profit !== 0 ? (
-              <p className="text-xs text-muted">
-                {profit > 0 ? t.balancePositive : t.balanceNegative}
-              </p>
-            ) : null}
-          </div>
+    <section className="flex flex-col gap-5 rounded-tile border border-border bg-surface p-5 lg:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-sm font-[550] text-muted">{t.balanceTitle}</h2>
+        {profit !== 0 ? (
+          <Badge tone={profit > 0 ? "good" : "critical"} icon={profit > 0 ? TrendingUp : TrendingDown}>
+            {profit > 0 ? t.balancePositive : t.balanceNegative}
+          </Badge>
+        ) : null}
+      </div>
 
-          <dl className="flex gap-6">
-            <div className="flex flex-col gap-0.5">
-              <dt className="text-xs text-muted">{t.balanceIncome}</dt>
-              <dd className="tabular font-mono text-sm text-fg">
-                {formatMoney(balance.incomeGrosze, locale)}
-              </dd>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <dt className="text-xs text-muted">{t.balanceExpenses}</dt>
-              <dd className="tabular font-mono text-sm text-fg">
-                {balance.expenseGrosze > 0 ? "−" : ""}
-                {formatMoney(balance.expenseGrosze, locale)}
-              </dd>
-            </div>
-          </dl>
+      <MoneyDisplay
+        grosze={profit}
+        locale={locale}
+        sign
+        className={cn("text-[36px] leading-none tracking-[-0.9px] lg:text-[42px] lg:tracking-[-1.1px]", tone)}
+      />
+
+      <dl className="grid grid-cols-2 gap-4 border-t border-border pt-4">
+        <div className="flex flex-col gap-1">
+          <dt className="text-[13px] text-muted">{t.balanceIncome}</dt>
+          <dd className="font-mono text-[15px] font-semibold text-fg">
+            {formatMoney(balance.incomeGrosze, locale)}
+          </dd>
         </div>
-
-        <p className="text-xs text-muted">{t.balanceNote}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Sekcja szczegółów: nagłówek z ikoną i siatka par „etykieta + wartość". */
-function DetailSection({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="flex items-center gap-2 text-[15px] font-semibold text-fg">
-        {icon}
-        {title}
-      </h2>
-      <Card>
-        <CardContent className="grid gap-x-6 gap-y-3 p-4 sm:grid-cols-3">{children}</CardContent>
-      </Card>
+        <div className="flex flex-col gap-1">
+          <dt className="text-[13px] text-muted">{t.balanceExpenses}</dt>
+          <dd className="font-mono text-[15px] font-semibold text-fg">
+            {formatMoney(balance.expenseGrosze, locale)}
+          </dd>
+        </div>
+      </dl>
     </section>
   );
 }
 
-/** Wiersz „etykieta + wartość"; brak wartości znaczy, że pole się nie pokazuje. */
-function DetailItem({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
-
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="text-sm break-words text-fg">{value}</p>
-    </div>
-  );
-}
-
 /**
- * Termin — data plus adnotacja, gdy już minęła.
+ * Koniec umowy na internet — data plus plakietka, gdy już minęła.
  *
- * Przegląd po terminie to nie jest ta sama informacja co przegląd za miesiąc,
- * a z samej daty w tabeli nikt tego nie wyłapie. Dlatego minione terminy
- * dostają kolor i podpis, a nie tylko inny format.
+ * Termin po fakcie to nie jest ta sama informacja co termin za miesiąc,
+ * a z samej daty nikt tego nie wyłapie. Dlatego miniony dostaje kolor,
+ * ikonę i etykietę, a nie tylko inny format.
  */
-function DateItem({
-  label,
+function ContractEnd({
   date,
   now,
   locale,
-  overdueSuffix,
+  overdueLabel,
 }: {
-  label: string;
-  date: Date | null;
+  date: Date;
   now: Date;
   locale: Locale;
-  overdueSuffix: string;
+  overdueLabel: string;
 }) {
-  if (!date) return null;
   const overdue = date < now;
 
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <p className="text-xs text-muted">{label}</p>
-      <p className={`text-sm ${overdue ? "font-medium text-bad" : "text-fg"}`}>
-        {formatDateIn(date, locale, "short")}
-        {overdue ? overdueSuffix : ""}
-      </p>
-    </div>
+    <span className="flex flex-wrap items-center gap-2">
+      <span className={cn("font-mono", overdue && "text-bad")}>
+        {formatDateIn(date, locale, "numeric")}
+      </span>
+      {overdue ? (
+        <Badge size="sm" tone="critical" icon={Clock}>
+          {overdueLabel}
+        </Badge>
+      ) : null}
+    </span>
   );
 }

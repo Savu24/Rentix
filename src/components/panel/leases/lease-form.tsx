@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, X } from "lucide-react";
+import { Building2, CalendarDays, Loader2, Wallet, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -9,7 +9,8 @@ import { Controller, useForm } from "react-hook-form";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { FormSection } from "@/components/panel/form-section";
+import { LeaseSummary } from "@/components/panel/leases/lease-summary";
 import { CheckboxField } from "@/components/ui/checkbox-field";
 import { DateInput } from "@/components/ui/date-input";
 import { fieldAria, FormField } from "@/components/ui/form-field";
@@ -22,7 +23,6 @@ import {
   LEASE_SETTABLE_STATUSES,
   MAX_NOTICE_PERIOD_MONTHS,
   leaseStatusLabels,
-  utilitiesModeHints,
   utilitiesModeIncomplete,
   utilitiesModeLabels,
   leaseFormSchema,
@@ -213,19 +213,19 @@ export function LeaseForm({
     router.refresh();
   }
 
+  const summaryValues = watch();
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,720px)_minmax(0,1fr)] lg:gap-8">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="order-2 flex flex-col gap-3 lg:order-1">
       {formError ? <Alert tone="error">{formError}</Alert> : null}
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionSubject}</h2>
+      <FormSection title={t.sectionSubject} icon={Building2} collapsible={false}>
 
           <FormField
             id="propertyId"
             label={t.property}
             error={errors.propertyId?.message}
-            hint={t.propertyHint}
           >
             <Controller
               control={control}
@@ -255,7 +255,6 @@ export function LeaseForm({
               id="roomId"
               label={t.room}
               error={errors.roomId?.message}
-              hint={t.roomHint}
             >
               <Controller
                 control={control}
@@ -287,7 +286,6 @@ export function LeaseForm({
             id="tenantIds"
             label={t.tenants}
             error={errors.tenantIds?.message}
-            hint={t.tenantsHint}
           >
             <Controller
               control={control}
@@ -385,12 +383,9 @@ export function LeaseForm({
               })}
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionPeriod}</h2>
+      <FormSection title={t.sectionPeriod} icon={CalendarDays} collapsible={false}>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <FormField id="startDate" label={t.startDate} error={errors.startDate?.message}>
@@ -405,7 +400,6 @@ export function LeaseForm({
               id="endDate"
               label={t.endDate}
               error={errors.endDate?.message}
-              hint={t.endDateHint}
             >
               <DateInput
                 {...fieldAria("endDate", { error: errors.endDate?.message })}
@@ -418,7 +412,6 @@ export function LeaseForm({
               id="noticePeriodMonths"
               label={t.noticePeriod}
               error={errors.noticePeriodMonths?.message}
-              hint={t.noticePeriodHint}
             >
               <Input
                 {...fieldAria("noticePeriodMonths", {
@@ -450,7 +443,6 @@ export function LeaseForm({
               id="number"
               label={t.number}
               error={errors.number?.message}
-              hint={t.numberHint}
             >
               <Input
                 {...fieldAria("number", { error: errors.number?.message })}
@@ -459,12 +451,9 @@ export function LeaseForm({
               />
             </FormField>
           </div>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <Card>
-        <CardContent className="flex flex-col gap-4">
-          <h2 className="text-[15px] font-semibold text-fg">{t.sectionRent}</h2>
+      <FormSection title={t.sectionRent} icon={Wallet} collapsible={false}>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="rentGrosze" label={t.rent} error={errors.rentGrosze?.message}>
@@ -489,7 +478,6 @@ export function LeaseForm({
               id="utilitiesMode"
               label={t.utilities}
               error={errors.utilitiesMode?.message}
-              hint={utilitiesModeHints(d)[utilitiesMode ?? "FLAT_RATE"]}
             >
               <Select
                 {...fieldAria("utilitiesMode", { error: errors.utilitiesMode?.message })}
@@ -533,7 +521,6 @@ export function LeaseForm({
               id="billingDay"
               label={t.billingDay}
               error={errors.billingDay?.message}
-              hint={t.billingDayHint}
             >
               <Input
                 {...fieldAria("billingDay", { error: errors.billingDay?.message })}
@@ -554,7 +541,6 @@ export function LeaseForm({
               id="billingStartsAt"
               label={t.billingStart}
               error={errors.billingStartsAt?.message}
-              hint={t.billingStartHint}
             >
               <DateInput
                 {...fieldAria("billingStartsAt", { error: errors.billingStartsAt?.message })}
@@ -586,7 +572,6 @@ export function LeaseForm({
           */}
           <CheckboxField
             label={t.sendByEmail}
-            hint={t.sendByEmailHint}
             disabled={isSubmitting}
             {...register("sendInvoicesByEmail")}
           />
@@ -598,10 +583,9 @@ export function LeaseForm({
               {...register("notes")}
             />
           </FormField>
-        </CardContent>
-      </Card>
+        </FormSection>
 
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-row-reverse flex-wrap justify-start gap-2.5">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -612,10 +596,27 @@ export function LeaseForm({
             t.create
           )}
         </Button>
-        <Button type="button" variant="secondary" disabled={isSubmitting} onClick={() => router.back()}>
+        <Button type="button" variant="ghost" disabled={isSubmitting} onClick={() => router.back()}>
           {d.panel.common.cancel}
         </Button>
       </div>
     </form>
+
+    <aside className="order-1 lg:sticky lg:top-10 lg:order-2">
+      <LeaseSummary
+        values={{
+          rent: String(summaryValues.rentGrosze ?? ""),
+          deposit: String(summaryValues.depositGrosze ?? ""),
+          utilitiesMode: summaryValues.utilitiesMode ?? "FLAT_RATE",
+          utilitiesAdvance: String(summaryValues.utilitiesAdvanceGrosze ?? ""),
+          startDate: String(summaryValues.startDate ?? ""),
+          endDate: String(summaryValues.endDate ?? ""),
+          billingStartsAt: String(summaryValues.billingStartsAt ?? ""),
+          billingDay: String(summaryValues.billingDay ?? 1),
+          paymentTermDays: String(summaryValues.paymentTermDays ?? 0),
+        }}
+      />
+    </aside>
+    </div>
   );
 }
