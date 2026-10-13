@@ -162,7 +162,7 @@ export function InvoiceFilters({ total }: { total: number }) {
                 if (sort) next.set("sort", sort);
                 apply(next);
               }}
-              className="inline-flex items-center gap-1 rounded-btn font-[550] text-accent hover:underline"
+              className="inline-flex items-center gap-1 rounded-btn font-[550] whitespace-nowrap text-accent hover:underline"
             >
               <X className="size-3.5" aria-hidden />
               {t.clear}

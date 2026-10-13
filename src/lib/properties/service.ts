@@ -1,7 +1,11 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { Dictionary } from "@/lib/i18n/types";
 import { prisma } from "@/lib/prisma";
-import { occupancyPercent } from "@/lib/properties/occupancy";
+import {
+  matchesOccupancyFilter,
+  occupancyPercent,
+  resolvePropertyOccupancy,
+} from "@/lib/properties/occupancy";
 import type {
   PropertyCreateOutput,
   PropertyFormOutput,
@@ -38,11 +42,6 @@ export async function listProperties(organizationId: string, query: PropertyList
       ...(query.includeArchived ? {} : { archivedAt: null }),
       ...(query.type ? { type: query.type } : {}),
       ...buildSearchFilter(query.q),
-      // „Z wolnymi" to lokale do wynajęcia, więc remont się tu nie łapie —
-      // ma własną pozycję w filtrze.
-      ...(query.occupancy === "vacant" ? { status: "AVAILABLE" } : {}),
-      ...(query.occupancy === "occupied" ? { status: "OCCUPIED" } : {}),
-      ...(query.occupancy === "unavailable" ? { status: "UNAVAILABLE" } : {}),
     },
     select: {
       id: true,
@@ -70,7 +69,10 @@ export async function listProperties(organizationId: string, query: PropertyList
     orderBy: [{ archivedAt: "asc" }, { name: "asc" }],
   });
 
-  return properties.map(({ rooms, photos, areaM2, ...property }) => {
+  // Filtr obłożenia liczy się po pobraniu, z pokoi — tak samo jak plakietka
+  // na karcie. Sam status nieruchomości przy lokalu na pokoje nie nadąża za
+  // umowami, więc „Wolne" pokazywało lokale z kompletem najemców.
+  const items = properties.map(({ rooms, photos, areaM2, ...property }) => {
     const occupied = rooms.filter((room) => room.status === "OCCUPIED").length;
     const available = rooms.filter((room) => room.status === "AVAILABLE").length;
 
@@ -85,6 +87,18 @@ export async function listProperties(organizationId: string, query: PropertyList
       occupancyPercent: occupancyPercent(occupied, rooms.length),
     };
   });
+
+  return items.filter((item) =>
+    matchesOccupancyFilter(
+      resolvePropertyOccupancy({
+        status: item.status,
+        roomCount: item.roomCount,
+        occupiedRoomCount: item.occupiedRoomCount,
+        availableRoomCount: item.availableRoomCount,
+      }),
+      query.occupancy,
+    ),
+  );
 }
 
 /** Nieruchomość ze szczegółami: pokoje, ich najemcy i umowa na całość. */

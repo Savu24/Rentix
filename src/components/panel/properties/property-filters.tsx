@@ -97,7 +97,8 @@ export function PropertyFilters({ total }: { total: number }) {
         ]}
       />
 
-      <div className="flex items-center justify-between gap-3 lg:flex-1">
+      {/* Na telefonie licznik z „Wyczyść filtry" schodzi do drugiej linii, zamiast łamać przycisk. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 lg:flex-1">
         <Select
           aria-label={t.typeLabel}
           value={searchParams.get("type") ?? "all"}
@@ -120,7 +121,7 @@ export function PropertyFilters({ total }: { total: number }) {
                 setQuery("");
                 apply(new URLSearchParams());
               }}
-              className="inline-flex items-center gap-1 rounded-btn font-[550] text-accent hover:underline"
+              className="inline-flex items-center gap-1 rounded-btn font-[550] whitespace-nowrap text-accent hover:underline"
             >
               <X className="size-3.5" aria-hidden />
               {t.clear}

@@ -40,6 +40,27 @@ export function resolvePropertyOccupancy(property: OccupancyInput): PropertyOccu
   };
 }
 
+export type OccupancyFilter = "all" | "vacant" | "occupied" | "unavailable";
+
+/**
+ * Czy lokal pasuje do filtra listy. Liczone z tego samego obłożenia co
+ * plakietka, żeby filtr „Wolne" nie pokazywał lokalu oznaczonego „Wszystkie
+ * zajęte". Lokal z częścią wolnych pokoi jest „Wolny" — da się go jeszcze
+ * wynająć.
+ */
+export function matchesOccupancyFilter(occupancy: PropertyOccupancy, filter: OccupancyFilter): boolean {
+  switch (filter) {
+    case "all":
+      return true;
+    case "vacant":
+      return occupancy.kind === "vacant" || occupancy.kind === "someVacant";
+    case "occupied":
+      return occupancy.kind === "let" || occupancy.kind === "allLet";
+    case "unavailable":
+      return occupancy.kind === "refurbishment";
+  }
+}
+
 /** Obłożenie w procentach, zaokrąglone; 0 przy braku pokoi zamiast dzielenia przez zero. */
 export function occupancyPercent(occupied: number, total: number): number {
   return total > 0 ? Math.round((occupied / total) * 100) : 0;
