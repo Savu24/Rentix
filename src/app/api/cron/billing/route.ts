@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 
 import { apiError, ok } from "@/lib/api/response";
+import { stripeClient, syncRentFee } from "@/lib/billing/stripe";
 import { env } from "@/lib/env";
 import { accrueRecurringExpenses } from "@/lib/expenses/recurrence";
 import { generateInvoicesForMonth } from "@/lib/invoices/service";
@@ -92,6 +93,8 @@ async function run(request: NextRequest) {
   // trafiły do najemców jednym przebiegiem.
   const notifications = await sendPaymentNotifications({ now });
 
+  const rentFees = await syncRentFees();
+
   return ok({
     ranAt: now.toISOString(),
     period: { year, month },
@@ -104,7 +107,40 @@ async function run(request: NextRequest) {
       failed: notifications.failed,
       skipped: notifications.skipped,
     },
+    rentFees,
   });
+}
+
+/**
+ * Opłata od czynszu w subskrypcjach Stripe — według umów aktywnych dziś.
+ *
+ * Stripe pobiera ją z góry przy odnowieniu, więc codzienne odświeżenie
+ * wystarcza, żeby w dniu odnowienia kwota zgadzała się ze stanem umów.
+ * Błąd jednego konta (Stripe niedostępny, usunięta subskrypcja) nie może
+ * zatrzymać pozostałych ani reszty nocnego przebiegu.
+ */
+async function syncRentFees(): Promise<{ updated: number; failed: number }> {
+  const stripe = stripeClient();
+  if (!stripe) return { updated: 0, failed: 0 };
+
+  const paying = await prisma.subscription.findMany({
+    where: { externalSubscriptionId: { not: null }, status: { not: "CANCELLED" }, billingExempt: false },
+    select: { organizationId: true },
+  });
+
+  let updated = 0;
+  let failed = 0;
+
+  for (const { organizationId } of paying) {
+    try {
+      if (await syncRentFee(stripe, organizationId)) updated += 1;
+    } catch (error) {
+      failed += 1;
+      console.error(`[stripe] Opłata od czynszu dla ${organizationId} nie poszła:`, error);
+    }
+  }
+
+  return { updated, failed };
 }
 
 /** Vercel Cron woła GET-em, Render Cron Job zwykle `curl -X POST`. */

@@ -1865,6 +1865,8 @@ export const pl = {
           back: "Wróć do planów",
           manage: "Zarządzaj płatnościami",
           manageLead: "Zmiana planu, karta, faktury i rezygnacja — w portalu płatności Stripe.",
+          rentFee:
+            "Do ceny planu doliczamy 0,1% czynszu z aktywnych umów — przy dzisiejszych umowach {amount} miesięcznie.",
           pastDue: "Ostatnia płatność nie przeszła. Zaktualizuj kartę, żeby konto nie wróciło do planu Free.",
           returned:
             "Dziękujemy! Płatność jest przetwarzana — nowy plan pojawi się tutaj w ciągu minuty. Odśwież stronę, jeśli go nie widzisz.",

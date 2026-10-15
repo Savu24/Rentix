@@ -1858,6 +1858,8 @@ export const uk: Dictionary = {
           back: "Back to plans",
           manage: "Manage billing",
           manageLead: "Change plan, update your card, download invoices or cancel — in the Stripe billing portal.",
+          rentFee:
+            "On top of the plan we charge 0.1% of the rent on your active tenancies — {amount} a month with today's tenancies.",
           pastDue: "Your last payment did not go through. Update your card so the account does not drop to the Free plan.",
           returned:
             "Thank you! Your payment is being processed — the new plan will show here within a minute. Refresh the page if you do not see it.",

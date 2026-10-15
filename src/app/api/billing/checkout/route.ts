@@ -3,7 +3,14 @@ import { z } from "zod";
 
 import { apiError, ok, validationError } from "@/lib/api/response";
 import { membershipRole, requireApiOwner } from "@/lib/auth/session";
-import { PAID_PLANS, priceLookupKey, stripeClient } from "@/lib/billing/stripe";
+import {
+  organizationRentFee,
+  PAID_PLANS,
+  priceByLookupKey,
+  priceLookupKey,
+  rentFeeLookupKey,
+  stripeClient,
+} from "@/lib/billing/stripe";
 import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 
@@ -56,16 +63,25 @@ export async function POST(request: NextRequest) {
     return apiError("CONFLICT", t.alreadySubscribed);
   }
 
-  const lookupKey = priceLookupKey(parsed.data.plan, auth.locale);
-  if (!lookupKey) return apiError("INTERNAL_ERROR", t.unavailable);
+  const planKey = priceLookupKey(parsed.data.plan, auth.locale);
+  const feeKey = rentFeeLookupKey(auth.locale);
+  if (!planKey || !feeKey) return apiError("INTERNAL_ERROR", t.unavailable);
 
-  const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-  const price = prices.data[0];
+  // Bez ceny opłaty od czynszu nie sprzedajemy wcale: plan bez niej byłby
+  // tańszy, niż mówi cennik, a dopisanie jej później zaskoczyłoby klienta.
+  const [price, feePrice, rentFee] = await Promise.all([
+    priceByLookupKey(stripe, planKey),
+    priceByLookupKey(stripe, feeKey),
+    organizationRentFee(auth.organizationId),
+  ]);
+  if (!price || !feePrice) return apiError("INTERNAL_ERROR", t.unavailable);
 
-  if (!price) {
-    console.error(`[stripe] Brak aktywnej ceny z lookup_key „${lookupKey}”.`);
-    return apiError("INTERNAL_ERROR", t.unavailable);
-  }
+  // Konto bez aktywnych umów nie ma od czego płacić procentu — pozycję
+  // dołoży nocny cron, gdy pojawi się pierwsza umowa.
+  const lineItems = [
+    { price: price.id, quantity: 1 },
+    ...(rentFee > 0 ? [{ price: feePrice.id, quantity: rentFee }] : []),
+  ];
 
   const origin = env.APP_URL ?? request.nextUrl.origin;
   const customer = subscription?.externalCustomerId;
@@ -74,7 +90,7 @@ export async function POST(request: NextRequest) {
     ui_mode: "form",
     integration_identifier: "custom_embedded_web_0001",
     mode: "subscription",
-    line_items: [{ price: price.id, quantity: 1 }],
+    line_items: lineItems,
     billing_address_collection: "auto",
     phone_number_collection: { enabled: false },
     automatic_tax: { enabled: false },

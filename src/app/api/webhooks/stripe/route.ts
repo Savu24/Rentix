@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
 
 import { apiError, ok } from "@/lib/api/response";
-import { stripeClient, syncStripeSubscription } from "@/lib/billing/stripe";
+import { stripeClient, syncRentFee, syncStripeSubscription } from "@/lib/billing/stripe";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -46,6 +46,11 @@ export async function POST(request: NextRequest) {
         typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
       if (session.mode === "subscription" && subscriptionId) {
         await syncStripeSubscription(stripe, subscriptionId);
+        // Umowy mogły się zmienić między otwarciem formularza a zapłatą —
+        // opłata od czynszu od razu według stanu z tej chwili.
+        if (session.client_reference_id) {
+          await syncRentFee(stripe, session.client_reference_id);
+        }
       }
       break;
     }

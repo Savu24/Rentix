@@ -80,6 +80,113 @@ export function planFromLookupKey(key: string | null | undefined): PaidPlan | nu
 }
 
 /**
+ * Opłata od czynszu: 0,1% miesięcznego czynszu z aktywnych umów, doliczana
+ * do planu płatnego (plan Free jej nie płaci — nie ma subskrypcji w Stripe).
+ *
+ * W Stripe to druga pozycja subskrypcji: cena 1 grosz za sztukę, a liczba
+ * sztuk to opłata w groszach. Stała cena jednostkowa zamiast osobnego planu
+ * na każdą kwotę — zmienia się tylko ilość, a fakturę Stripe liczy sam.
+ *
+ * Opłata jest pobierana z góry, razem z planem, według stanu umów w dniu
+ * odnowienia. Ilość odświeża nocny cron (`syncRentFee`), bez proporcji za
+ * część miesiąca: dodana w trakcie miesiąca umowa wchodzi od następnego.
+ */
+export const RENT_FEE_RATE = 0.001;
+
+const RENT_FEE_LOOKUP_KEYS: Partial<Record<Locale, string>> = {
+  pl: "rent_fee_monthly",
+};
+
+/** Klucz ceny opłaty od czynszu, `null` = w tej wersji krajowej nie sprzedajemy. */
+export function rentFeeLookupKey(locale: Locale): string | null {
+  return RENT_FEE_LOOKUP_KEYS[locale] ?? null;
+}
+
+/** Opłata w groszach od miesięcznego czynszu w groszach. */
+export function rentFeeFor(rentGrosze: number): number {
+  return Math.round(rentGrosze * RENT_FEE_RATE);
+}
+
+/**
+ * Opłata konta: od czynszu umów obowiązujących dziś.
+ *
+ * Tylko ACTIVE i poza archiwum — szkic, rezerwacja i umowa zakończona nie
+ * przynoszą czynszu, więc nie ma od czego liczyć procentu.
+ */
+export async function organizationRentFee(organizationId: string): Promise<number> {
+  const { _sum } = await prisma.lease.aggregate({
+    where: { organizationId, status: "ACTIVE", archivedAt: null },
+    _sum: { rentGrosze: true },
+  });
+
+  return rentFeeFor(_sum.rentGrosze ?? 0);
+}
+
+/** Aktywna cena po kluczu; `null` z wpisem w logu, gdy nikt jej nie założył. */
+export async function priceByLookupKey(stripe: Stripe, key: string): Promise<Stripe.Price | null> {
+  const prices = await stripe.prices.list({ lookup_keys: [key], active: true, limit: 1 });
+  const price = prices.data[0] ?? null;
+  if (!price) console.error(`[stripe] Brak aktywnej ceny z lookup_key „${key}”.`);
+  return price;
+}
+
+/**
+ * Ustawia w subskrypcji Stripe opłatę od czynszu według bieżących umów.
+ *
+ * Idempotentne: przy niezmienionej kwocie nic nie wysyła. Pozycję dodaje,
+ * gdy opłata pojawia się pierwszy raz, i zdejmuje, gdy spada do zera (Stripe
+ * nie trzyma pozycji z ilością 0 w każdej konfiguracji). Zwraca, czy coś
+ * zmieniło się po stronie Stripe.
+ */
+export async function syncRentFee(stripe: Stripe, organizationId: string): Promise<boolean> {
+  const row = await prisma.subscription.findUnique({
+    where: { organizationId },
+    select: {
+      externalSubscriptionId: true,
+      status: true,
+      billingExempt: true,
+      organization: { select: { locale: true } },
+    },
+  });
+
+  if (!row?.externalSubscriptionId || row.status === "CANCELLED" || row.billingExempt) return false;
+
+  const key = rentFeeLookupKey(row.organization.locale as Locale);
+  if (!key) return false;
+
+  const subscription = await stripe.subscriptions.retrieve(row.externalSubscriptionId, {
+    expand: ["items.data.price"],
+  });
+  if (!["active", "trialing", "past_due"].includes(subscription.status)) return false;
+
+  const item = subscription.items.data.find((candidate) => candidate.price.lookup_key === key);
+  const quantity = await organizationRentFee(organizationId);
+
+  if (quantity === 0) {
+    if (!item) return false;
+    await stripe.subscriptionItems.del(item.id, { proration_behavior: "none" });
+    return true;
+  }
+
+  if (!item) {
+    const price = await priceByLookupKey(stripe, key);
+    if (!price) return false;
+    await stripe.subscriptionItems.create({
+      subscription: subscription.id,
+      price: price.id,
+      quantity,
+      proration_behavior: "none",
+    });
+    return true;
+  }
+
+  if (item.quantity === quantity) return false;
+
+  await stripe.subscriptionItems.update(item.id, { quantity, proration_behavior: "none" });
+  return true;
+}
+
+/**
  * Status Stripe → status konta.
  *
  * `incomplete` to subskrypcja, której pierwsza płatność jeszcze nie przeszła
@@ -136,7 +243,11 @@ export async function syncStripeSubscription(stripe: Stripe, subscriptionId: str
     return;
   }
 
-  const item = subscription.items.data[0];
+  // Subskrypcja ma dwie pozycje — plan i opłatę od czynszu — więc plan
+  // szukamy po kluczu ceny, a nie po kolejności.
+  const item =
+    subscription.items.data.find((candidate) => planFromLookupKey(candidate.price.lookup_key)) ??
+    subscription.items.data[0];
   const plan = planFromLookupKey(item?.price.lookup_key);
   const status = statusFrom(subscription.status);
 

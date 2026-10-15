@@ -97,8 +97,11 @@ export function PlanCheckout({
   subscribed,
   pastDue,
   returned,
+  rentFee,
 }: {
   publishableKey: string;
+  /** Zdanie o opłacie od czynszu, z kwotą już policzoną dla tego konta. */
+  rentFee: string;
   /** Plany do kupienia, z ceną już sformatowaną w walucie konta. */
   options: PlanOption[];
   /** Konto ma subskrypcję w Stripe — zamiast zakupu portal płatności. */
@@ -134,6 +137,7 @@ export function PlanCheckout({
       {subscribed ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted">{t.manageLead}</p>
+          <p className="text-xs text-muted">{rentFee}</p>
           <div>
             <Button variant="secondary" size="sm" onClick={openPortal} disabled={busy}>
               {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
@@ -155,6 +159,7 @@ export function PlanCheckout({
         <div className="flex flex-col gap-2">
           <p className="text-xs font-medium text-fg">{t.upgradeTitle}</p>
           <p className="text-xs text-muted">{t.upgradeLead}</p>
+          <p className="text-xs text-muted">{rentFee}</p>
           <div className="flex flex-wrap gap-2">
             {options.map((option) => (
               <Button

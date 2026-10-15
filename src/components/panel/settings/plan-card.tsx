@@ -2,7 +2,7 @@ import { InfoTip } from "@/components/ui/info-tip";
 import { PLAN_LEASE_LIMIT, PLAN_PRICE, type PlanUsage } from "@/lib/billing/plans";
 import { PAID_PLANS, sellsPlansIn } from "@/lib/billing/stripe";
 import { fill, pluralize } from "@/lib/i18n/format";
-import { formatMoneyWhole } from "@/lib/money";
+import { formatMoney, formatMoneyWhole } from "@/lib/money";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,8 @@ export type PlanBilling = {
   subscribed: boolean;
   pastDue: boolean;
   returned: boolean;
+  /** Opłata od czynszu w groszach, według dzisiejszych aktywnych umów. */
+  rentFeeGrosze: number;
 } | null;
 
 /**
@@ -116,6 +118,7 @@ export async function PlanCard({
           subscribed={checkout.subscribed}
           pastDue={checkout.pastDue}
           returned={checkout.returned}
+          rentFee={fill(t.billing.rentFee, { amount: formatMoney(checkout.rentFeeGrosze, locale) })}
           // Tylko progi wyższe od obecnego — zejście niżej idzie przez portal.
           options={PAID_PLANS.filter(
             (plan) => PAID_PLANS.indexOf(plan) > (PAID_PLANS as readonly string[]).indexOf(usage.plan),

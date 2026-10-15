@@ -62,6 +62,17 @@ Ceny są na razie tylko polskie. Każda cena musi być **cykliczna, miesięczna,
 | Pro | 99 zł | `pro_monthly` |
 | Portfel | 249 zł | `portfel_monthly` |
 
+**Opłata od czynszu (0,1%).** Do planu płatnego doliczamy 0,1% miesięcznego czynszu z aktywnych umów. Plan Free jej nie płaci. Załóż w Stripe czwartą cenę:
+
+| Pole | Wartość |
+|------|---------|
+| Produkt | np. „Opłata od czynszu” |
+| Model cenowy | Per unit (za sztukę), **cykliczna, miesięczna**, PLN |
+| Cena za sztukę | **0,01 zł** (1 grosz) |
+| Lookup key | `rent_fee_monthly` |
+
+Ilość sztuk to opłata w groszach. Przy 20 000 zł czynszu z aktywnych umów ilość wynosi 2000, czyli 20 zł. Aplikacja sama ustawia ilość: przy zakupie, po zapłacie (webhook) i co noc (cron `/api/cron/billing`). Kwota idzie razem z planem przy każdym odnowieniu, według umów z dnia odnowienia, bez proporcji za część miesiąca. Bez tej ceny zakup planu jest zablokowany komunikatem „Płatności są chwilowo niedostępne”.
+
 Klucze są wpisane w `PRICE_LOOKUP_KEYS` w [src/lib/billing/stripe.ts](src/lib/billing/stripe.ts). Kwoty muszą zgadzać się z `PLAN_PRICE` w [src/lib/billing/plans.ts](src/lib/billing/plans.ts), bo to te ceny widzi klient na przyciskach. Przy zmianie ceny tworzysz nową cenę w Stripe i przenosisz na nią lookup key (opcja „Transfer lookup key”), bez wdrażania kodu.
 
 Ceny trzeba założyć osobno w trybie testowym i w trybie live, z tymi samymi kluczami.

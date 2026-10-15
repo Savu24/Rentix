@@ -9,6 +9,7 @@ import { SettingsColumns } from "@/components/panel/settings/settings-columns";
 import { Alert } from "@/components/ui/alert";
 import { membershipRole, requireOwnerSession } from "@/lib/auth/session";
 import { organizationAllows, organizationPlan } from "@/lib/billing/server";
+import { organizationRentFee } from "@/lib/billing/stripe";
 import { env } from "@/lib/env";
 import { invoiceNumberPrefixes } from "@/lib/invoices/numbering";
 import {
@@ -26,7 +27,7 @@ export default async function SettingsOrganizationPage({
 }) {
   const session = await requireOwnerSession("/panel/ustawienia");
   const organizationId = session.user.organizationId;
-  const [organization, logo, logoAllowed, plan, d, locale, subscription, role, query] =
+  const [organization, logo, logoAllowed, plan, d, locale, subscription, role, query, rentFee] =
     await Promise.all([
       getOrganization(organizationId),
       getOrganizationLogo(organizationId),
@@ -40,6 +41,7 @@ export default async function SettingsOrganizationPage({
       }),
       membershipRole(session.user.id, organizationId),
       searchParams,
+      organizationRentFee(organizationId),
     ]);
 
   if (!organization) notFound();
@@ -60,6 +62,7 @@ export default async function SettingsOrganizationPage({
             Boolean(subscription?.externalSubscriptionId) && subscription?.status !== "CANCELLED",
           pastDue: subscription?.status === "PAST_DUE",
           returned: Boolean(query.platnosc),
+          rentFeeGrosze: rentFee,
         }
       : null;
 
