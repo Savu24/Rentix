@@ -1865,8 +1865,17 @@ export const uk: Dictionary = {
           manage: "Manage billing",
           manageLead: "Plan, card, invoices and cancellation.",
           pastDue: "Your last payment did not go through. Update your card so the account does not drop to the Free plan.",
-          returned:
-            "Thank you! Your payment is being processed — the new plan will show here within a minute. Refresh the page if you do not see it.",
+          returned: {
+            pendingTitle: "Thank you for your payment!",
+            pendingBody: "We're switching on your plan. It usually takes a few seconds — this page will refresh by itself.",
+            pendingNote: "You can close this window. The plan will switch on either way.",
+            activeTitle: "{plan} plan is active",
+            activeBody: "All set. Your new limits and features work from now on.",
+            slowTitle: "Payment received",
+            slowBody:
+              "Activation is taking longer than usual. The plan will appear by itself — check back in a few minutes. If it doesn't, get in touch.",
+            done: "Done",
+          },
           formError: "We could not open the payment form. Please try again in a moment.",
           managerOnly: "Only the owner or an administrator of the organisation can change its plan.",
           unavailable: "Payments are temporarily unavailable. Please try again later.",

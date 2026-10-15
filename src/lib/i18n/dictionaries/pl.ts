@@ -1874,8 +1874,18 @@ export const pl = {
           manage: "Zarządzaj płatnościami",
           manageLead: "Plan, karta, faktury i rezygnacja.",
           pastDue: "Ostatnia płatność nie przeszła. Zaktualizuj kartę, żeby konto nie wróciło do planu Free.",
-          returned:
-            "Dziękujemy! Płatność jest przetwarzana — nowy plan pojawi się tutaj w ciągu minuty. Odśwież stronę, jeśli go nie widzisz.",
+          /** Okno po powrocie z płatności — najpierw czekamy na webhook, potem gotowe. */
+          returned: {
+            pendingTitle: "Dziękujemy za płatność!",
+            pendingBody: "Aktywujemy Twój plan. Zwykle trwa to kilka sekund — strona odświeży się sama.",
+            pendingNote: "Możesz zamknąć to okno. Plan włączy się także bez niego.",
+            activeTitle: "Plan {plan} jest aktywny",
+            activeBody: "Wszystko gotowe. Nowe limity i funkcje działają od teraz.",
+            slowTitle: "Płatność przyjęta",
+            slowBody:
+              "Aktywacja trwa dłużej niż zwykle. Plan pojawi się sam — zajrzyj tu za kilka minut. Jeśli go nie będzie, napisz do nas.",
+            done: "Gotowe",
+          },
           formError: "Nie udało się otworzyć formularza płatności. Spróbuj ponownie za chwilę.",
           managerOnly: "Plan konta zmienia właściciel albo administrator organizacji.",
           unavailable: "Płatności są chwilowo niedostępne. Spróbuj ponownie później.",

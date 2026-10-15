@@ -165,6 +165,7 @@ export async function PlanCard({
           pastDue={checkout.pastDue}
           returned={checkout.returned}
           requestedPlan={checkout.requestedPlan}
+          currentPlanName={names[usage.plan]}
           feeNote={feeNote}
           tiers={tiers}
         />

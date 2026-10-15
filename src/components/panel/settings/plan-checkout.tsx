@@ -11,6 +11,8 @@ import type { PaidPlan } from "@/lib/billing/stripe";
 import { useI18n } from "@/lib/i18n/client";
 import { cn } from "@/lib/utils";
 
+import { PaymentReturnDialog } from "./payment-return-dialog";
+
 /**
  * Zakup planu formularzem Stripe osadzonym w ustawieniach konta.
  *
@@ -207,6 +209,7 @@ export function PlanCheckout({
   pastDue,
   returned,
   requestedPlan = null,
+  currentPlanName,
 }: {
   publishableKey: string;
   /** Wszystkie progi w kolejności cennika; wybierać można te z `cta`. */
@@ -220,6 +223,8 @@ export function PlanCheckout({
   returned: boolean;
   /** Plan wybrany w cenniku (`?plan=`) — zaznaczony i od razu z otwartą płatnością. */
   requestedPlan?: string | null;
+  /** Nazwa obecnego planu — okno po płatności pokazuje ją jako aktywowaną. */
+  currentPlanName: string;
 }) {
   const { d } = useI18n();
   const t = d.panel.settings.plan.billing;
@@ -262,7 +267,7 @@ export function PlanCheckout({
 
   const alerts = (
     <>
-      {returned ? <Alert tone="success">{t.returned}</Alert> : null}
+      {returned ? <PaymentReturnDialog active={subscribed} planName={currentPlanName} /> : null}
       {pastDue ? <Alert tone="warning">{t.pastDue}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
     </>
