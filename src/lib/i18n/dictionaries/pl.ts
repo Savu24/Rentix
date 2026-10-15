@@ -1863,16 +1863,16 @@ export const pl = {
         grandfathered: "Twoje konto ma podwyższony próg z wcześniejszych warunków.",
         note: "Zmianę planu włączymy razem z płatnościami.",
         billing: {
-          upgradeTitle: "Zmień plan",
-          upgradeLead:
-            "Płatność kartą co miesiąc. Zrezygnujesz w każdej chwili, a plan działa do końca opłaconego okresu.",
-          choose: "{plan} · {price}/mies.",
+          choosePlan: "Wybierz plan",
+          /** Przycisk zakupu — cena razem z opłatą od czynszu tego konta. */
+          cta: "Przejdź na {plan} · {price}/mies.",
+          terms: "Brutto, co miesiąc. Rezygnujesz kiedy chcesz.",
+          feeRule: "Ponad {threshold} czynszu doliczamy 0,1% nadwyżki.",
+          feeIncluded: "W cenie {fee} od czynszu ponad {threshold}.",
           loading: "Ładujemy formularz płatności…",
           back: "Wróć do planów",
           manage: "Zarządzaj płatnościami",
-          manageLead: "Zmiana planu, karta, faktury i rezygnacja — w portalu płatności Stripe.",
-          rentFee:
-            "Do ceny planu doliczamy 0,1% czynszu z aktywnych umów powyżej {threshold} miesięcznie — przy dzisiejszych umowach {amount}. Kwoty brutto.",
+          manageLead: "Plan, karta, faktury i rezygnacja.",
           pastDue: "Ostatnia płatność nie przeszła. Zaktualizuj kartę, żeby konto nie wróciło do planu Free.",
           returned:
             "Dziękujemy! Płatność jest przetwarzana — nowy plan pojawi się tutaj w ciągu minuty. Odśwież stronę, jeśli go nie widzisz.",

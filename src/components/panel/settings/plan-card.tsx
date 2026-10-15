@@ -12,8 +12,14 @@ import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
 import { cn } from "@/lib/utils";
 
 import type { SubscriptionPlan } from "@/generated/prisma/enums";
+import type { Locale } from "@/lib/i18n/config";
 
-import { PlanCheckout } from "./plan-checkout";
+import { PlanCheckout, type PlanTier } from "./plan-checkout";
+
+/** „39 zł” przy pełnych złotych, „41,50 zł”, gdy są grosze. */
+function money(grosze: number, locale: Locale): string {
+  return grosze % 100 === 0 ? formatMoneyWhole(grosze, locale) : formatMoney(grosze, locale);
+}
 
 /** Co karta wie o płatnościach. `null` = Stripe nieskonfigurowany albo konto bez prawa zakupu. */
 export type PlanBilling = {
@@ -62,6 +68,36 @@ export async function PlanCard({
   // w wersji krajowej, dla której są ceny w Stripe.
   const checkout = billing && (billing.subscribed || sellsPlansIn(locale)) ? billing : null;
 
+  const feeGrosze = checkout?.rentFeeGrosze ?? 0;
+  const threshold = formatMoneyWhole(RENT_FEE_THRESHOLD_GROSZE, locale);
+  const feeNote =
+    feeGrosze > 0
+      ? fill(t.billing.feeIncluded, { fee: money(feeGrosze, locale), threshold })
+      : fill(t.billing.feeRule, { threshold });
+
+  // Kupić można tylko próg wyższy od obecnego — zejście niżej idzie przez portal.
+  const currentRank = (PAID_PLANS as readonly string[]).indexOf(usage.plan);
+  const tiers: PlanTier[] = (Object.keys(PLAN_LEASE_LIMIT) as SubscriptionPlan[]).map((plan) => {
+    const limit = PLAN_LEASE_LIMIT[plan];
+    const rank = (PAID_PLANS as readonly string[]).indexOf(plan);
+    const price = PLAN_PRICE[locale][plan];
+
+    return {
+      plan,
+      name: names[plan],
+      limit: limit === null ? "∞" : String(limit),
+      price: formatMoneyWhole(price, locale),
+      // Na przycisku suma, którą klient faktycznie zapłaci: plan + opłata od czynszu.
+      cta:
+        rank > currentRank
+          ? fill(t.billing.cta, { plan: names[plan], price: money(price + feeGrosze, locale) })
+          : null,
+      current: plan === usage.plan,
+    };
+  });
+
+  const picker = checkout !== null && !checkout.subscribed && tiers.some((tier) => tier.cta);
+
   return (
     <section id="plan" className="flex scroll-mt-10 flex-col gap-4 rounded-tile border border-border bg-surface p-5 lg:p-6">
       <div className="flex flex-col gap-1">
@@ -98,24 +134,27 @@ export async function PlanCard({
         {raised ? <p className="text-[12.5px] text-muted">{t.grandfathered}</p> : null}
       </div>
 
-      <ul className="grid grid-cols-4 gap-2 border-t border-border pt-4">
-        {(Object.keys(PLAN_LEASE_LIMIT) as SubscriptionPlan[]).map((plan) => {
-          const limit = PLAN_LEASE_LIMIT[plan];
-          const current = plan === usage.plan;
+      {/* Przy zakupie siatkę z wyborem rysuje `PlanCheckout` — tu tylko podgląd. */}
+      {picker ? null : (
+        <ul className="grid grid-cols-4 gap-2 border-t border-border pt-4">
+          {(Object.keys(PLAN_LEASE_LIMIT) as SubscriptionPlan[]).map((plan) => {
+            const limit = PLAN_LEASE_LIMIT[plan];
+            const current = plan === usage.plan;
 
-          return (
-            <li key={plan} className="flex min-w-0 flex-col gap-1">
-              <span className={cn("text-[13px]", current ? "font-[650] text-accent" : "font-medium text-muted")}>
-                {names[plan]}
-                {current ? <span className="sr-only"> ({t.current})</span> : null}
-              </span>
-              <span className="font-mono text-[13px] text-subtle">
-                {limit === null ? "∞" : limit}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+            return (
+              <li key={plan} className="flex min-w-0 flex-col gap-1">
+                <span className={cn("text-[13px]", current ? "font-[650] text-accent" : "font-medium text-muted")}>
+                  {names[plan]}
+                  {current ? <span className="sr-only"> ({t.current})</span> : null}
+                </span>
+                <span className="font-mono text-[13px] text-subtle">
+                  {limit === null ? "∞" : limit}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {checkout ? (
         <PlanCheckout
@@ -123,20 +162,8 @@ export async function PlanCard({
           subscribed={checkout.subscribed}
           pastDue={checkout.pastDue}
           returned={checkout.returned}
-          rentFee={fill(t.billing.rentFee, {
-            amount: formatMoney(checkout.rentFeeGrosze, locale),
-            threshold: formatMoneyWhole(RENT_FEE_THRESHOLD_GROSZE, locale),
-          })}
-          // Tylko progi wyższe od obecnego — zejście niżej idzie przez portal.
-          options={PAID_PLANS.filter(
-            (plan) => PAID_PLANS.indexOf(plan) > (PAID_PLANS as readonly string[]).indexOf(usage.plan),
-          ).map((plan) => ({
-            plan,
-            label: fill(t.billing.choose, {
-              plan: names[plan],
-              price: formatMoneyWhole(PLAN_PRICE[locale][plan], locale),
-            }),
-          }))}
+          feeNote={feeNote}
+          tiers={tiers}
         />
       ) : null}
     </section>

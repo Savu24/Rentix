@@ -6,8 +6,10 @@ import { useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api/client";
+import type { SubscriptionPlan } from "@/generated/prisma/enums";
 import type { PaidPlan } from "@/lib/billing/stripe";
 import { useI18n } from "@/lib/i18n/client";
+import { cn } from "@/lib/utils";
 
 /**
  * Zakup planu formularzem Stripe osadzonym w ustawieniach konta.
@@ -89,21 +91,32 @@ function loadStripeJs(): Promise<StripeFactory> {
   return stripeJs;
 }
 
-export type PlanOption = { plan: PaidPlan; label: string };
+/** Jeden próg w siatce planów — teksty już sformatowane po stronie serwera. */
+export type PlanTier = {
+  plan: SubscriptionPlan;
+  name: string;
+  /** Limit umów: „2”, „10”, „∞”. */
+  limit: string;
+  /** Cena samego planu: „39 zł”. */
+  price: string;
+  /** Napis na przycisku zakupu (z ceną razem z opłatą od czynszu); `null` = nie do kupienia. */
+  cta: string | null;
+  current: boolean;
+};
 
 export function PlanCheckout({
   publishableKey,
-  options,
+  tiers,
+  feeNote,
   subscribed,
   pastDue,
   returned,
-  rentFee,
 }: {
   publishableKey: string;
-  /** Zdanie o opłacie od czynszu, z kwotą już policzoną dla tego konta. */
-  rentFee: string;
-  /** Plany do kupienia, z ceną już sformatowaną w walucie konta. */
-  options: PlanOption[];
+  /** Wszystkie progi w kolejności cennika; wybierać można te z `cta`. */
+  tiers: PlanTier[];
+  /** Jedno zdanie o opłacie od czynszu, z kwotą tego konta. */
+  feeNote: string;
   /** Konto ma subskrypcję w Stripe — zamiast zakupu portal płatności. */
   subscribed: boolean;
   pastDue: boolean;
@@ -112,9 +125,15 @@ export function PlanCheckout({
 }) {
   const { d } = useI18n();
   const t = d.panel.settings.plan.billing;
+  const tCard = d.panel.settings.plan;
+  const buyable = tiers.filter((tier) => tier.cta !== null);
+  // Zaznaczony od razu najbliższy wyższy próg — jedno kliknięcie mniej
+  // w najczęstszym przypadku, a wybór da się zmienić jednym stuknięciem.
+  const [selected, setSelected] = useState<SubscriptionPlan | null>(buyable[0]?.plan ?? null);
   const [plan, setPlan] = useState<PaidPlan | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectedTier = buyable.find((tier) => tier.plan === selected) ?? null;
 
   async function openPortal() {
     setBusy(true);
@@ -128,53 +147,125 @@ export function PlanCheckout({
     setError(result.message);
   }
 
-  return (
-    <div className="flex flex-col gap-3 border-t border-border pt-4">
+  const alerts = (
+    <>
       {returned ? <Alert tone="success">{t.returned}</Alert> : null}
       {pastDue ? <Alert tone="warning">{t.pastDue}</Alert> : null}
       {error ? <Alert tone="error">{error}</Alert> : null}
+    </>
+  );
 
-      {subscribed ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-muted">{t.manageLead}</p>
-          <p className="text-xs text-muted">{rentFee}</p>
-          <div>
-            <Button variant="secondary" size="sm" onClick={openPortal} disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              {t.manage}
-            </Button>
-          </div>
+  // Opłacone konto: siatkę rysuje karta, tu tylko wejście do portalu.
+  if (subscribed) {
+    return (
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
+        {alerts}
+        <Button variant="secondary" block onClick={openPortal} disabled={busy}>
+          {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+          {t.manage}
+        </Button>
+        <p className="text-[12.5px] text-muted">
+          {t.manageLead} {feeNote}
+        </p>
+      </div>
+    );
+  }
+
+  if (plan) {
+    return (
+      <div className="flex flex-col gap-3 border-t border-border pt-4">
+        {alerts}
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => setPlan(null)}>
+            <ArrowLeft aria-hidden />
+            {t.back}
+          </Button>
         </div>
-      ) : plan ? (
-        <div className="flex flex-col gap-3">
-          <div>
-            <Button variant="ghost" size="sm" onClick={() => setPlan(null)}>
-              <ArrowLeft aria-hidden />
-              {t.back}
-            </Button>
-          </div>
-          <StripeForm key={plan} plan={plan} publishableKey={publishableKey} />
-        </div>
-      ) : options.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-fg">{t.upgradeTitle}</p>
-          <p className="text-xs text-muted">{t.upgradeLead}</p>
-          <p className="text-xs text-muted">{rentFee}</p>
-          <div className="flex flex-wrap gap-2">
-            {options.map((option) => (
-              <Button
-                key={option.plan}
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setError(null);
-                  setPlan(option.plan);
-                }}
+        <StripeForm key={plan} plan={plan} publishableKey={publishableKey} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {alerts}
+
+      {/*
+        Siatka progów jest zarazem wyborem planu: zamiast drugiej listy
+        z przyciskami pod spodem klika się w sam próg. Wyższe progi są
+        przyciskami, obecny i niższe tylko informacją.
+      */}
+      <div
+        role="group"
+        aria-label={t.choosePlan}
+        className="-mx-1 grid grid-cols-4 gap-1 border-t border-border pt-3"
+      >
+        {tiers.map((tier) => {
+          const isSelected = tier.plan === selected;
+          const body = (
+            <>
+              <span
+                className={cn(
+                  "truncate text-[13px] font-[650]",
+                  tier.current ? "text-accent" : isSelected ? "text-fg" : "text-muted",
+                )}
               >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+                {tier.name}
+              </span>
+              <span className="font-mono text-[13px] text-subtle">{tier.limit}</span>
+              <span
+                className={cn("text-[12px] tabular-nums", isSelected ? "text-fg" : "text-subtle")}
+              >
+                {tier.current ? tCard.current : tier.price}
+              </span>
+            </>
+          );
+
+          if (tier.cta === null) {
+            return (
+              <div key={tier.plan} className="flex min-w-0 flex-col gap-0.5 px-2 py-2">
+                {body}
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={tier.plan}
+              type="button"
+              aria-pressed={isSelected}
+              aria-label={`${tier.name}, ${tier.limit}, ${tier.price}`}
+              onClick={() => setSelected(tier.plan)}
+              className={cn(
+                "flex min-w-0 cursor-pointer flex-col gap-0.5 rounded-control border px-2 py-2 text-left",
+                "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                isSelected
+                  ? "border-accent bg-accent-soft shadow-[inset_0_0_0_1px_var(--color-accent)]"
+                  : "border-border hover:border-border-strong hover:bg-hover",
+              )}
+            >
+              {body}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedTier?.cta ? (
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="primary"
+            block
+            onClick={() => {
+              setError(null);
+              setPlan(selectedTier.plan as PaidPlan);
+            }}
+          >
+            {selectedTier.cta}
+          </Button>
+          <p className="text-[12.5px] leading-[18px] text-muted">
+            {t.terms} {feeNote}
+          </p>
         </div>
       ) : null}
     </div>

@@ -1855,16 +1855,15 @@ export const uk: Dictionary = {
         grandfathered: "Your account keeps a higher limit from its earlier terms.",
         note: "Changing plan goes live together with payments.",
         billing: {
-          upgradeTitle: "Change plan",
-          upgradeLead:
-            "Paid monthly by card. Cancel any time — the plan stays on until the end of the period you paid for.",
-          choose: "{plan} · {price}/month",
+          choosePlan: "Choose a plan",
+          cta: "Switch to {plan} · {price}/month",
+          terms: "Billed monthly. Cancel any time.",
+          feeRule: "Above {threshold} of rent we add 0.1% of the excess.",
+          feeIncluded: "Includes {fee} on rent above {threshold}.",
           loading: "Loading the payment form…",
           back: "Back to plans",
           manage: "Manage billing",
-          manageLead: "Change plan, update your card, download invoices or cancel — in the Stripe billing portal.",
-          rentFee:
-            "On top of the plan we charge 0.1% of the rent on your active tenancies above {threshold} a month — {amount} with today's tenancies.",
+          manageLead: "Plan, card, invoices and cancellation.",
           pastDue: "Your last payment did not go through. Update your card so the account does not drop to the Free plan.",
           returned:
             "Thank you! Your payment is being processed — the new plan will show here within a minute. Refresh the page if you do not see it.",
