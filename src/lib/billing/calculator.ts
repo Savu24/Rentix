@@ -70,8 +70,8 @@ export type PlanEstimate = {
    */
   shareOfRent: number | null;
   /**
-   * Opłata od czynszu w groszach (0,1% całego czynszu od progu). Zero na
-   * planie Free, poniżej progu i w wersji krajowej, która tej opłaty nie pobiera.
+   * Opłata od czynszu w groszach (0,1% nadwyżki ponad próg). Zero na planie
+   * Free, poniżej progu i w wersji krajowej, która tej opłaty nie pobiera.
    */
   rentFeeGrosze: number;
   /** Ile wyjdzie miesięcznie razem: plan plus opłata od czynszu. */

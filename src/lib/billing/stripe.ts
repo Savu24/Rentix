@@ -80,7 +80,7 @@ export function planFromLookupKey(key: string | null | undefined): PaidPlan | nu
 }
 
 /**
- * Opłata od czynszu w Stripe (regułę — 0,1% całego czynszu od progu — trzyma
+ * Opłata od czynszu w Stripe (regułę — 0,1% nadwyżki ponad próg — trzyma
  * `plans.ts`, bo liczy ją też kalkulator na stronie). Plan Free jej nie płaci,
  * bo nie ma subskrypcji w Stripe.
  *

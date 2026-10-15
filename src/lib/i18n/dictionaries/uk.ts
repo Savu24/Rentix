@@ -104,8 +104,8 @@ export const uk: Dictionary = {
         shareFree: "Nothing to pay at this level",
         // Opłata od czynszu nie obowiązuje jeszcze w UK — teksty czekają na nią.
         feeBreakdown: "{plan} for the plan + {fee} rent fee",
-        feeRule: "From {threshold} of rent a month we add 0.1% of the whole rent to the plan.",
-        feeNone: "Below {threshold} of rent a month you pay only the plan.",
+        feeRule: "On top of the plan we charge 0.1% of rent above {threshold} a month.",
+        feeNone: "Up to {threshold} of rent a month you pay only the plan.",
         priceNote: "",
       },
 
@@ -1864,7 +1864,7 @@ export const uk: Dictionary = {
           manage: "Manage billing",
           manageLead: "Change plan, update your card, download invoices or cancel — in the Stripe billing portal.",
           rentFee:
-            "Once rent on your active tenancies reaches {threshold} a month, we add 0.1% of the whole rent to the plan — {amount} with today's tenancies.",
+            "On top of the plan we charge 0.1% of the rent on your active tenancies above {threshold} a month — {amount} with today's tenancies.",
           pastDue: "Your last payment did not go through. Update your card so the account does not drop to the Free plan.",
           returned:
             "Thank you! Your payment is being processed — the new plan will show here within a minute. Refresh the page if you do not see it.",
