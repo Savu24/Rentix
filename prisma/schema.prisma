@@ -1575,7 +1575,7 @@ model EmailTemplate {
 // ═══════════════════════════════════════════════════════════════════════════
 
 enum SubscriptionPlan {
-  FREE // 2 umowy
+  FREE // 3 umowy
   START // 10 umów
   PRO // 30 umów
   PORTFOLIO // bez limitu

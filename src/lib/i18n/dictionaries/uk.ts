@@ -120,7 +120,7 @@ export const uk: Dictionary = {
           name: "Free",
           price: "£0",
           period: "",
-          note: "2 tenancies",
+          note: "3 tenancies",
           featured: false,
           items: [
             "Properties, rooms and a tenant register",
@@ -179,7 +179,7 @@ export const uk: Dictionary = {
     closing: {
       titleFirstLine: "Move your lettings",
       titleSecondLine: "off the spreadsheet",
-      lead: "Two tenancies free, no time limit.",
+      lead: "Three tenancies free, no time limit.",
       cta: "Create a free account",
     },
 
@@ -218,9 +218,9 @@ export const uk: Dictionary = {
     },
 
     register: {
-      freePlan: "2 tenancies free, no time limit",
+      freePlan: "3 tenancies free, no time limit",
       metaTitle: "Create an account",
-      metaDescription: "Create a free RentixON account. Two tenancies free, no time limit.",
+      metaDescription: "Create a free RentixON account. Three tenancies free, no time limit.",
       heading: "Create a free account",
       hasAccount: "Already have an account?",
       loginLink: "Log in",

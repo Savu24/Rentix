@@ -11,7 +11,7 @@ import { LOCALES } from "@/lib/i18n/config";
 
 describe("progi planów", () => {
   it("każdy plan ma swój próg, a Portfel go nie ma", () => {
-    expect(PLAN_LEASE_LIMIT.FREE).toBe(2);
+    expect(PLAN_LEASE_LIMIT.FREE).toBe(3);
     expect(PLAN_LEASE_LIMIT.START).toBe(10);
     expect(PLAN_LEASE_LIMIT.PRO).toBe(30);
     expect(PLAN_LEASE_LIMIT.PORTFOLIO).toBeNull();
@@ -21,7 +21,7 @@ describe("progi planów", () => {
     const usage = planUsage(DEFAULT_PLAN, undefined, 0);
 
     expect(usage.plan).toBe("FREE");
-    expect(usage.limit).toBe(2);
+    expect(usage.limit).toBe(3);
     expect(usage.hasCapacity).toBe(true);
   });
 });

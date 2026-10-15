@@ -14,7 +14,7 @@ import type { Locale } from "@/lib/i18n/config";
 
 /** Domyślny próg planu. `null` = bez limitu. */
 export const PLAN_LEASE_LIMIT: Record<SubscriptionPlan, number | null> = {
-  FREE: 2,
+  FREE: 3,
   START: 10,
   PRO: 30,
   PORTFOLIO: null,

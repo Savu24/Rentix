@@ -17,8 +17,8 @@ import { LOCALES } from "@/lib/i18n/config";
 describe("dobór planu do liczby umów", () => {
   it("zaczyna od darmowego i przechodzi próg po progu", () => {
     expect(planForLeases(0)).toBe("FREE");
-    expect(planForLeases(2)).toBe("FREE");
-    expect(planForLeases(3)).toBe("START");
+    expect(planForLeases(3)).toBe("FREE");
+    expect(planForLeases(4)).toBe("START");
     expect(planForLeases(10)).toBe("START");
     expect(planForLeases(11)).toBe("PRO");
     expect(planForLeases(30)).toBe("PRO");

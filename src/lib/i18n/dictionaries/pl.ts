@@ -129,7 +129,7 @@ export const pl = {
           name: "Free",
           price: "0 zł",
           period: "",
-          note: "2 umowy",
+          note: "3 umowy",
           featured: false,
           items: [
             "Nieruchomości, pokoje i kartoteka najemców",
@@ -188,7 +188,7 @@ export const pl = {
     closing: {
       titleFirstLine: "Przenieś swój najem",
       titleSecondLine: "z Excela do RentixON",
-      lead: "Dwie umowy za darmo, bez terminu.",
+      lead: "Trzy umowy za darmo, bez terminu.",
       cta: "Załóż darmowe konto",
     },
 
@@ -227,9 +227,9 @@ export const pl = {
     },
 
     register: {
-      freePlan: "2 umowy za darmo, bez terminu",
+      freePlan: "3 umowy za darmo, bez terminu",
       metaTitle: "Załóż konto",
-      metaDescription: "Załóż darmowe konto RentixON. Dwie umowy za darmo, bez terminu.",
+      metaDescription: "Załóż darmowe konto RentixON. Trzy umowy za darmo, bez terminu.",
       heading: "Załóż darmowe konto",
       hasAccount: "Masz już konto?",
       loginLink: "Zaloguj się",
