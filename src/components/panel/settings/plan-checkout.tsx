@@ -40,6 +40,60 @@ const FONTS = [{ cssSrc: "https://fonts.googleapis.com/css2?family=Geist:wght@40
  * otwarcia formularza — dzięki temu ten sam kod daje jasny formularz w jasnym
  * motywie i ciemny w ciemnym, bez drugiej palety do utrzymania.
  */
+/** Wygląd z Checkout Studio — ostatnia deska ratunku, z nim formularz zawsze startował. */
+const STUDIO_APPEARANCE = {
+  theme: "stripe",
+  labels: "auto",
+  inputs: "spaced",
+  variables: {
+    borderRadius: "4px",
+    colorBackground: "#ffffff",
+    colorDanger: "#df1b41",
+    colorPrimary: "#0570de",
+    colorSuccess: "#00c853",
+    colorText: "#30313d",
+    fontFamily: "default",
+    fontSizeBase: "16px",
+    spacingUnit: "4px",
+  },
+};
+
+/**
+ * Kolejne próby wyglądu: od pełnego (kolory, reguły, Geist) do coraz
+ * prostszego. Kolory panelu zostają tak długo, jak się da — Studio jest
+ * dopiero ostatnią próbą.
+ */
+function checkoutAppearanceAttempts(): Array<{ appearance: unknown; fonts?: unknown }> {
+  const full = appearanceFromTheme();
+  const withoutRules = {
+    theme: full.theme,
+    labels: full.labels,
+    inputs: full.inputs,
+    variables: full.variables,
+  };
+  const basic = {
+    theme: "stripe",
+    labels: "auto",
+    inputs: "spaced",
+    variables: {
+      fontFamily: '"Segoe UI", system-ui, -apple-system, sans-serif',
+      borderRadius: "8px",
+      colorPrimary: full.variables.colorPrimary,
+      colorBackground: full.variables.colorBackground,
+      colorText: full.variables.colorText,
+      colorDanger: full.variables.colorDanger,
+    },
+  };
+
+  return [
+    { appearance: full, fonts: FONTS },
+    { appearance: full },
+    { appearance: withoutRules },
+    { appearance: basic },
+    { appearance: STUDIO_APPEARANCE },
+  ];
+}
+
 function appearanceFromTheme() {
   const css = getComputedStyle(document.documentElement);
   const token = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
@@ -359,25 +413,55 @@ function StripeForm({ plan, publishableKey }: { plan: PaidPlan; publishableKey: 
           if (!cancelled) setError(reason instanceof Error ? reason.message : t.formError);
         });
 
-        const checkout = stripe.initCheckoutFormSdk({
-          clientSecret,
-          appearance: appearanceFromTheme(),
-          fonts: FONTS,
-        });
-        form = checkout.createForm({ layout: "expanded" });
-        form.mount("#checkout-form");
+        /*
+          Formularz w becie Stripe nie dokumentuje, które opcje wyglądu
+          przyjmuje — odrzucona opcja kończy się błędem zamiast pominięciem.
+          Próbujemy więc od pełnego wyglądu panelu do coraz prostszego,
+          a na końcu do tego z Checkout Studio, który działał zawsze.
+          Każde odrzucenie trafia do konsoli z powodem podanym przez Stripe.
+        */
+        let loadActionsResult: Extract<LoadActionsResult, { type: "success" }> | null = null;
+        const attempts = checkoutAppearanceAttempts();
 
-        const loadActionsResult = await checkout.loadActions();
+        for (const [index, options] of attempts.entries()) {
+          if (cancelled) return;
+          try {
+            const checkout = stripe.initCheckoutFormSdk({ clientSecret, ...options });
+            const candidate = checkout.createForm({ layout: "expanded" });
+            candidate.mount("#checkout-form");
+
+            const result = await checkout.loadActions();
+            if (result.type === "success") {
+              form = candidate;
+              loadActionsResult = result;
+              break;
+            }
+
+            console.error(
+              `[stripe] Formularz nie wystartował (wariant wyglądu ${index + 1}/${attempts.length}):`,
+              result.error,
+            );
+            candidate.unmount?.();
+            candidate.destroy?.();
+          } catch (reason) {
+            console.error(
+              `[stripe] Stripe odrzucił wygląd formularza (wariant ${index + 1}/${attempts.length}):`,
+              reason,
+            );
+          }
+        }
+
         if (cancelled) return;
-
-        if (loadActionsResult.type !== "success") {
-          setError(t.formError);
+        const activeForm: CheckoutForm | null = form;
+        if (!activeForm || !loadActionsResult) {
+          setError((current) => current ?? t.formError);
           return;
         }
 
-        form.on("confirm", async (event) => {
+        const { actions } = loadActionsResult;
+        activeForm.on("confirm", async (event) => {
           try {
-            await loadActionsResult.actions.confirm({ formConfirmEvent: event });
+            await actions.confirm({ formConfirmEvent: event });
           } catch (reason) {
             console.error("Payment confirmation error:", reason);
           }
