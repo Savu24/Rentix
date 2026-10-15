@@ -1872,7 +1872,17 @@ export const pl = {
           loading: "Ładujemy formularz płatności…",
           back: "Wróć do planów",
           manage: "Zarządzaj płatnościami",
-          manageLead: "Plan, karta, faktury i rezygnacja.",
+          manageLead: "Karta, faktury i rezygnacja.",
+          /** Ulepszenie opłaconego konta — podmiana planu w istniejącej subskrypcji. */
+          upgradeCta: "Ulepsz do {plan} · {price}/mies.",
+          upgradeTitle: "Ulepszyć plan do {plan}?",
+          upgradeBody:
+            "Od razu pobierzemy z zapisanej karty różnicę za resztę bieżącego okresu. Od kolejnego płacisz {price}/mies.",
+          upgradeConfirm: "Ulepsz plan",
+          upgradeFailed:
+            "Nie udało się pobrać płatności z zapisanej karty. Sprawdź kartę w „Zarządzaj płatnościami” i spróbuj ponownie.",
+          upgradeNotHigher: "Ten plan nie jest wyższy od obecnego. Niższy wybierzesz w „Zarządzaj płatnościami”.",
+          upgradeNoSubscription: "To konto nie ma jeszcze płatnej subskrypcji.",
           pastDue: "Ostatnia płatność nie przeszła. Zaktualizuj kartę, żeby konto nie wróciło do planu Free.",
           /** Okno po powrocie z płatności — najpierw czekamy na webhook, potem gotowe. */
           returned: {

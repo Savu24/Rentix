@@ -1,14 +1,17 @@
 "use client";
 
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { api } from "@/lib/api/client";
 import type { SubscriptionPlan } from "@/generated/prisma/enums";
 import type { PaidPlan } from "@/lib/billing/stripe";
 import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/format";
 import { cn } from "@/lib/utils";
 
 import { PaymentReturnDialog } from "./payment-return-dialog";
@@ -196,6 +199,8 @@ export type PlanTier = {
   limit: string;
   /** Cena samego planu: „39 zł”. */
   price: string;
+  /** Miesięcznie razem z opłatą od czynszu: „43,10 zł”. */
+  monthly: string;
   /** Napis na przycisku zakupu (z ceną razem z opłatą od czynszu); `null` = nie do kupienia. */
   cta: string | null;
   current: boolean;
@@ -251,7 +256,36 @@ export function PlanCheckout({
   }, [requested]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const selectedTier = buyable.find((tier) => tier.plan === selected) ?? null;
+  // Po ulepszeniu karta przelicza się na serwerze i zaznaczony próg może już
+  // nie być do kupienia — wtedy zaznaczenie przechodzi na najbliższy wyższy.
+  const selectedTier = buyable.find((tier) => tier.plan === selected) ?? buyable[0] ?? null;
+
+  const router = useRouter();
+  const [confirming, setConfirming] = useState<PlanTier | null>(null);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  const [upgradedTo, setUpgradedTo] = useState<string | null>(null);
+
+  async function upgrade(tier: PlanTier) {
+    setUpgrading(true);
+    setUpgradeError(null);
+    const result = await api.post<{ plan: string }>("/api/billing/upgrade", { plan: tier.plan });
+    setUpgrading(false);
+    if (!result.ok) {
+      setUpgradeError(result.message);
+      return;
+    }
+    // Plan zapisał już serwer — przeliczamy kartę i pokazujemy gotowy stan.
+    setUpgradedTo(tier.name);
+    router.refresh();
+  }
+
+  function closeUpgrade() {
+    if (upgrading) return;
+    setConfirming(null);
+    setUpgradeError(null);
+    setUpgradedTo(null);
+  }
 
   async function openPortal() {
     setBusy(true);
@@ -273,18 +307,128 @@ export function PlanCheckout({
     </>
   );
 
-  // Opłacone konto: siatkę rysuje karta, tu tylko wejście do portalu.
+  /*
+    Siatka progów jest zarazem wyborem planu: zamiast drugiej listy
+    z przyciskami pod spodem klika się w sam próg. Wyższe progi są
+    przyciskami, obecny i niższe tylko informacją.
+  */
+  const tierGrid = (
+    <div
+      role="group"
+      aria-label={t.choosePlan}
+      className="-mx-1 grid grid-cols-4 gap-1 border-t border-border pt-3"
+    >
+      {tiers.map((tier) => {
+        const isSelected = tier.plan === selectedTier?.plan;
+        const body = (
+          <>
+            <span
+              className={cn(
+                "truncate text-[13px] font-[650]",
+                tier.current ? "text-accent" : isSelected ? "text-fg" : "text-muted",
+              )}
+            >
+              {tier.name}
+            </span>
+            <span className="font-mono text-[13px] text-subtle">{tier.limit}</span>
+            <span className={cn("text-[12px] tabular-nums", isSelected ? "text-fg" : "text-subtle")}>
+              {tier.current ? tCard.current : tier.price}
+            </span>
+          </>
+        );
+
+        if (tier.cta === null) {
+          return (
+            <div key={tier.plan} className="flex min-w-0 flex-col gap-0.5 px-2 py-2">
+              {body}
+            </div>
+          );
+        }
+
+        return (
+          <button
+            key={tier.plan}
+            type="button"
+            aria-pressed={isSelected}
+            aria-label={`${tier.name}, ${tier.limit}, ${tier.price}`}
+            onClick={() => setSelected(tier.plan)}
+            className={cn(
+              "flex min-w-0 cursor-pointer flex-col gap-0.5 rounded-control border px-2 py-2 text-left",
+              "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+              isSelected
+                ? "border-accent bg-accent-soft shadow-[inset_0_0_0_1px_var(--color-accent)]"
+                : "border-border hover:border-border-strong hover:bg-hover",
+            )}
+          >
+            {body}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  /*
+    Opłacone konto: ta sama siatka, ale przycisk ulepsza istniejącą
+    subskrypcję (z potwierdzeniem, bo pobiera pieniądze od razu), a karta,
+    faktury i rezygnacja zostają w portalu Stripe.
+  */
   if (subscribed) {
     return (
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
+      <div className="flex flex-col gap-4">
         {alerts}
-        <Button variant="secondary" block onClick={openPortal} disabled={busy}>
-          {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
-          {t.manage}
-        </Button>
-        <p className="text-[12.5px] text-muted">
-          {t.manageLead} {feeNote}
-        </p>
+        {selectedTier?.cta ? tierGrid : null}
+        <div className="flex flex-col gap-2">
+          {selectedTier?.cta ? (
+            <Button variant="primary" block onClick={() => setConfirming(selectedTier)}>
+              {selectedTier.cta}
+            </Button>
+          ) : null}
+          <Button variant="secondary" block onClick={openPortal} disabled={busy}>
+            {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            {t.manage}
+          </Button>
+          <p className="text-[12.5px] leading-[18px] text-muted">
+            {t.manageLead} {feeNote}
+          </p>
+        </div>
+
+        {confirming ? (
+          <Dialog
+            open
+            onClose={closeUpgrade}
+            title={
+              upgradedTo
+                ? fill(t.returned.activeTitle, { plan: upgradedTo })
+                : fill(t.upgradeTitle, { plan: confirming.name })
+            }
+            closeLabel={d.panel.common.close}
+          >
+            <DialogBody>
+              {upgradeError ? <Alert tone="error">{upgradeError}</Alert> : null}
+              <p className="text-[15px] leading-6 text-fg">
+                {upgradedTo ? t.returned.activeBody : fill(t.upgradeBody, { price: confirming.monthly })}
+              </p>
+            </DialogBody>
+            <DialogFooter>
+              {upgradedTo ? (
+                <Button variant="primary" onClick={closeUpgrade}>
+                  {t.returned.done}
+                </Button>
+              ) : (
+                <>
+                  <Button variant="secondary" onClick={closeUpgrade} disabled={upgrading}>
+                    {d.panel.common.cancel}
+                  </Button>
+                  <Button variant="primary" onClick={() => upgrade(confirming)} disabled={upgrading}>
+                    {upgrading ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                    {t.upgradeConfirm}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          </Dialog>
+        ) : null}
       </div>
     );
   }
@@ -308,66 +452,7 @@ export function PlanCheckout({
     <div className="flex flex-col gap-4">
       {alerts}
 
-      {/*
-        Siatka progów jest zarazem wyborem planu: zamiast drugiej listy
-        z przyciskami pod spodem klika się w sam próg. Wyższe progi są
-        przyciskami, obecny i niższe tylko informacją.
-      */}
-      <div
-        role="group"
-        aria-label={t.choosePlan}
-        className="-mx-1 grid grid-cols-4 gap-1 border-t border-border pt-3"
-      >
-        {tiers.map((tier) => {
-          const isSelected = tier.plan === selected;
-          const body = (
-            <>
-              <span
-                className={cn(
-                  "truncate text-[13px] font-[650]",
-                  tier.current ? "text-accent" : isSelected ? "text-fg" : "text-muted",
-                )}
-              >
-                {tier.name}
-              </span>
-              <span className="font-mono text-[13px] text-subtle">{tier.limit}</span>
-              <span
-                className={cn("text-[12px] tabular-nums", isSelected ? "text-fg" : "text-subtle")}
-              >
-                {tier.current ? tCard.current : tier.price}
-              </span>
-            </>
-          );
-
-          if (tier.cta === null) {
-            return (
-              <div key={tier.plan} className="flex min-w-0 flex-col gap-0.5 px-2 py-2">
-                {body}
-              </div>
-            );
-          }
-
-          return (
-            <button
-              key={tier.plan}
-              type="button"
-              aria-pressed={isSelected}
-              aria-label={`${tier.name}, ${tier.limit}, ${tier.price}`}
-              onClick={() => setSelected(tier.plan)}
-              className={cn(
-                "flex min-w-0 cursor-pointer flex-col gap-0.5 rounded-control border px-2 py-2 text-left",
-                "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
-                isSelected
-                  ? "border-accent bg-accent-soft shadow-[inset_0_0_0_1px_var(--color-accent)]"
-                  : "border-border hover:border-border-strong hover:bg-hover",
-              )}
-            >
-              {body}
-            </button>
-          );
-        })}
-      </div>
+      {tierGrid}
 
       {selectedTier?.cta ? (
         <div className="flex flex-col gap-2">

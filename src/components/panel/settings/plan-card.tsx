@@ -90,15 +90,20 @@ export async function PlanCard({
       limit: limit === null ? "∞" : String(limit),
       price: formatMoneyWhole(price, locale),
       // Na przycisku suma, którą klient faktycznie zapłaci: plan + opłata od czynszu.
+      monthly: money(price + feeGrosze, locale),
+      // Konto bez subskrypcji kupuje plan, opłacone — ulepsza obecny.
       cta:
         rank > currentRank
-          ? fill(t.billing.cta, { plan: names[plan], price: money(price + feeGrosze, locale) })
+          ? fill(checkout?.subscribed ? t.billing.upgradeCta : t.billing.cta, {
+              plan: names[plan],
+              price: money(price + feeGrosze, locale),
+            })
           : null,
       current: plan === usage.plan,
     };
   });
 
-  const picker = checkout !== null && !checkout.subscribed && tiers.some((tier) => tier.cta);
+  const picker = checkout !== null && tiers.some((tier) => tier.cta);
 
   return (
     <section id="plan" className="flex scroll-mt-10 flex-col gap-4 rounded-tile border border-border bg-surface p-5 lg:p-6">

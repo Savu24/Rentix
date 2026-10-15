@@ -1863,7 +1863,16 @@ export const uk: Dictionary = {
           loading: "Loading the payment form…",
           back: "Back to plans",
           manage: "Manage billing",
-          manageLead: "Plan, card, invoices and cancellation.",
+          manageLead: "Card, invoices and cancellation.",
+          upgradeCta: "Upgrade to {plan} · {price}/month",
+          upgradeTitle: "Upgrade to {plan}?",
+          upgradeBody:
+            "We'll charge the difference for the rest of this period to your saved card right away. From the next one you pay {price}/month.",
+          upgradeConfirm: "Upgrade plan",
+          upgradeFailed:
+            "We couldn't charge your saved card. Check it under “Manage billing” and try again.",
+          upgradeNotHigher: "That plan isn't higher than your current one. Choose a lower one under “Manage billing”.",
+          upgradeNoSubscription: "This account has no paid subscription yet.",
           pastDue: "Your last payment did not go through. Update your card so the account does not drop to the Free plan.",
           returned: {
             pendingTitle: "Thank you for your payment!",
