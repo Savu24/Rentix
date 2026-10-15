@@ -26,23 +26,60 @@ import { cn } from "@/lib/utils";
 
 const STRIPE_JS = "https://js.stripe.com/dahlia/stripe.js";
 
-/** Wygląd skonfigurowany w Checkout Studio. */
-const APPEARANCE = {
-  theme: "stripe",
-  labels: "auto",
-  inputs: "spaced",
-  variables: {
-    borderRadius: "4px",
-    colorBackground: "#ffffff",
-    colorDanger: "#df1b41",
-    colorPrimary: "#0570de",
-    colorSuccess: "#00c853",
-    colorText: "#30313d",
-    fontFamily: "default",
-    fontSizeBase: "16px",
-    spacingUnit: "4px",
-  },
-};
+/**
+ * Geist z Google Fonts — formularz siedzi w ramce Stripe, która nie widzi
+ * fontów strony (`next/font` hostuje je pod własną, haszowaną nazwą).
+ */
+const FONTS = [{ cssSrc: "https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" }];
+
+/**
+ * Wygląd formularza z kolorów panelu.
+ *
+ * Ramka Stripe nie dziedziczy CSS-a strony, a `appearance` przyjmuje tylko
+ * gotowe kolory, nie `var(--…)`. Czytamy więc żetony motywu z `<html>` w chwili
+ * otwarcia formularza — dzięki temu ten sam kod daje jasny formularz w jasnym
+ * motywie i ciemny w ciemnym, bez drugiej palety do utrzymania.
+ */
+function appearanceFromTheme() {
+  const css = getComputedStyle(document.documentElement);
+  const token = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+
+  const surface = token("--surface", "#ffffff");
+  const ink = token("--ink", "#14241c");
+  const ink2 = token("--ink-2", "#56615a");
+  const ink3 = token("--ink-3", "#8a928c");
+  const line = token("--line-2", "#cdd2c6");
+  const primary = token("--primary", "#1b4d3e");
+
+  return {
+    theme: "stripe",
+    labels: "above",
+    inputs: "spaced",
+    variables: {
+      fontFamily: '"Geist", "Segoe UI", system-ui, sans-serif',
+      fontSizeBase: "15px",
+      fontWeightNormal: "400",
+      fontWeightMedium: "550",
+      borderRadius: "8px",
+      spacingUnit: "4px",
+      colorPrimary: primary,
+      colorBackground: surface,
+      colorText: ink,
+      colorTextSecondary: ink2,
+      colorTextPlaceholder: ink3,
+      colorDanger: token("--bad", "#b83a2c"),
+      colorSuccess: token("--good", "#23794a"),
+      colorIcon: ink2,
+    },
+    rules: {
+      ".Input": { border: `1px solid ${line}`, boxShadow: "none" },
+      ".Input:focus": { borderColor: primary },
+      ".Label": { color: ink2, fontWeight: "500", fontSize: "13.5px" },
+      ".Tab": { border: `1px solid ${line}`, boxShadow: "none" },
+      ".Tab--selected": { borderColor: primary, color: ink },
+    },
+  };
+}
 
 // Stripe.js nie ma jeszcze typów dla bety formularza — opisujemy tylko to,
 // czego tu używamy.
@@ -60,7 +97,11 @@ type CheckoutSdk = {
   loadActions: () => Promise<LoadActionsResult>;
 };
 type StripeInstance = {
-  initCheckoutFormSdk: (options: { clientSecret: Promise<string>; appearance: unknown }) => CheckoutSdk;
+  initCheckoutFormSdk: (options: {
+    clientSecret: Promise<string>;
+    appearance: unknown;
+    fonts?: unknown;
+  }) => CheckoutSdk;
 };
 type StripeFactory = (key: string, options: { betas: string[] }) => StripeInstance;
 
@@ -300,7 +341,11 @@ function StripeForm({ plan, publishableKey }: { plan: PaidPlan; publishableKey: 
           if (!cancelled) setError(reason instanceof Error ? reason.message : t.formError);
         });
 
-        const checkout = stripe.initCheckoutFormSdk({ clientSecret, appearance: APPEARANCE });
+        const checkout = stripe.initCheckoutFormSdk({
+          clientSecret,
+          appearance: appearanceFromTheme(),
+          fonts: FONTS,
+        });
         form = checkout.createForm({ layout: "expanded" });
         form.mount("#checkout-form");
 
@@ -343,8 +388,7 @@ function StripeForm({ plan, publishableKey }: { plan: PaidPlan; publishableKey: 
           {t.loading}
         </p>
       ) : null}
-      {/* Formularz rysuje się w ramce Stripe — jasne tło niezależnie od motywu panelu. */}
-      <div id="checkout-form" className="rounded-md bg-white" hidden={Boolean(error)} />
+      <div id="checkout-form" hidden={Boolean(error)} />
     </div>
   );
 }
