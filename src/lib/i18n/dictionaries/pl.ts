@@ -110,7 +110,7 @@ export const pl = {
         share: "Abonament to {percent} czynszu, który co miesiąc wpływa",
         shareFree: "Na tym progu nie płacisz nic",
         /** Rozbicie kwoty, gdy czynsz przekracza próg opłaty. */
-        feeBreakdown: "{plan} za plan + {fee} opłaty od czynszu",
+        feeBreakdown: "{plan} za plan + {fee} od czynszu",
         feeRule: "Od {threshold} czynszu miesięcznie doliczamy do abonamentu 0,1% całego czynszu.",
         feeNone: "Poniżej {threshold} czynszu miesięcznie płacisz tylko abonament.",
         /** Pusty tekst = nic nie wyświetlamy (wersja bez ustalonego VAT). */

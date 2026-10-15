@@ -14,6 +14,7 @@ import { fill } from "@/lib/i18n/format";
 import type { Dictionary } from "@/lib/i18n/types";
 import { chargesRentFee, RENT_FEE_THRESHOLD_GROSZE } from "@/lib/billing/plans";
 import { formatMoney, formatMoneyWhole } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 /** „41 zł” przy pełnych złotych, „41,50 zł”, gdy są grosze — jak na kartach cennika. */
 function money(grosze: number, locale: Locale): string {
@@ -133,7 +134,9 @@ export function PlanCalculator({ locale, t, plans }: Props) {
           </div>
         </div>
 
-        <p className="text-[13px] text-subtle">
+        {/* Na telefonie zdanie łamie się albo nie, zależnie od długości kwoty —
+            stałe dwie linijki, żeby suwak nie przesuwał się pod palcem. */}
+        <p className="min-h-[2lh] text-[13px] text-subtle sm:min-h-0">
           {fill(t.rentRoll, { amount: formatMoneyWhole(estimate.rentRollGrosze, locale) })}
         </p>
       </div>
@@ -149,15 +152,27 @@ export function PlanCalculator({ locale, t, plans }: Props) {
           <span className="font-sans text-[14px] font-medium tracking-normal text-muted">{card.period}</span>
         </p>
         <p className="mt-1 text-[13.5px] text-muted">{card.note}</p>
-        {estimate.rentFeeGrosze > 0 ? (
-          <p className="mt-1 text-[13.5px] text-muted">
-            {fill(t.feeBreakdown, {
-              plan: card.price,
-              fee: money(estimate.rentFeeGrosze, locale),
-            })}
-          </p>
-        ) : null}
-        <p className="mt-3 text-[13.5px] text-muted">{punchline()}</p>
+        {/*
+          Wiersz rozbicia i zdanie pod kwotą zajmują stałe miejsce, także gdy
+          rozbicia nie ma albo zdanie jest krótsze. Kolumna jest wyśrodkowana
+          w pionie, więc każda zmiana jej wysokości przy przesuwaniu suwaka
+          podrzucałaby cały kalkulator w górę i w dół.
+        */}
+        <p
+          className={cn(
+            "mt-1 min-h-[1lh] text-[13.5px] text-muted",
+            estimate.rentFeeGrosze > 0 ? null : "invisible",
+          )}
+          aria-hidden={estimate.rentFeeGrosze > 0 ? undefined : true}
+        >
+          {estimate.rentFeeGrosze > 0
+            ? fill(t.feeBreakdown, {
+                plan: card.price,
+                fee: money(estimate.rentFeeGrosze, locale),
+              })
+            : null}
+        </p>
+        <p className="mt-3 min-h-[3lh] text-[13.5px] text-muted">{punchline()}</p>
         {t.priceNote ? <p className="mt-1 text-[12.5px] text-subtle">{t.priceNote}</p> : null}
       </div>
     </section>
