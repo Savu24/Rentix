@@ -15,9 +15,8 @@ import { cn } from "@/lib/utils";
  * Ukrycie bez śladu zostawia użytkownika z pytaniem, czy funkcji nie ma,
  * czy jej nie znalazł. Bez zdania opisu — nazwa i plakietka planu wystarczą.
  *
- * Przycisk prowadzi do karty planu w ustawieniach konta, a nie do zakupu:
- * płatności jeszcze nie ma, a przycisk „kup" prowadzący donikąd jest gorszy
- * niż jego brak (ta sama zasada, co w `PlanCard`).
+ * Przycisk prowadzi do karty planu w ustawieniach (`#plan`), a nie prosto do
+ * zakupu: tam widać wszystkie progi i cenę, więc wybór zostaje przy kliencie.
  *
  * `variant="overlay"` — duża karta na rozmytym podglądzie zablokowanego ekranu.
  */
@@ -36,7 +35,11 @@ export async function PlanLock({
   const d = await panelDictionary();
   const plan = d.panel.shell.plans[requiredPlan(feature)];
   const seePlans = (
-    <Button asChild variant={variant === "overlay" ? "primary" : "secondary"}>
+    <Button
+      asChild
+      variant={variant === "overlay" ? "primary" : "secondary"}
+      className={variant === "row" ? "w-full @md:w-auto" : undefined}
+    >
       <Link href="/panel/ustawienia#plan">{d.panel.panelMisc.seePlans}</Link>
     </Button>
   );
@@ -65,14 +68,22 @@ export async function PlanLock({
     );
   }
 
+  /*
+    Szerokość przycisku zależy od miejsca na kartę, a nie od ekranu: ta sama
+    karta stoi w szerokiej kolumnie raportów i w wąskiej kolumnie ustawień.
+    Gdy jest ciasno, przycisk schodzi pod tytuł na całą szerokość — przyklejony
+    do prawej krawędzi w osobnej linii wyglądał jak zgubiony.
+  */
   return (
-    <section className="flex flex-wrap items-center gap-x-3 gap-y-3 rounded-tile border border-border bg-surface px-5 py-5 lg:px-6">
-      <Lock className="size-[18px] shrink-0 text-warn" aria-hidden />
-      <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
-      <Badge tone="amber" icon={Lock}>
-        {plan}
-      </Badge>
-      <div className="ml-auto">{seePlans}</div>
+    <section className="@container rounded-tile border border-border bg-surface px-5 py-5 lg:px-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+        <Lock className="size-[18px] shrink-0 text-warn" aria-hidden />
+        <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+        <Badge tone="amber" icon={Lock}>
+          {plan}
+        </Badge>
+        <div className="w-full @md:ml-auto @md:w-auto">{seePlans}</div>
+      </div>
     </section>
   );
 }
