@@ -2,7 +2,7 @@ import type { SubscriptionPlan } from "@/generated/prisma/enums";
 import type { Locale } from "@/lib/i18n/config";
 
 import { PLAN_ORDER } from "./features";
-import { PLAN_LEASE_LIMIT, PLAN_PRICE } from "./plans";
+import { chargesRentFee, PLAN_LEASE_LIMIT, PLAN_PRICE, rentFeeFor } from "./plans";
 
 /**
  * Kalkulator kosztu z cennika.
@@ -69,6 +69,13 @@ export type PlanEstimate = {
    * a „0%" przy zerowym portfelu kłamałoby w drugą stronę.
    */
   shareOfRent: number | null;
+  /**
+   * Opłata od czynszu w groszach (0,1% nadwyżki ponad próg). Zero na planie
+   * Free, poniżej progu i w wersji krajowej, która tej opłaty nie pobiera.
+   */
+  rentFeeGrosze: number;
+  /** Ile wyjdzie miesięcznie razem: plan plus opłata od czynszu. */
+  totalGrosze: number;
 };
 
 export function estimatePlan(
@@ -82,11 +89,15 @@ export function estimatePlan(
   const plan = planForLeases(count);
   const priceGrosze = PLAN_PRICE[locale][plan];
   const rentRollGrosze = count * rent;
+  const rentFeeGrosze =
+    priceGrosze > 0 && chargesRentFee(locale) ? rentFeeFor(rentRollGrosze) : 0;
 
   return {
     plan,
     priceGrosze,
     rentRollGrosze,
     shareOfRent: rentRollGrosze > 0 ? priceGrosze / rentRollGrosze : null,
+    rentFeeGrosze,
+    totalGrosze: priceGrosze + rentFeeGrosze,
   };
 }

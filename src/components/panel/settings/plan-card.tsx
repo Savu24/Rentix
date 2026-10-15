@@ -1,5 +1,10 @@
 import { InfoTip } from "@/components/ui/info-tip";
-import { PLAN_LEASE_LIMIT, PLAN_PRICE, type PlanUsage } from "@/lib/billing/plans";
+import {
+  PLAN_LEASE_LIMIT,
+  PLAN_PRICE,
+  RENT_FEE_THRESHOLD_GROSZE,
+  type PlanUsage,
+} from "@/lib/billing/plans";
 import { PAID_PLANS, sellsPlansIn } from "@/lib/billing/stripe";
 import { fill, pluralize } from "@/lib/i18n/format";
 import { formatMoney, formatMoneyWhole } from "@/lib/money";
@@ -118,7 +123,10 @@ export async function PlanCard({
           subscribed={checkout.subscribed}
           pastDue={checkout.pastDue}
           returned={checkout.returned}
-          rentFee={fill(t.billing.rentFee, { amount: formatMoney(checkout.rentFeeGrosze, locale) })}
+          rentFee={fill(t.billing.rentFee, {
+            amount: formatMoney(checkout.rentFeeGrosze, locale),
+            threshold: formatMoneyWhole(RENT_FEE_THRESHOLD_GROSZE, locale),
+          })}
           // Tylko progi wyższe od obecnego — zejście niżej idzie przez portal.
           options={PAID_PLANS.filter(
             (plan) => PAID_PLANS.indexOf(plan) > (PAID_PLANS as readonly string[]).indexOf(usage.plan),

@@ -12,7 +12,13 @@ import { PLAN_ORDER } from "@/lib/billing/features";
 import { LOCALE_META, type Locale } from "@/lib/i18n/config";
 import { fill } from "@/lib/i18n/format";
 import type { Dictionary } from "@/lib/i18n/types";
-import { formatMoneyWhole } from "@/lib/money";
+import { chargesRentFee, RENT_FEE_THRESHOLD_GROSZE } from "@/lib/billing/plans";
+import { formatMoney, formatMoneyWhole } from "@/lib/money";
+
+/** „41 zł” przy pełnych złotych, „41,50 zł”, gdy są grosze — jak na kartach cennika. */
+function money(grosze: number, locale: Locale): string {
+  return grosze % 100 === 0 ? formatMoneyWhole(grosze, locale) : formatMoney(grosze, locale);
+}
 
 type Pricing = Dictionary["marketing"]["pricing"];
 
@@ -56,6 +62,23 @@ export function PlanCalculator({ locale, t, plans }: Props) {
           minimumFractionDigits: 0,
           maximumFractionDigits: 2,
         }).format(estimate.shareOfRent);
+
+  /*
+    Zdanie pod kwotą. Tam, gdzie doliczamy opłatę od czynszu, mówi o progu —
+    to jest reguła, którą klient musi znać. W pozostałych wersjach zostaje
+    udział abonamentu w czynszu: cena stoi w miejscu, więc procent spada
+    z każdą kolejną umową.
+  */
+  function punchline(): string {
+    if (estimate.priceGrosze === 0) return t.shareFree;
+
+    if (chargesRentFee(locale)) {
+      const threshold = formatMoneyWhole(RENT_FEE_THRESHOLD_GROSZE, locale);
+      return fill(estimate.rentFeeGrosze > 0 ? t.feeRule : t.feeNone, { threshold });
+    }
+
+    return share === null ? t.shareFree : fill(t.share, { percent: share });
+  }
 
   return (
     <section className="mt-8 grid grid-cols-1 gap-8 rounded-tile border border-border bg-surface p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-center lg:gap-10">
@@ -119,16 +142,23 @@ export function PlanCalculator({ locale, t, plans }: Props) {
         <p className="text-sm font-semibold text-accent">
           {t.plan}: {card.name}
         </p>
+        {/* Ponad próg czynszu duża liczba to suma do zapłaty, a nie sama
+            cena planu — klient ma zobaczyć kwotę, która zejdzie z karty. */}
         <p className="r-display mt-2 text-[38px] leading-none tracking-[-0.8px] text-fg">
-          {card.price}
+          {estimate.rentFeeGrosze > 0 ? money(estimate.totalGrosze, locale) : card.price}
           <span className="font-sans text-[14px] font-medium tracking-normal text-muted">{card.period}</span>
         </p>
         <p className="mt-1 text-[13.5px] text-muted">{card.note}</p>
-        {/* Udział w czynszu to puenta kalkulatora: cena stoi w miejscu, więc
-            procent spada z każdą kolejną umową. */}
-        <p className="mt-3 text-[13.5px] text-muted">
-          {estimate.priceGrosze === 0 || share === null ? t.shareFree : fill(t.share, { percent: share })}
-        </p>
+        {estimate.rentFeeGrosze > 0 ? (
+          <p className="mt-1 text-[13.5px] text-muted">
+            {fill(t.feeBreakdown, {
+              plan: card.price,
+              fee: money(estimate.rentFeeGrosze, locale),
+            })}
+          </p>
+        ) : null}
+        <p className="mt-3 text-[13.5px] text-muted">{punchline()}</p>
+        {t.priceNote ? <p className="mt-1 text-[12.5px] text-subtle">{t.priceNote}</p> : null}
       </div>
     </section>
   );

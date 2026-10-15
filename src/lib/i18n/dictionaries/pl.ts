@@ -107,8 +107,14 @@ export const pl = {
         rent: "Średni czynsz miesięczny",
         rentRoll: "Czynsz z całego portfela: {amount} miesięcznie",
         plan: "Twój plan",
-        share: "Do abonamentu doliczane jest 0,1% czynszu, który co miesiąc wpływa",
+        share: "Abonament to {percent} czynszu, który co miesiąc wpływa",
         shareFree: "Na tym progu nie płacisz nic",
+        /** Rozbicie kwoty, gdy czynsz przekracza próg opłaty. */
+        feeBreakdown: "{plan} za plan + {fee} opłaty od czynszu",
+        feeRule: "Do abonamentu doliczamy 0,1% czynszu powyżej {threshold} miesięcznie.",
+        feeNone: "Do {threshold} czynszu miesięcznie płacisz tylko abonament.",
+        /** Pusty tekst = nic nie wyświetlamy (wersja bez ustalonego VAT). */
+        priceNote: "Kwoty brutto.",
       },
 
       /*
@@ -1866,7 +1872,7 @@ export const pl = {
           manage: "Zarządzaj płatnościami",
           manageLead: "Zmiana planu, karta, faktury i rezygnacja — w portalu płatności Stripe.",
           rentFee:
-            "Do ceny planu doliczamy 0,1% czynszu z aktywnych umów — przy dzisiejszych umowach {amount} miesięcznie.",
+            "Do ceny planu doliczamy 0,1% czynszu z aktywnych umów powyżej {threshold} miesięcznie — przy dzisiejszych umowach {amount}. Kwoty brutto.",
           pastDue: "Ostatnia płatność nie przeszła. Zaktualizuj kartę, żeby konto nie wróciło do planu Free.",
           returned:
             "Dziękujemy! Płatność jest przetwarzana — nowy plan pojawi się tutaj w ciągu minuty. Odśwież stronę, jeśli go nie widzisz.",

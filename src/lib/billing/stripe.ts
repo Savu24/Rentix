@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 import type { Locale } from "@/lib/i18n/config";
 import { prisma } from "@/lib/prisma";
 
-import { PLAN_LEASE_LIMIT } from "./plans";
+import { chargesRentFee, PLAN_LEASE_LIMIT, rentFeeFor } from "./plans";
 
 /**
  * Integracja ze Stripe: klient, ceny planów i zapis subskrypcji w bazie.
@@ -80,8 +80,9 @@ export function planFromLookupKey(key: string | null | undefined): PaidPlan | nu
 }
 
 /**
- * Opłata od czynszu: 0,1% miesięcznego czynszu z aktywnych umów, doliczana
- * do planu płatnego (plan Free jej nie płaci — nie ma subskrypcji w Stripe).
+ * Opłata od czynszu w Stripe (regułę — 0,1% nadwyżki ponad próg — trzyma
+ * `plans.ts`, bo liczy ją też kalkulator na stronie). Plan Free jej nie płaci,
+ * bo nie ma subskrypcji w Stripe.
  *
  * W Stripe to druga pozycja subskrypcji: cena 1 grosz za sztukę, a liczba
  * sztuk to opłata w groszach. Stała cena jednostkowa zamiast osobnego planu
@@ -91,20 +92,13 @@ export function planFromLookupKey(key: string | null | undefined): PaidPlan | nu
  * odnowienia. Ilość odświeża nocny cron (`syncRentFee`), bez proporcji za
  * część miesiąca: dodana w trakcie miesiąca umowa wchodzi od następnego.
  */
-export const RENT_FEE_RATE = 0.001;
-
 const RENT_FEE_LOOKUP_KEYS: Partial<Record<Locale, string>> = {
   pl: "rent_fee_monthly",
 };
 
 /** Klucz ceny opłaty od czynszu, `null` = w tej wersji krajowej nie sprzedajemy. */
 export function rentFeeLookupKey(locale: Locale): string | null {
-  return RENT_FEE_LOOKUP_KEYS[locale] ?? null;
-}
-
-/** Opłata w groszach od miesięcznego czynszu w groszach. */
-export function rentFeeFor(rentGrosze: number): number {
-  return Math.round(rentGrosze * RENT_FEE_RATE);
+  return chargesRentFee(locale) ? (RENT_FEE_LOOKUP_KEYS[locale] ?? null) : null;
 }
 
 /**

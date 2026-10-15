@@ -6,7 +6,12 @@ import {
   estimatePlan,
   planForLeases,
 } from "@/lib/billing/calculator";
-import { PLAN_LEASE_LIMIT, PLAN_PRICE } from "@/lib/billing/plans";
+import {
+  PLAN_LEASE_LIMIT,
+  PLAN_PRICE,
+  RENT_FEE_THRESHOLD_GROSZE,
+  rentFeeFor,
+} from "@/lib/billing/plans";
 import { LOCALES } from "@/lib/i18n/config";
 
 describe("dobór planu do liczby umów", () => {
@@ -82,5 +87,42 @@ describe("widełki suwaków", () => {
     // przeskakuje o resztę z dzielenia i kwota „skacze" bez powodu.
     expect((rent.default - rent.min) % rent.step).toBe(0);
     expect((rent.max - rent.min) % rent.step).toBe(0);
+  });
+});
+
+describe("opłata od czynszu", () => {
+  it("do 20 000 zł czynszu nie ma opłaty", () => {
+    expect(rentFeeFor(0)).toBe(0);
+    expect(rentFeeFor(RENT_FEE_THRESHOLD_GROSZE)).toBe(0);
+  });
+
+  it("liczy 0,1% tylko od nadwyżki ponad próg, zaokrąglone do grosza", () => {
+    // 25 000 zł → nadwyżka 5000 zł → 5 zł
+    expect(rentFeeFor(2_500_000)).toBe(500);
+    // 20 001,23 zł → nadwyżka 1,23 zł → 0,123 gr → 0 gr
+    expect(rentFeeFor(2_000_123)).toBe(0);
+    // 22 345,67 zł → nadwyżka 2345,67 zł → 234,567 gr → 235 gr
+    expect(rentFeeFor(2_234_567)).toBe(235);
+  });
+
+  it("kalkulator dolicza opłatę do planu płatnego ponad próg", () => {
+    // 30 umów po 2500 zł = 75 000 zł → nadwyżka 55 000 zł → 55 zł; Pro 99 zł.
+    const estimate = estimatePlan(30, 250_000, "pl");
+
+    expect(estimate.rentFeeGrosze).toBe(5_500);
+    expect(estimate.totalGrosze).toBe(PLAN_PRICE.pl.PRO + 5_500);
+  });
+
+  it("poniżej progu płacisz sam plan", () => {
+    // 8 umów po 2500 zł = 20 000 zł — dokładnie próg.
+    const estimate = estimatePlan(8, 250_000, "pl");
+
+    expect(estimate.rentFeeGrosze).toBe(0);
+    expect(estimate.totalGrosze).toBe(PLAN_PRICE.pl.START);
+  });
+
+  it("plan Free i wersja UK nie płacą opłaty", () => {
+    expect(estimatePlan(2, 1_000_000, "pl").rentFeeGrosze).toBe(0);
+    expect(estimatePlan(60, 400_000, "uk").rentFeeGrosze).toBe(0);
   });
 });
