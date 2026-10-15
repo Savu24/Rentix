@@ -91,31 +91,35 @@ describe("widełki suwaków", () => {
 });
 
 describe("opłata od czynszu", () => {
-  it("do 20 000 zł czynszu nie ma opłaty", () => {
+  it("poniżej 20 000 zł czynszu nie ma opłaty", () => {
     expect(rentFeeFor(0)).toBe(0);
-    expect(rentFeeFor(RENT_FEE_THRESHOLD_GROSZE)).toBe(0);
+    expect(rentFeeFor(RENT_FEE_THRESHOLD_GROSZE - 1)).toBe(0);
   });
 
-  it("liczy 0,1% tylko od nadwyżki ponad próg, zaokrąglone do grosza", () => {
-    // 25 000 zł → nadwyżka 5000 zł → 5 zł
-    expect(rentFeeFor(2_500_000)).toBe(500);
-    // 20 001,23 zł → nadwyżka 1,23 zł → 0,123 gr → 0 gr
-    expect(rentFeeFor(2_000_123)).toBe(0);
-    // 22 345,67 zł → nadwyżka 2345,67 zł → 234,567 gr → 235 gr
-    expect(rentFeeFor(2_234_567)).toBe(235);
+  it("od progu liczy 0,1% całego czynszu, zaokrąglone do grosza", () => {
+    // 20 000 zł → 20 zł, 50 000 zł → 50 zł
+    expect(rentFeeFor(RENT_FEE_THRESHOLD_GROSZE)).toBe(2_000);
+    expect(rentFeeFor(5_000_000)).toBe(5_000);
+    // 22 345,67 zł → 2234,567 gr → 2235 gr
+    expect(rentFeeFor(2_234_567)).toBe(2_235);
   });
 
-  it("kalkulator dolicza opłatę do planu płatnego ponad próg", () => {
-    // 30 umów po 2500 zł = 75 000 zł → nadwyżka 55 000 zł → 55 zł; Pro 99 zł.
+  it("kalkulator dolicza opłatę do planu płatnego od progu", () => {
+    // 30 umów po 2500 zł = 75 000 zł → 75 zł; Pro 99 zł.
     const estimate = estimatePlan(30, 250_000, "pl");
 
-    expect(estimate.rentFeeGrosze).toBe(5_500);
-    expect(estimate.totalGrosze).toBe(PLAN_PRICE.pl.PRO + 5_500);
+    expect(estimate.rentFeeGrosze).toBe(7_500);
+    expect(estimate.totalGrosze).toBe(PLAN_PRICE.pl.PRO + 7_500);
+  });
+
+  it("dokładnie na progu opłata już jest", () => {
+    // 8 umów po 2500 zł = 20 000 zł → 20 zł; Start 39 zł.
+    expect(estimatePlan(8, 250_000, "pl").totalGrosze).toBe(PLAN_PRICE.pl.START + 2_000);
   });
 
   it("poniżej progu płacisz sam plan", () => {
-    // 8 umów po 2500 zł = 20 000 zł — dokładnie próg.
-    const estimate = estimatePlan(8, 250_000, "pl");
+    // 7 umów po 2500 zł = 17 500 zł.
+    const estimate = estimatePlan(7, 250_000, "pl");
 
     expect(estimate.rentFeeGrosze).toBe(0);
     expect(estimate.totalGrosze).toBe(PLAN_PRICE.pl.START);

@@ -62,7 +62,7 @@ Ceny są na razie tylko polskie. Każda cena musi być **cykliczna, miesięczna,
 | Pro | 99 zł | `pro_monthly` |
 | Portfel | 249 zł | `portfel_monthly` |
 
-**Opłata od czynszu (0,1%).** Do planu płatnego doliczamy 0,1% tej części miesięcznego czynszu z aktywnych umów, która przekracza 20 000 zł (próg i stawka: `RENT_FEE_THRESHOLD_GROSZE` i `RENT_FEE_RATE` w `src/lib/billing/plans.ts`). Plan Free jej nie płaci. Załóż w Stripe czwartą cenę:
+**Opłata od czynszu (0,1%).** Do planu płatnego doliczamy 0,1% całego miesięcznego czynszu z aktywnych umów, gdy wynosi on co najmniej 20 000 zł (próg i stawka: `RENT_FEE_THRESHOLD_GROSZE` i `RENT_FEE_RATE` w `src/lib/billing/plans.ts`). Plan Free jej nie płaci. Załóż w Stripe czwartą cenę:
 
 | Pole | Wartość |
 |------|---------|
@@ -71,7 +71,7 @@ Ceny są na razie tylko polskie. Każda cena musi być **cykliczna, miesięczna,
 | Cena za sztukę | **0,01 zł** (1 grosz) |
 | Lookup key | `rent_fee_monthly` |
 
-Ilość sztuk to opłata w groszach. Przy 30 000 zł czynszu z aktywnych umów nadwyżka to 10 000 zł, ilość wynosi 1000, czyli 10 zł. Do 20 000 zł pozycji w subskrypcji nie ma wcale. Aplikacja sama ustawia ilość: przy zakupie, po zapłacie (webhook) i co noc (cron `/api/cron/billing`). Kwota idzie razem z planem przy każdym odnowieniu, według umów z dnia odnowienia, bez proporcji za część miesiąca. Bez tej ceny zakup planu jest zablokowany komunikatem „Płatności są chwilowo niedostępne”.
+Ilość sztuk to opłata w groszach. Przy 20 000 zł czynszu ilość wynosi 2000 (20 zł), przy 50 000 zł 5000 (50 zł). Poniżej 20 000 zł pozycji w subskrypcji nie ma wcale. Aplikacja sama ustawia ilość: przy zakupie, po zapłacie (webhook) i co noc (cron `/api/cron/billing`). Kwota idzie razem z planem przy każdym odnowieniu, według umów z dnia odnowienia, bez proporcji za część miesiąca. Bez tej ceny zakup planu jest zablokowany komunikatem „Płatności są chwilowo niedostępne”.
 
 Klucze są wpisane w `PRICE_LOOKUP_KEYS` w [src/lib/billing/stripe.ts](src/lib/billing/stripe.ts). Kwoty muszą zgadzać się z `PLAN_PRICE` w [src/lib/billing/plans.ts](src/lib/billing/plans.ts), bo to te ceny widzi klient na przyciskach. Przy zmianie ceny tworzysz nową cenę w Stripe i przenosisz na nią lookup key (opcja „Transfer lookup key”), bez wdrażania kodu.
 

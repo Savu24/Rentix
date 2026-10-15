@@ -39,19 +39,19 @@ export const PLAN_PRICE: Record<Locale, Record<SubscriptionPlan, number>> = {
 export const DEFAULT_PLAN: SubscriptionPlan = "FREE";
 
 /**
- * Opłata od czynszu doliczana do planu płatnego: 0,1% tej części miesięcznego
- * czynszu z aktywnych umów, która przekracza próg.
+ * Opłata od czynszu doliczana do planu płatnego: 0,1% **całego** miesięcznego
+ * czynszu z aktywnych umów, gdy ten osiąga próg. Poniżej progu nic.
  *
- * Od nadwyżki, a nie od całości po przekroczeniu progu — inaczej jedna umowa
- * więcej robiłaby z zera od razu dwadzieścia złotych i opłacałoby się trzymać
- * portfel tuż pod progiem. Tak każda złotówka ponad próg kosztuje tyle samo.
+ * Od całości, nie od nadwyżki — decyzja cennikowa: 20 000 zł czynszu to
+ * 20 zł, 50 000 zł to 50 zł. Przy samym progu opłata wskakuje od razu na
+ * dwadzieścia złotych; tak ma być.
  *
  * Tylko wersje krajowe z ceną opłaty w Stripe (na razie Polska). Plik nie
  * dotyka Prismy, więc tę samą regułę liczy kalkulator na stronie i serwer.
  */
 export const RENT_FEE_RATE = 0.001;
 
-/** Próg w groszach: do 20 000 zł czynszu miesięcznie opłaty nie ma. */
+/** Próg w groszach: od 20 000 zł czynszu miesięcznie naliczamy opłatę. */
 export const RENT_FEE_THRESHOLD_GROSZE = 2_000_000;
 
 const RENT_FEE_LOCALES: readonly Locale[] = ["pl"];
@@ -63,8 +63,7 @@ export function chargesRentFee(locale: Locale): boolean {
 
 /** Opłata w groszach od miesięcznego czynszu z aktywnych umów, w groszach. */
 export function rentFeeFor(rentGrosze: number): number {
-  const excess = rentGrosze - RENT_FEE_THRESHOLD_GROSZE;
-  return excess > 0 ? Math.round(excess * RENT_FEE_RATE) : 0;
+  return rentGrosze >= RENT_FEE_THRESHOLD_GROSZE ? Math.round(rentGrosze * RENT_FEE_RATE) : 0;
 }
 
 export type PlanUsage = {
