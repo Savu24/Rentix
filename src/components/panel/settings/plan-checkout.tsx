@@ -64,18 +64,12 @@ const STUDIO_APPEARANCE = {
 };
 
 /**
- * Kolejne próby wyglądu: od pełnego (kolory, reguły, Geist) do coraz
+ * Kolejne próby wyglądu: od pełnego (kolory panelu i Geist) do coraz
  * prostszego. Kolory panelu zostają tak długo, jak się da — Studio jest
- * dopiero ostatnią próbą.
+ * dopiero ostatnią próbą. (`appearance.rules` ta beta odrzuca — sprawdzone 15.10.2026.)
  */
 function checkoutAppearanceAttempts(): Array<{ appearance: unknown; fonts?: unknown }> {
   const full = appearanceFromTheme();
-  const withoutRules = {
-    theme: full.theme,
-    labels: full.labels,
-    inputs: full.inputs,
-    variables: full.variables,
-  };
   const basic = {
     theme: "stripe",
     labels: "auto",
@@ -93,7 +87,6 @@ function checkoutAppearanceAttempts(): Array<{ appearance: unknown; fonts?: unkn
   return [
     { appearance: full, fonts: FONTS },
     { appearance: full },
-    { appearance: withoutRules },
     { appearance: basic },
     { appearance: STUDIO_APPEARANCE },
   ];
@@ -107,7 +100,6 @@ function appearanceFromTheme() {
   const ink = token("--ink", "#14241c");
   const ink2 = token("--ink-2", "#56615a");
   const ink3 = token("--ink-3", "#8a928c");
-  const line = token("--line-2", "#cdd2c6");
   const primary = token("--primary", "#1b4d3e");
 
   return {
@@ -129,13 +121,6 @@ function appearanceFromTheme() {
       colorDanger: token("--bad", "#b83a2c"),
       colorSuccess: token("--good", "#23794a"),
       colorIcon: ink2,
-    },
-    rules: {
-      ".Input": { border: `1px solid ${line}`, boxShadow: "none" },
-      ".Input:focus": { borderColor: primary },
-      ".Label": { color: ink2, fontWeight: "500", fontSize: "13.5px" },
-      ".Tab": { border: `1px solid ${line}`, boxShadow: "none" },
-      ".Tab--selected": { borderColor: primary, color: ink },
     },
   };
 }
