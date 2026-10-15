@@ -27,6 +27,8 @@ export type PlanBilling = {
   subscribed: boolean;
   pastDue: boolean;
   returned: boolean;
+  /** Plan wybrany w cenniku — zaznaczony i od razu z otwartą płatnością. */
+  requestedPlan: string | null;
   /** Opłata od czynszu w groszach, według dzisiejszych aktywnych umów. */
   rentFeeGrosze: number;
 } | null;
@@ -162,6 +164,7 @@ export async function PlanCard({
           subscribed={checkout.subscribed}
           pastDue={checkout.pastDue}
           returned={checkout.returned}
+          requestedPlan={checkout.requestedPlan}
           feeNote={feeNote}
           tiers={tiers}
         />

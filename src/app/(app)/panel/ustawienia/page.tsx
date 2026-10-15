@@ -9,7 +9,7 @@ import { SettingsColumns } from "@/components/panel/settings/settings-columns";
 import { Alert } from "@/components/ui/alert";
 import { membershipRole, requireOwnerSession } from "@/lib/auth/session";
 import { organizationAllows, organizationPlan } from "@/lib/billing/server";
-import { organizationRentFee } from "@/lib/billing/stripe";
+import { organizationRentFee, PAID_PLANS } from "@/lib/billing/stripe";
 import { env } from "@/lib/env";
 import { invoiceNumberPrefixes } from "@/lib/invoices/numbering";
 import {
@@ -23,7 +23,7 @@ import { prisma } from "@/lib/prisma";
 export default async function SettingsOrganizationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ platnosc?: string }>;
+  searchParams: Promise<{ platnosc?: string; plan?: string }>;
 }) {
   const session = await requireOwnerSession("/panel/ustawienia");
   const organizationId = session.user.organizationId;
@@ -62,6 +62,9 @@ export default async function SettingsOrganizationPage({
             Boolean(subscription?.externalSubscriptionId) && subscription?.status !== "CANCELLED",
           pastDue: subscription?.status === "PAST_DUE",
           returned: Boolean(query.platnosc),
+          // Plan wybrany w cenniku na stronie głównej (`planPurchasePath`).
+          requestedPlan:
+            (PAID_PLANS as readonly string[]).find((plan) => plan === query.plan) ?? null,
           rentFeeGrosze: rentFee,
         }
       : null;

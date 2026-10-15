@@ -152,6 +152,7 @@ export function PlanCheckout({
   subscribed,
   pastDue,
   returned,
+  requestedPlan = null,
 }: {
   publishableKey: string;
   /** Wszystkie progi w kolejności cennika; wybierać można te z `cta`. */
@@ -163,15 +164,32 @@ export function PlanCheckout({
   pastDue: boolean;
   /** Powrót z formularza (`?platnosc=` w adresie). */
   returned: boolean;
+  /** Plan wybrany w cenniku (`?plan=`) — zaznaczony i od razu z otwartą płatnością. */
+  requestedPlan?: string | null;
 }) {
   const { d } = useI18n();
   const t = d.panel.settings.plan.billing;
   const tCard = d.panel.settings.plan;
   const buyable = tiers.filter((tier) => tier.cta !== null);
-  // Zaznaczony od razu najbliższy wyższy próg — jedno kliknięcie mniej
-  // w najczęstszym przypadku, a wybór da się zmienić jednym stuknięciem.
-  const [selected, setSelected] = useState<SubscriptionPlan | null>(buyable[0]?.plan ?? null);
-  const [plan, setPlan] = useState<PaidPlan | null>(null);
+  /*
+    Plan z cennika (`?plan=`), o ile da się go kupić — klient kliknął już
+    „Wybierz Pro”, więc formularz płatności otwiera się od razu. Bez niego
+    zaznaczony jest najbliższy wyższy próg: jedno kliknięcie mniej
+    w najczęstszym przypadku, a wybór da się zmienić jednym stuknięciem.
+  */
+  const requested = buyable.find((tier) => tier.plan === requestedPlan) ?? null;
+  const [selected, setSelected] = useState<SubscriptionPlan | null>(
+    requested?.plan ?? buyable[0]?.plan ?? null,
+  );
+  const [plan, setPlan] = useState<PaidPlan | null>(
+    subscribed ? null : ((requested?.plan as PaidPlan | undefined) ?? null),
+  );
+
+  // Przejście z cennika: karta planu bywa pod formularzami (na telefonie
+  // zawsze), więc przewijamy do niej, żeby płatność nie czekała poza ekranem.
+  useEffect(() => {
+    if (requested) document.getElementById("plan")?.scrollIntoView({ block: "start" });
+  }, [requested]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedTier = buyable.find((tier) => tier.plan === selected) ?? null;

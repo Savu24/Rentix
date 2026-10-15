@@ -9,6 +9,7 @@ import {
   landingPathForRole,
   loginPathWithReturn,
   publicRoutes,
+  returnPathFrom,
   ROUTES,
 } from "@/lib/auth/routes";
 import {
@@ -83,9 +84,16 @@ export default auth((req) => {
     return NextResponse.redirect(new URL(`${target}${search}`, req.nextUrl));
   }
 
-  // Zalogowany na stronie logowania/rejestracji → prosto do swojego panelu.
+  /*
+    Zalogowany na stronie logowania/rejestracji → prosto do swojego panelu,
+    a gdy link niesie adres powrotu — tam. Tędy przechodzi przycisk planu
+    z cennika: „Wybierz Pro” prowadzi przez rejestrację, a zalogowany
+    właściciel ma od razu wylądować przy płatności, nie na pulpicie.
+  */
   if (isLoggedIn && isGuestOnlyPath(pathname)) {
-    const target = landingPathForRole(req.auth?.user?.role);
+    const target =
+      returnPathFrom((name) => req.nextUrl.searchParams.get(name)) ??
+      landingPathForRole(req.auth?.user?.role);
     return NextResponse.redirect(new URL(target, req.nextUrl));
   }
 

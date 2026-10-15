@@ -6,12 +6,31 @@ import { AuthDivider, GoogleButton } from "@/components/auth/google-button";
 import { RegisterForm } from "@/components/auth/register-form";
 import { Badge } from "@/components/ui/badge";
 import { googleEnabled } from "@/lib/auth/google";
-import { publicRoutes } from "@/lib/auth/routes";
+import { publicRoutes, returnPathFrom, withReturn } from "@/lib/auth/routes";
 import { getDictionary, type Locale } from "@/lib/i18n";
 
-export function RegisterView({ locale }: { locale: Locale }) {
+/** Parametry adresu strony rejestracji — jak przy logowaniu. */
+export type RegisterSearchParams = Record<string, string | string[] | undefined>;
+
+export function RegisterView({
+  locale,
+  searchParams = {},
+}: {
+  locale: Locale;
+  searchParams?: RegisterSearchParams;
+}) {
   const t = getDictionary(locale).auth.register;
   const routes = publicRoutes(locale);
+
+  /*
+    Adres powrotu, gdy ktoś przyszedł z konkretnym celem — np. z cennika po
+    plan Pro. Po założeniu konta trafia tam zamiast na pulpit. Tylko ścieżki
+    w obrębie domeny (`safeReturnPath`), jak przy logowaniu.
+  */
+  const returnTo = returnPathFrom((name) => {
+    const value = searchParams[name];
+    return typeof value === "string" ? value : undefined;
+  });
 
   return (
     <AuthShell locale={locale}>
@@ -25,18 +44,20 @@ export function RegisterView({ locale }: { locale: Locale }) {
 
         {googleEnabled ? (
           <>
-            <GoogleButton label={t.google} />
+            <GoogleButton label={t.google} returnTo={returnTo} />
             <AuthDivider />
           </>
         ) : null}
 
-        <RegisterForm />
+        <RegisterForm returnTo={returnTo} />
 
         <p className="text-center text-[13px] leading-relaxed text-subtle">{t.terms}</p>
 
         <p className="text-center text-sm text-muted">
           {t.hasAccount}{" "}
-          <Link href={routes.login} className="font-semibold text-accent underline-offset-4 hover:underline">
+          <Link
+            href={returnTo ? withReturn(routes.login, locale, returnTo) : routes.login}
+            className="font-semibold text-accent underline-offset-4 hover:underline">
             {t.loginLink}
           </Link>
         </p>

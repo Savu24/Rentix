@@ -4,7 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { AuthDivider, GoogleButton } from "@/components/auth/google-button";
 import { LoginForm } from "@/components/auth/login-form";
 import { googleEnabled } from "@/lib/auth/google";
-import { publicRoutes, RETURN_PARAMS, safeReturnPath } from "@/lib/auth/routes";
+import { publicRoutes, RETURN_PARAMS, safeReturnPath, withReturn } from "@/lib/auth/routes";
 import { getDictionary, type Locale } from "@/lib/i18n";
 
 /** Parametry adresu, jakie strona logowania przyjmuje w każdej wersji krajowej. */
@@ -52,7 +52,12 @@ export function LoginView({
 
         <p className="text-center text-sm text-muted">
           {t.noAccount}{" "}
-          <Link href={routes.register} className="font-semibold text-accent underline-offset-4 hover:underline">
+          {/* Adres powrotu idzie dalej — kto przyszedł z cennika po plan,
+              po rejestracji ma trafić do płatności, a nie na pulpit. */}
+          <Link
+            href={returnTo ? withReturn(routes.register, locale, returnTo) : routes.register}
+            className="font-semibold text-accent underline-offset-4 hover:underline"
+          >
             {t.registerLink}
           </Link>
         </p>

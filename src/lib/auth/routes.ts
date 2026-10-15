@@ -60,9 +60,31 @@ export function publicRoutes(locale: Locale) {
   } as const;
 }
 
+/** Dowolna ścieżka z dopisanym adresem powrotu — w wariancie właściwym dla wersji. */
+export function withReturn(path: string, locale: Locale, returnTo: string): string {
+  return `${path}?${RETURN_PARAM[locale]}=${encodeURIComponent(returnTo)}`;
+}
+
 /** Ścieżka logowania z adresem powrotu — w wariancie właściwym dla wersji. */
 export function loginPathWithReturn(locale: Locale, returnTo: string): string {
-  return `${publicRoutes(locale).login}?${RETURN_PARAM[locale]}=${encodeURIComponent(returnTo)}`;
+  return withReturn(publicRoutes(locale).login, locale, returnTo);
+}
+
+/** Bezpieczny adres powrotu z parametrów żądania — pierwszy z wariantów językowych. */
+export function returnPathFrom(get: (name: string) => string | null | undefined): string | undefined {
+  const raw = RETURN_PARAMS.map((name) => get(name)).find((value) => typeof value === "string");
+  return safeReturnPath(raw);
+}
+
+/**
+ * Zakup konkretnego planu: karta planu w ustawieniach z zaznaczonym progiem
+ * i od razu otwartym formularzem płatności. Tu prowadzą przyciski płatnych
+ * planów z cennika — przez rejestrację albo logowanie, jeśli trzeba.
+ */
+export const PLAN_PARAM = "plan";
+
+export function planPurchasePath(plan: string): string {
+  return `${ROUTES.ownerDashboard}/ustawienia?${PLAN_PARAM}=${plan}`;
 }
 
 /**

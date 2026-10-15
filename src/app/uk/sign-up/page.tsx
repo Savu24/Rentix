@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { RegisterView } from "@/components/auth/register-view";
+import { RegisterView, type RegisterSearchParams } from "@/components/auth/register-view";
 import { getDictionary } from "@/lib/i18n";
 
 const t = getDictionary("uk").auth.register;
@@ -11,6 +11,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function RegisterPage() {
-  return <RegisterView locale="uk" />;
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<RegisterSearchParams>;
+}) {
+  return <RegisterView locale="uk" searchParams={await searchParams} />;
 }

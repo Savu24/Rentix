@@ -4,9 +4,12 @@ import {
   isGuestOnlyPath,
   isProtectedPath,
   landingPathForRole,
+  planPurchasePath,
   publicRoutes,
+  returnPathFrom,
   ROUTES,
   safeReturnPath,
+  withReturn,
 } from "@/lib/auth/routes";
 
 describe("isProtectedPath", () => {
@@ -84,5 +87,25 @@ describe("safeReturnPath", () => {
   it("przy braku wartości zwraca undefined", () => {
     expect(safeReturnPath(undefined)).toBeUndefined();
     expect(safeReturnPath("")).toBeUndefined();
+  });
+});
+
+describe("powrót do zakupu planu z cennika", () => {
+  it("rejestracja niesie adres zakupu planu, który wraca nienaruszony", () => {
+    const href = withReturn(publicRoutes("pl").register, "pl", planPurchasePath("PRO"));
+    expect(href).toBe("/pl/rejestracja?powrot=%2Fpanel%2Fustawienia%3Fplan%3DPRO");
+
+    const params = new URL(href, "https://rentixon.com").searchParams;
+    expect(returnPathFrom((name) => params.get(name))).toBe("/panel/ustawienia?plan=PRO");
+  });
+
+  it("czyta też wariant z innej wersji językowej", () => {
+    const params = new URLSearchParams({ return: "/panel/ustawienia?plan=START" });
+    expect(returnPathFrom((name) => params.get(name))).toBe("/panel/ustawienia?plan=START");
+  });
+
+  it("odrzuca adres na obcą domenę", () => {
+    const params = new URLSearchParams({ powrot: "https://evil.example/" });
+    expect(returnPathFrom((name) => params.get(name))).toBeUndefined();
   });
 });

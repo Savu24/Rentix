@@ -13,7 +13,7 @@ import { fieldAria, FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PasswordChecklist } from "@/components/ui/password-checklist";
 import { PasswordInput } from "@/components/ui/password-input";
-import { ROUTES } from "@/lib/auth/routes";
+import { ROUTES, withReturn } from "@/lib/auth/routes";
 import { useI18n } from "@/lib/i18n/client";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
@@ -21,7 +21,12 @@ type ApiErrorBody = {
   error?: { code?: string; message?: string; fields?: Record<string, string[]> };
 };
 
-export function RegisterForm() {
+export function RegisterForm({
+  returnTo,
+}: {
+  /** Dokąd po założeniu konta — np. do zakupu planu wybranego w cenniku. */
+  returnTo?: string;
+} = {}) {
   const router = useRouter();
   const { locale, d } = useI18n();
   const t = d.auth.register;
@@ -83,11 +88,11 @@ export function RegisterForm() {
     if (!signInResult || signInResult.error) {
       // Rzadki przypadek: konto powstało, ale logowanie się nie udało.
       // Odsyłamy na logowanie zamiast zostawiać użytkownika w zawieszeniu.
-      router.replace(ROUTES.loginAlias);
+      router.replace(returnTo ? withReturn(ROUTES.loginAlias, locale, returnTo) : ROUTES.loginAlias);
       return;
     }
 
-    router.replace(ROUTES.ownerDashboard);
+    router.replace(returnTo ?? ROUTES.ownerDashboard);
     router.refresh();
   }
 

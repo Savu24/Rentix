@@ -18,7 +18,8 @@ import { InvoiceStatusBadge } from "@/components/panel/status-badges";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { publicRoutes } from "@/lib/auth/routes";
+import { planPurchasePath, publicRoutes, withReturn } from "@/lib/auth/routes";
+import { PLAN_ORDER } from "@/lib/billing/features";
 import { getDictionary, type Locale } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,19 @@ export function Landing({ locale }: { locale: Locale }) {
   const routes = publicRoutes(locale);
   const now = new Date();
   const notes = t.hero.note.split(" · ");
+
+  /*
+    Przycisk planu w cenniku. Free prowadzi zwyczajnie do rejestracji; płatny
+    plan — do jego zakupu w ustawieniach, przez rejestrację z adresem powrotu.
+    Zalogowanego middleware przepuszcza od razu pod ten adres, nowy klient
+    po założeniu konta ląduje przy płatności, a nie na pustym pulpicie.
+    Karty stoją w kolejności `PLAN_ORDER` (pilnuje tego test cennika).
+  */
+  const planHref = (index: number) => {
+    const plan = PLAN_ORDER[index];
+    if (!plan || plan === "FREE") return routes.register;
+    return withReturn(routes.register, locale, planPurchasePath(plan));
+  };
 
   return (
     <div className="min-h-dvh bg-bg">
@@ -235,7 +249,7 @@ export function Landing({ locale }: { locale: Locale }) {
             {/* Cztery progi w rzędzie dopiero od lg — poniżej idą po dwa, bo
                 cena i przypis nie mieszczą się w ćwiartce szerokości tabletu. */}
             <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {t.pricing.plans.map((plan) => (
+              {t.pricing.plans.map((plan, index) => (
                 <div
                   key={plan.name}
                   className={cn(
@@ -286,7 +300,7 @@ export function Landing({ locale }: { locale: Locale }) {
                   </ul>
 
                   <Button asChild block variant={plan.featured ? "highlight" : "secondary"} className="mt-6">
-                    <Link href={routes.register}>{plan.cta}</Link>
+                    <Link href={planHref(index)}>{plan.cta}</Link>
                   </Button>
                 </div>
               ))}
