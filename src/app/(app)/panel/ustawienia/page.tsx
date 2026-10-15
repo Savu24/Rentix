@@ -4,11 +4,12 @@ import { PlanLock } from "@/components/panel/plan-lock";
 import { LogoForm } from "@/components/panel/settings/logo-form";
 import { NumberingForm } from "@/components/panel/settings/numbering-form";
 import { OrganizationForm } from "@/components/panel/settings/organization-form";
-import { PlanCard } from "@/components/panel/settings/plan-card";
+import { PlanCard, type PlanBilling } from "@/components/panel/settings/plan-card";
 import { SettingsColumns } from "@/components/panel/settings/settings-columns";
 import { Alert } from "@/components/ui/alert";
-import { requireOwnerSession } from "@/lib/auth/session";
+import { membershipRole, requireOwnerSession } from "@/lib/auth/session";
 import { organizationAllows, organizationPlan } from "@/lib/billing/server";
+import { env } from "@/lib/env";
 import { invoiceNumberPrefixes } from "@/lib/invoices/numbering";
 import {
   getOrganization,
@@ -16,25 +17,57 @@ import {
   isSellerComplete,
 } from "@/lib/organizations/service";
 import { panelDictionary, panelLocale } from "@/lib/panel/dictionary";
+import { prisma } from "@/lib/prisma";
 
-export default async function SettingsOrganizationPage() {
+export default async function SettingsOrganizationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ platnosc?: string }>;
+}) {
   const session = await requireOwnerSession("/panel/ustawienia");
-  const [organization, logo, logoAllowed, plan, d, locale] = await Promise.all([
-    getOrganization(session.user.organizationId),
-    getOrganizationLogo(session.user.organizationId),
-    organizationAllows(session.user.organizationId, "DOCUMENT_LOGO"),
-    organizationPlan(session.user.organizationId),
-    panelDictionary(),
-    panelLocale(),
-  ]);
+  const organizationId = session.user.organizationId;
+  const [organization, logo, logoAllowed, plan, d, locale, subscription, role, query] =
+    await Promise.all([
+      getOrganization(organizationId),
+      getOrganizationLogo(organizationId),
+      organizationAllows(organizationId, "DOCUMENT_LOGO"),
+      organizationPlan(organizationId),
+      panelDictionary(),
+      panelLocale(),
+      prisma.subscription.findUnique({
+        where: { organizationId },
+        select: { billingExempt: true, externalSubscriptionId: true, status: true },
+      }),
+      membershipRole(session.user.id, organizationId),
+      searchParams,
+    ]);
 
   if (!organization) notFound();
+
+  /*
+    Zakup widzi tylko ten, kto może go zrobić: właściciel albo administrator
+    organizacji, na koncie, które w ogóle jest obciążane. Pozostałym karta
+    pokazuje sam plan — ten sam warunek pilnuje API, tu chodzi o to, żeby nie
+    kusić przyciskiem, który skończy się odmową.
+  */
+  const billing: PlanBilling =
+    env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
+    !subscription?.billingExempt &&
+    (role === "OWNER" || role === "ADMIN")
+      ? {
+          publishableKey: env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+          subscribed:
+            Boolean(subscription?.externalSubscriptionId) && subscription?.status !== "CANCELLED",
+          pastDue: subscription?.status === "PAST_DUE",
+          returned: Boolean(query.platnosc),
+        }
+      : null;
 
   return (
     <SettingsColumns
       aside={
         <>
-          <PlanCard usage={plan} />
+          <PlanCard usage={plan} billing={billing} />
           {logoAllowed ? (
             <LogoForm logo={logo?.dataUrl ?? null} />
           ) : (

@@ -293,8 +293,6 @@ export function Landing({ locale }: { locale: Locale }) {
             </div>
 
             <PlanCalculator locale={locale} t={t.pricing.calculator} plans={t.pricing.plans} />
-
-            <p className="mt-6 text-[13px] text-muted">{t.pricing.note}</p>
           </div>
         </section>
 

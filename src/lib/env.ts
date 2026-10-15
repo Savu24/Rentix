@@ -72,6 +72,28 @@ const serverEnvSchema = z.object({
    */
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+
+  /**
+   * Płatności za plany (Stripe).
+   *
+   * Bez klucza tajnego zakup planu jest wyłączony — karta planu w ustawieniach
+   * pokazuje same progi, jak przed integracją. Klucz publiczny ma prefiks
+   * `NEXT_PUBLIC_`, bo czyta go formularz w przeglądarce; tajny i sekret
+   * webhooka nigdy nie wychodzą poza serwer.
+   */
+  /** Pełny klucz (`sk_`) albo ograniczony (`rk_`) — na produkcji lepiej ograniczony. */
+  STRIPE_SECRET_KEY: z
+    .string()
+    .regex(/^(sk|rk)_/, "STRIPE_SECRET_KEY zaczyna się od sk_ albo rk_")
+    .optional(),
+  STRIPE_WEBHOOK_SECRET: z
+    .string()
+    .startsWith("whsec_", "STRIPE_WEBHOOK_SECRET zaczyna się od whsec_")
+    .optional(),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z
+    .string()
+    .startsWith("pk_", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY zaczyna się od pk_")
+    .optional(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
 
@@ -127,6 +149,12 @@ function loadEnv(): ServerEnv {
   if (Boolean(env.UPSTASH_REDIS_REST_URL) !== Boolean(env.UPSTASH_REDIS_REST_TOKEN)) {
     throw new Error(
       "Ustaw UPSTASH_REDIS_REST_URL i UPSTASH_REDIS_REST_TOKEN razem. Sam adres bez tokenu (albo odwrotnie) po cichu wyłącza limiter.",
+    );
+  }
+
+  if (Boolean(env.STRIPE_SECRET_KEY) !== Boolean(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)) {
+    throw new Error(
+      "Ustaw STRIPE_SECRET_KEY i NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY razem. Bez pary serwer założy sesję płatności, której formularz w przeglądarce nie otworzy.",
     );
   }
 

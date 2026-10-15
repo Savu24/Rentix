@@ -91,7 +91,6 @@ export const uk: Dictionary = {
       heading: "Simple pricing, no traps",
       lead: "Start for free. You pay once the tenancies add up.",
       badge: "Most popular",
-      note: "Prices exclude VAT and are billed monthly. Pay yearly and you pay for ten months.",
 
       /* Kalkulator jak po polsku — patrz komentarz w `pl`. */
       calculator: {
@@ -1850,6 +1849,25 @@ export const uk: Dictionary = {
         current: "Your plan",
         grandfathered: "Your account keeps a higher limit from its earlier terms.",
         note: "Changing plan goes live together with payments.",
+        billing: {
+          upgradeTitle: "Change plan",
+          upgradeLead:
+            "Paid monthly by card. Cancel any time — the plan stays on until the end of the period you paid for.",
+          choose: "{plan} · {price}/month",
+          loading: "Loading the payment form…",
+          back: "Back to plans",
+          manage: "Manage billing",
+          manageLead: "Change plan, update your card, download invoices or cancel — in the Stripe billing portal.",
+          pastDue: "Your last payment did not go through. Update your card so the account does not drop to the Free plan.",
+          returned:
+            "Thank you! Your payment is being processed — the new plan will show here within a minute. Refresh the page if you do not see it.",
+          formError: "We could not open the payment form. Please try again in a moment.",
+          managerOnly: "Only the owner or an administrator of the organisation can change its plan.",
+          unavailable: "Payments are temporarily unavailable. Please try again later.",
+          exempt: "This account is not billed — its plan is set by the RentixON team.",
+          alreadySubscribed: "This account already has an active subscription. Change the plan in the billing portal.",
+          noCustomer: "This account has no payments yet.",
+        },
       },
       logo: {
         maxSize: "up to {kb} kB",

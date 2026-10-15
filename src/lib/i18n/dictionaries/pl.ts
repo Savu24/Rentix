@@ -93,7 +93,6 @@ export const pl = {
       heading: "Prosty cennik, bez pułapek",
       lead: "Zaczynasz za darmo. Płacisz dopiero, gdy przybywa umów.",
       badge: "Najczęściej wybierany",
-      note: "Ceny netto, płatne miesięcznie. Przy rozliczeniu rocznym płacisz za dziesięć miesięcy.",
 
       /*
         Kalkulator pod kartami: liczba umów i średni czynsz, a w odpowiedzi
@@ -108,7 +107,7 @@ export const pl = {
         rent: "Średni czynsz miesięczny",
         rentRoll: "Czynsz z całego portfela: {amount} miesięcznie",
         plan: "Twój plan",
-        share: "Abonament to {percent} czynszu, który co miesiąc wpływa",
+        share: "Do abonamentu doliczane jest 0,1% czynszu, który co miesiąc wpływa",
         shareFree: "Na tym progu nie płacisz nic",
       },
 
@@ -1857,6 +1856,25 @@ export const pl = {
         /** Konta sprzed cennika mają próg wyższy niż plan — mówimy to wprost. */
         grandfathered: "Twoje konto ma podwyższony próg z wcześniejszych warunków.",
         note: "Zmianę planu włączymy razem z płatnościami.",
+        billing: {
+          upgradeTitle: "Zmień plan",
+          upgradeLead:
+            "Płatność kartą co miesiąc. Zrezygnujesz w każdej chwili, a plan działa do końca opłaconego okresu.",
+          choose: "{plan} · {price}/mies.",
+          loading: "Ładujemy formularz płatności…",
+          back: "Wróć do planów",
+          manage: "Zarządzaj płatnościami",
+          manageLead: "Zmiana planu, karta, faktury i rezygnacja — w portalu płatności Stripe.",
+          pastDue: "Ostatnia płatność nie przeszła. Zaktualizuj kartę, żeby konto nie wróciło do planu Free.",
+          returned:
+            "Dziękujemy! Płatność jest przetwarzana — nowy plan pojawi się tutaj w ciągu minuty. Odśwież stronę, jeśli go nie widzisz.",
+          formError: "Nie udało się otworzyć formularza płatności. Spróbuj ponownie za chwilę.",
+          managerOnly: "Plan konta zmienia właściciel albo administrator organizacji.",
+          unavailable: "Płatności są chwilowo niedostępne. Spróbuj ponownie później.",
+          exempt: "To konto nie jest obciążane opłatami — plan ustawia administrator RentixON.",
+          alreadySubscribed: "Konto ma już aktywną subskrypcję. Plan zmienisz w portalu płatności.",
+          noCustomer: "To konto nie ma jeszcze żadnej płatności.",
+        },
       },
       logo: {
         maxSize: "do {kb} kB",

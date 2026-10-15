@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
    * - `nosniff` — przeglądarka nie zgaduje typu pliku wbrew nagłówkowi.
    * - HSTS — po pierwszej wizycie tylko HTTPS. Przeglądarki ignorują go
    *   na `http://localhost`, więc praca lokalna działa jak dotąd.
+   * - `payment` tylko dla Stripe — formularz zakupu planu działa w jego
+   *   ramce, a Apple Pay i Google Pay potrzebują tam Payment Request API.
    */
   async headers() {
     return [
@@ -43,7 +45,8 @@ const nextConfig: NextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=()",
+            value:
+              'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")',
           },
         ],
       },
